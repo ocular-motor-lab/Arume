@@ -35,7 +35,9 @@ classdef Session < ArumeCore.DataDB
         currentRun      = [];       % current data for this session
         
         pastRuns        = [];       % data from every time experiment was started, resumed, or restarted
-        
+    end
+    
+    properties(SetAccess = public)
         dataPath        = [];       % path of the folder containing the session files
     end
     
@@ -263,6 +265,27 @@ classdef Session < ArumeCore.DataDB
                 this.currentRun.LinkedFiles.(fileTag) = vertcat( this.currentRun.LinkedFiles.(fileTag), [fileName ext] );
             end               
         end
+
+        function addExistingFile(this, fileTag, filePath)
+            
+            [~,fileName, ext] = fileparts(filePath);
+            % counter = 1;
+            % fileNameOrig = fileName;
+            % while ( exist(fullfile(this.dataPath, [fileName ext] ),'file') )
+            %     fileName = sprintf([fileNameOrig '_%02d'], counter);
+            %     counter = counter + 1;
+            % end
+            % copyfile(filePath, fullfile(this.dataPath, [fileName ext] ));
+                
+            if ( ~isfield(this.currentRun.LinkedFiles, fileTag) )
+                this.currentRun.LinkedFiles.(fileTag) = strcat(fileName, ext);
+            else
+                if ~iscell(this.currentRun.LinkedFiles.(fileTag))
+                    this.currentRun.LinkedFiles.(fileTag) = {this.currentRun.LinkedFiles.(fileTag)};
+                end
+                this.currentRun.LinkedFiles.(fileTag) = vertcat( this.currentRun.LinkedFiles.(fileTag), strcat(fileName, ext) );
+            end               
+        end
         
         function importSession(this)
             this.experimentDesign.ImportSession();
@@ -342,122 +365,11 @@ classdef Session < ArumeCore.DataDB
     %
     %% ANALYSIS METHODS
     methods
-        function prepareForAnalysis( this, options)
-            Enum = ArumeCore.ExperimentDesign.getEnum();
-            
-            if ( isempty(  this.currentRun ) )
-                return;
-            end
-            
-            %% 0) Create the basic trial data table (without custom experiment stuff)
-            if ( options.Prepare_For_Analysis_And_Plots )
-                
-                trials = this.currentRun.pastTrialTable;
-                
-                % remove errors and aborts for analysis
-                if (~isempty(trials))
-                    % Trial attempt is just a continuos unique number for
-                    % each past trial.
-                    trials.TrialAttempt = (1:height(trials))';
-                    
-                    % just in case for old data. TrialResult used to be
-                    % numeric. Now it is categorical but the categories
-                    % match the old numbers+1;
-                    if ( ~iscategorical(trials.TrialResult) )
-                        trials.TrialResult = Enum.trialResult.PossibleResults(trials.TrialResult+1);
-                    end
-                    % in old files TrialNumber counted all trials not just
-                    % correct trials. So we fix it for code down the line
-                    % it could also be missing
-                    if ( ~any(strcmp(trials.Properties.VariableNames,'TrialNumber')) || ...
-                            sum(trials.TrialResult == Enum.trialResult.CORRECT) < max(trials.TrialNumber) )
-                        % rebuild trial number as a counter of past correct
-                        % trials plus one
-                        trials.TrialNumber = cumsum([1;trials.TrialResult(1:end-1) == Enum.trialResult.CORRECT]);
-                    end
-                    
-                    % keep only correct trials from now on
-                    % TODO: rething this. Depending on how the experiment
-                    % is programmed it may be interesting to look at the
-                    % aborts.
-                    trials(trials.TrialResult ~= Enum.trialResult.CORRECT ,:) = [];
-                    
-                    % merge the columns in trials with the ones already
-                    % present in the trialDataTable.
-                    % It is only necessary to rerun this stage zero if
-                    % this.trialDataTable is not empty because there may be
-                    % changes on the code. Otherwise we could change it to
-                    % get here only if trialDataTable is empty.
-                    if ( ~isempty(this.trialDataTable) )
-                        rightVariables = setdiff(this.trialDataTable.Properties.VariableNames, trials.Properties.VariableNames);
-                        trials =  outerjoin(trials, this.trialDataTable, 'Keys', 'TrialNumber', 'MergeKeys',true, 'RightVariables', rightVariables );
-                    end
-                end
-                
-                this.WriteVariableIfNotEmpty(trials,'trialDataTable');
-                
-                %% 1) Prepare the sample data table
-                if ( isempty(this.samplesDataTable) )
-                    % In most cases this will just be from EyeTracking
-                    % experiment but there could be others that have a
-                    % different way to load sample data.
-                    try
-                        [samples, cleanedData, calibratedData, rawData] = this.experimentDesign.PrepareSamplesDataTable(options);
-                        
-                        this.WriteVariableIfNotEmpty(samples,'samplesDataTable');
-                        this.WriteVariableIfNotEmpty(rawData,'rawDataTable');
-                        this.WriteVariableIfNotEmpty(cleanedData,'cleanedData');
-                        this.WriteVariableIfNotEmpty(calibratedData,'calibratedData');
-                    catch ex
-                        getReport(ex)
-                        cprintf('red', sprintf('++ VOGAnalysis :: ERROR PREPARING SAMPLES. WE WILL TRY TO CONTINUE.\n'));
-                    end
-                end
-                cprintf('blue', '++ ARUME::Done with samplesDataTable.\n');
-                
-                %% 2) Prepare the trial data table
-                trials = this.experimentDesign.PrepareTrialDataTable(trials, options);
-                this.WriteVariableIfNotEmpty(trials,'trialDataTable');
-                cprintf('blue', '++ ARUME::Done with trialDataTable.\n');
-                
-                %% 3) Prepare session data table
-                newSessionDataTable = this.GetBasicSessionDataTable();
-                newSessionDataTable = this.experimentDesign.PrepareSessionDataTable(newSessionDataTable, options);
-                newSessionDataTable.LastAnalysisDateTime = datestr(now);
-                
-                options = FlattenStructure(options); % eliminate strcuts with the struct so it can be made into a row of a table
-                opts = fieldnames(options);
-                s = this.experimentDesign.GetExperimentOptionsDialog(1);
-                for i=1:length(opts)
-                    if ( isempty(options.(opts{i})))
-                        newSessionDataTable.(['AnalysisOption_' opts{i}]) = {''};
-                    elseif ( ~ischar( options.(opts{i})) && numel(options.(opts{i})) <= 1)
-                        newSessionDataTable.(['AnalysisOption_' opts{i}]) = options.(opts{i});
-                    elseif (isfield( s, opts{i}) && iscell(s.(opts{i})) && iscell(s.(opts{i}){1}) && length(s.(opts{i}){1}) >1)
-                        newSessionDataTable.(['AnalysisOption_' opts{i}]) = categorical(cellstr(options.(opts{i})));
-                    elseif (~ischar(options.(opts{i})) && numel(options.(opts{i})) > 1 )
-                        newSessionDataTable.(['AnalysisOption_' opts{i}]) = {options.(opts{i})};
-                    else
-                        newSessionDataTable.(['AnalysisOption_' opts{i}]) = string(options.(opts{i}));
-                    end
-                end
-                
-                this.WriteVariableIfNotEmpty(newSessionDataTable,'sessionDataTable');
-            end
-        end
-        
         function runAnalysis(this, options)
             
             cprintf('blue', '++ ARUME::Preparing %s for Analysis.\n', this.name);
-            
-            this.prepareForAnalysis(options);
-            
-            [results, samples, trials, sessionTable]  = this.experimentDesign.RunDataAnalyses( ...
-                this.analysisResults, ...
-                this.samplesDataTable, ...
-                this.trialDataTable, ...
-                this.sessionDataTable, ...
-                options);
+                        
+            [results, samples, trials, sessionTable]  = this.experimentDesign.RunExperimentAnalysis(options);
         
             this.WriteVariableIfNotEmpty(samples,'samplesDataTable');
             this.WriteVariableIfNotEmpty(trials,'trialDataTable');
@@ -482,7 +394,7 @@ classdef Session < ArumeCore.DataDB
             
             try 
                 newSessionDataTable = table();
-                newSessionDataTable.ArumeVersion = this.ArumeVersionWhenCreated;
+                newSessionDataTable.ArumeVersion = string(this.ArumeVersionWhenCreated);
                 newSessionDataTable.Subject = categorical(cellstr(this.subjectCode));
                 newSessionDataTable.SessionCode = categorical(cellstr(this.sessionCode));
                 newSessionDataTable.Experiment = categorical(cellstr(this.experimentDesign.Name));

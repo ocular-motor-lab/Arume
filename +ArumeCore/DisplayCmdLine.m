@@ -1,4 +1,4 @@
-classdef DisplayCmdLine < ArumeCore.Display
+classdef DisplayCmdLine < ArumeCore.PTB
     %DISPLAY Summary of this class goes here
     %   Detailed explanation goes here
     properties   

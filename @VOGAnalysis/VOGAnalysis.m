@@ -864,6 +864,96 @@ classdef VOGAnalysis < handle
 
             data.Properties.UserData.sampleRate = framerate;
         end
+
+        function [samplesDataTable, cleanedData, calibratedData, rawData] = LoadCleanAndResampleDataEyelink(dataFolder, dataFiles, params)
+
+            if ( nargin == 1)
+                [dataFolder, dataFiles,ext] = fileparts(dataFolder);
+                dataFiles = [dataFiles,ext];
+            end
+            
+            if (~iscell(dataFiles))
+                dataFiles = {dataFiles};
+            end
+            
+            if  (~exist('params','var') )
+                params = VOGAnalysis.GetParameters;
+            end
+
+            samplesDataTable = table();
+            rawData = table();
+            cleanedData = table();
+            
+            for i=1:length(dataFiles)
+                dataFile = dataFiles{i};
+                cprintf('blue','++ VOGAnalysis :: Reading data File %d of %d = %s ...\n', i, length(dataFiles), dataFile);
+                
+                dataFilePath = fullfile(dataFolder, dataFile);
+                
+                % load and preprocess data
+                
+                [rawDataFile]           = VOGAnalysis.LoadEyelinkData(dataFilePath);
+                cleanedDataFile         = VOGAnalysis.CleanData(rawDataFile, params);
+                fileSamplesDataSet      = cleanedDataFile;
+%                 fileSamplesDataSet      = VOGAnalysis.ResampleData(cleanedDataFile, params);
+
+                rawsamplerate = rawDataFile.Properties.UserData.sampleRate;
+                
+                % add a column to indicate which file the samples came from
+                fileSamplesDataSet  = [table(repmat(i,height(fileSamplesDataSet),1),'variablenames',{'FileNumber'}), fileSamplesDataSet];
+                rawDataFile         = [table(repmat(i,height(rawDataFile),1),       'variablenames',{'FileNumber'}), rawDataFile];
+                cleanedDataFile     = [table(repmat(i,height(cleanedDataFile),1),   'variablenames',{'FileNumber'}), cleanedDataFile];
+                
+                % TODO: change if resampling! 
+                fileSamplesDataSet.Properties.UserData.sampleRate = rawsamplerate;
+                
+                if( i>1)
+                    % fix timestamps while concatenating so they
+                    gapSeconds = 100; % gap to add in beteen files
+                    fileSamplesDataSet.Time = fileSamplesDataSet.Time - fileSamplesDataSet.Time(1) + samplesDataTable.Time(end) + gapSeconds;
+                    fileSamplesDataSet.FrameNumber = fileSamplesDataSet.FrameNumber - fileSamplesDataSet.FrameNumber(1) + samplesDataTable.FrameNumber(end) + gapSeconds*fileSamplesDataSet.Properties.UserData.sampleRate;
+                end
+                
+                samplesDataTable = cat(1,samplesDataTable,fileSamplesDataSet);
+                rawData = cat(1,rawData,rawDataFile);
+                cleanedData = cat(1,cleanedData,cleanedDataFile);
+                calibratedData = rawData;
+            end
+        end
+
+        function [data] = LoadEyelinkData(dataFile)
+
+            %%
+            [path,fname, ext] = fileparts(dataFile);
+            tmpfile = fullfile(path, 'temp.edf');
+            copyfile(dataFile, tmpfile);
+            edf0 = ArumeHardware.Edf2Mat(char(tmpfile));
+            delete(tmpfile);
+
+            
+            s = edf0.Samples;
+
+            samplerate = 1/median(diff(s.time))*1000;
+
+            data = table();
+            data.FrameNumber = round(edf0.Samples.time/median(diff(s.time)));
+            
+            
+            data.LeftFrameNumberRaw = data.FrameNumber;
+            data.RightFrameNumberRaw = data.FrameNumber;
+            data.Time = edf0.Samples.time/1000;
+            
+
+            %% Do the transformation from raw data to degs
+            data.RightX = s.gx(:,2);
+            data.RightY = s.gy(:,2);
+            data.LeftX =  s.gx(:,1);
+            data.LeftY = s.gy(:,1);
+            data.RightT = nan(size(s.gx(:,2)));
+            data.LeftT = nan(size(s.gx(:,1)));
+
+            data.Properties.UserData.sampleRate = samplerate;
+        end
     end
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

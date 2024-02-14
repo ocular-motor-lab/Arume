@@ -172,8 +172,10 @@ classdef FixationTargets_BEAST < ArumeExperimentDesigns.EyeTracking
                     gamepad = ArumeHardware.GamePad;
                     right = 0;
                     this.newCenter = [this.ExperimentOptions.RasterCenter_x, this.ExperimentOptions.RasterCenter_y];
+
                     move_newCenter = 1;
                     this.Graph = ArumeCore.Display( );
+
                     this.Graph.Init( this );
 
                     while(right == 0)

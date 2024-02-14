@@ -161,37 +161,6 @@ classdef FixationTargets < ArumeExperimentDesigns.EyeTracking
     end
 
     methods ( Access = public )
-        function [analysisResults, samplesDataTable, trialDataTable, sessionDataTable]  = RunDataAnalyses(this, analysisResults, samplesDataTable, trialDataTable, sessionDataTable, options)
-
-            [analysisResults, samplesDataTable, trialDataTable, sessionDataTable]  = RunDataAnalyses@ArumeExperimentDesigns.EyeTracking(this, analysisResults, samplesDataTable, trialDataTable, sessionDataTable, options);
-
-            targetPositions_ = cell2mat(this.targetPositions');
-
-            calibrationPointsX = targetPositions_(trialDataTable.TargetPosition,1);
-            calibrationPointsY = targetPositions_(trialDataTable.TargetPosition,2);
-
-            fstart = round(trialDataTable.SampleStartTrial + 0.500*samplesDataTable.Properties.UserData.sampleRate);
-            fstops = trialDataTable.SampleStopTrial;
-
-            t = nan(size(samplesDataTable,1),2);
-
-            for i=1:length(fstart)
-                t(fstart(i):fstops(i),1) = calibrationPointsX(i);
-                t(fstart(i):fstops(i),2) = calibrationPointsY(i);
-            end
-
-            targetPosition = table();
-            targetPosition.x = t(:,1);
-            targetPosition.y = t(:,2);
-            targetPosition.LeftX = t(:,1);
-            targetPosition.LeftY = t(:,2);
-            targetPosition.RightX = t(:,1);
-            targetPosition.RightY = t(:,2);
-
-            analysisResults.calibrationTableCR = VOGAnalysis.CalculateCalibrationCR(samplesDataTable, targetPosition);
-            analysisResults.calibrationTable = VOGAnalysis.CalculateCalibration(samplesDataTable, targetPosition);
-
-        end
     end
 
     % ---------------------------------------------------------------------

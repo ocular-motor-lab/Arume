@@ -39,6 +39,23 @@ classdef Display < handle
     properties(Access=private)
         lastfliptime = 0;
     end
+
+    methods (Static=true)
+        function Test()
+%%
+            Graph = ArumeCore.Display( );
+            Graph.Init( [] );
+
+            Graph.DlgHitKey( 'Hit a key to continue',[],[]);
+
+            result = Graph.DlgSelect( ...
+                'Choose an option:', ...
+                { 'n' 'c' 'q'}, ...
+                { 'Choose n' 'Choose c' 'quit'} , [],[]);
+
+            Graph.Clear();
+        end
+    end
     
     methods
         
@@ -48,9 +65,32 @@ classdef Display < handle
         
         function Init( graph, exper)
             
+            if ( ~exist('exper','var') )
+                debugMode = 1;
+                selectedScreenFromOptions = 200;
+                stereoMode = 0;
+
+                foregroundColor = 100;
+                backgroundColor = 128;
+                mmWidthOptions    = 140*10;
+                mmHeightOptions   = 80*10;
+                distanceToMonitorOptions = 85;
+            else
+                debugMode = exper.ExperimentOptions.Debug.DebugMode;
+                selectedScreenFromOptions = exper.ExperimentOptions.DisplayOptions.SelectedScreen;
+                stereoMode = exper.ExperimentOptions.DisplayOptions.StereoMode;
+
+                foregroundColor = exper.ExperimentOptions.DisplayOptions.ForegroundColor;
+                backgroundColor = exper.ExperimentOptions.DisplayOptions.BackgroundColor;
+                mmWidthOptions    = exper.ExperimentOptions.DisplayOptions.ScreenWidth;
+                mmHeightOptions          = exper.ExperimentOptions.DisplayOptions.ScreenHeight;
+                distanceToMonitorOptions = exper.ExperimentOptions.DisplayOptions.ScreenDistance;
+            end
+
+
             % -- GRAPHICS KEYBOARD and MOUSE
             %-- hide the mouse cursor during the experiment
-            if ( ~exper.ExperimentOptions.Debug.DebugMode)
+            if ( ~debugMode)
                 HideCursor;
                 ListenChar(2);
             else
@@ -64,33 +104,29 @@ classdef Display < handle
             %-- screens
             
             graph.screens = Screen('Screens');
-            if exper.ExperimentOptions.DisplayOptions.SelectedScreen > max(graph.screens) % if the defaul screen is 2 but you don't have screen number 2
+            if selectedScreenFromOptions > max(graph.screens) % if the defaul screen is 2 but you don't have screen number 2
                 graph.selectedScreen=max(graph.screens);
             else
-                graph.selectedScreen= exper.ExperimentOptions.DisplayOptions.SelectedScreen; %max(graph.screens);
+                graph.selectedScreen= selectedScreenFromOptions; %max(graph.screens);
             end
             %graph.selectedScreen=1;
             
             %-- window
             Screen('Preference', 'ConserveVRAM', 64);
-            if (~exper.ExperimentOptions.Debug.DebugMode)
-                [graph.window, graph.wRect] = Screen('OpenWindow', graph.selectedScreen, 0, [], [], [], exper.ExperimentOptions.DisplayOptions.StereoMode, 10);%SR changed stereomode to 4 from 0
+            if (~debugMode)
+                [graph.window, graph.wRect] = Screen('OpenWindow', graph.selectedScreen, 0, [], [], [], stereoMode, 10);%SR changed stereomode to 4 from 0
             else
-                [graph.window, graph.wRect] = Screen('OpenWindow', graph.selectedScreen, 0, [10 10 900 600], [], [], exper.ExperimentOptions.DisplayOptions.StereoMode, 10); %SR changed stereomode to 4 from 0
+                [graph.window, graph.wRect] = Screen('OpenWindow', graph.selectedScreen, 0, [10 10 900 600], [], [], stereoMode, 10); %SR changed stereomode to 4 from 0
             end
             
             %-- color
             
             graph.black = BlackIndex( graph.window );
             graph.white = WhiteIndex( graph.window );
-            
-            if ( exist('exper','var') && ~isempty(exper) )
-                graph.dlgTextColor = exper.ExperimentOptions.DisplayOptions.ForegroundColor;
-                graph.dlgBackgroundScreenColor = exper.ExperimentOptions.DisplayOptions.BackgroundColor;
-            end
+            graph.dlgTextColor = foregroundColor;
+            graph.dlgBackgroundScreenColor = backgroundColor;
             
             % FOR OKN
-            
             AssertOpenGL;
             Screen('BlendFunction', graph.window, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
             Priority(MaxPriority(graph.window));
@@ -114,26 +150,11 @@ classdef Display < handle
             graph.windiwInfo                                = Screen('GetWindowInfo',graph.window);           
             %TODO: force resolution and refresh rate
             
-            
-            if ( exist('exper','var') && ~isempty(exper) )
-                %-- physical dimensions
-                graph.mmWidth           = exper.ExperimentOptions.DisplayOptions.ScreenWidth;
-                graph.mmHeight          = exper.ExperimentOptions.DisplayOptions.ScreenHeight;
-                graph.distanceToMonitor = exper.ExperimentOptions.DisplayOptions.ScreenDistance;
-                
-                
-                %-- scale
-                horPixPerDva = graph.pxWidth/2 / (atan(graph.mmWidth/2/graph.distanceToMonitor)*180/pi);
-                verPixPerDva = graph.pxHeight/2 / (atan(graph.mmHeight/2/graph.distanceToMonitor)*180/pi);
-            end
-            
-            
-            % draw a fixation spot in the center;
-            [mx, my] = RectCenter(graph.wRect);
-            fixRect = [0 0 10 10];
-            fixRect = CenterRectOnPointd( fixRect, mx, my );
-            Screen('FillOval', graph.window,  255, fixRect);
-            fliptime = Screen('Flip', graph.window);
+
+            %-- physical dimensions
+            graph.mmWidth           = mmWidthOptions;
+            graph.mmHeight          = mmHeightOptions;
+            graph.distanceToMonitor = distanceToMonitorOptions;
         end
         
         function Clear(graph)
@@ -302,14 +323,14 @@ classdef Display < handle
                 
                 try
                     g = ArumeHardware.GamePad();
-                    [ direction, left, right, a, b, x, y] = g.Query;
+                    [ ~, ~, ~, a, b, x, y] = g.Query;
                     
-                    if ( a | b | x | y)
+                    if ( a || b || x || y)
                         result = char('a');
                         break;
                     end
                     
-                    [x,y,buttons] = GetMouse();
+                    [~,~,buttons] = GetMouse();
                     
                     if buttons(2) % wait for release
                         
@@ -320,7 +341,7 @@ classdef Display < handle
                 catch
                 end
                 
-                [keyIsDown, secs, keyCode, deltaSecs] = KbCheck();
+                [keyIsDown, ~, keyCode, ~] = KbCheck();
                 if ( keyIsDown )
                     if ( KeyNotDown )
                         keys = find(keyCode);
