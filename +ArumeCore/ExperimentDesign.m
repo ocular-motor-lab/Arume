@@ -1257,7 +1257,7 @@ classdef ExperimentDesign < handle
             state = INITIALIZNG_HARDWARE;
             trialsSinceBreak = 0;
             trialsSinceCalibration = 0;
-            
+            calibrationCounter = [];
             while(1)
                 try
                     switch( state )
@@ -1330,6 +1330,11 @@ classdef ExperimentDesign < handle
 
                             if ( calibrationSuccessful)
                                 trialsSinceCalibration = 0;
+                                if ( ~isempty(this.Session.currentRun.pastTrialTable))
+                                    calibrationCounter = max(this.Session.currentRun.pastTrialTable.CalibrationCounter) + 1;
+                                else
+                                    calibrationCounter = 1;
+                                end
                                 state = STARTING_RECORDING;
                             else
                                 result = this.Graph.DlgSelect( ...
@@ -1391,6 +1396,7 @@ classdef ExperimentDesign < handle
                                 thisTrialData = table();
                                 thisTrialData.TrialNumber  = nCorrectTrials+1;
                                 thisTrialData.DateTimeTrialStart = string(datetime);
+                                thisTrialData.CalibrationCounter = calibrationCounter;
                                 thisTrialData = [thisTrialData this.Session.currentRun.futureTrialTable(1,:)];
                                 
                                 fprintf('\nARUME :: TRIAL %d START (%d TOTAL) ...\n', nCorrectTrials+1, height(this.Session.currentRun.originalFutureTrialTable));

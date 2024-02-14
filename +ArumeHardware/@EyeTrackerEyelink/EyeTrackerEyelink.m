@@ -87,7 +87,7 @@ classdef EyeTrackerEyelink  < handle
             timestamp = nan;
             if ( ~isempty( this.el) )
                 timestamp=EyelinkGetTime(this.el); % [, maxwait]) % TODO: this will be a timestamp not a frame number
-                Eyelink('Message',sprintf('ELtime=%d    %s',timestamp, message))
+                Eyelink('Message',sprintf('ELtime=%d PTBtime=%s  %s',timestamp, num2str(GetSecs), message))
                 timestamp = timestamp/1000; % convert to seconds for Arume
             end
         end
