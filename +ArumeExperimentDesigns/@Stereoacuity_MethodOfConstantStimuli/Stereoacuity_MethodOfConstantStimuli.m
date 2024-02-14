@@ -23,12 +23,12 @@ classdef Stereoacuity_MethodOfConstantStimuli < ArumeExperimentDesigns.EyeTracki
             dlg.Number_of_Dots = { 750 '* (num)' [10 10000] }; %750
             dlg.Size_of_Dots = { 1 '* (pix)' [1 100] };
             dlg.MaxStimDeg = {3.5 '* (deg)' [1 100] }; %3.5
-            dlg.MinStimDeg = {2 '* (deg)' [1 100] }; %2
+            dlg.MinStimDeg = {2 '* (deg)' [1 100] };
             dlg.FixationSpotSize = { 0.25 '* (diameter_in_deg)' [0 5] };
-            dlg.TimeStimOn = { 0.2 '* (sec)' [0 60] }; %0.2
+            dlg.TimeStimOn = { 0.2 '* (sec)' [0 60] }; 
             dlg.InitFixDuration = { 1 '* (sec)' [0 60] };
             
-            dlg.NumberOfRepetitions = {10 '* (N)' [1 200] }; %20
+            dlg.NumberOfRepetitions = {20 '* (N)' [1 200] }; 
             dlg.BackgroundBrightness = 0;
             
             %% CHANGE DEFAULTS values for existing options
@@ -55,12 +55,12 @@ classdef Stereoacuity_MethodOfConstantStimuli < ArumeExperimentDesigns.EyeTracki
              
             i = i+1;
             conditionVars(i).name   = 'Disparities';
-            conditionVars(i).values = [0.1:0.2:0.9]; 
+            conditionVars(i).values = [0.1:0.2:0.9];
             %conditionVars(i).values = ones(size([0.1:0.2:0.9]))*30;
             
             i = i+1;
-            conditionVars(i).name   = 'RotateDots'; % pos rotations mean ccw, neg rotations mean cw
-            conditionVars(i).values = [-30 -10 -5 0 0 5 10 30]; 
+            conditionVars(i).name   = 'RotateDots';
+            conditionVars(i).values = [0 5 10 30]; %[0 10 45];
             
             i = i+1;
             conditionVars(i).name   = 'SignDisparity';
@@ -120,7 +120,7 @@ classdef Stereoacuity_MethodOfConstantStimuli < ArumeExperimentDesigns.EyeTracki
                 % Right and left shifted dots 
                 leftStimDots = [dots(1,:)+(dots(3,:)/2); dots(2,:)]; %dots(1:2, :) + [dots(3, :)/2; zeros(1, numDots)]; 
                 rightStimDots = [dots(1,:)-(dots(3,:)/2); dots(2,:)]; 
-
+                
                 % Rotating the dots 
                 leftDistFromCenter = sqrt((leftStimDots(1,:)).^2 + (leftStimDots(2,:)).^2); %dist is measured from the ORIGIN (0,0) which is where the fixation dot is so we're rotating around fixation dot
                 leftThetaDeg = atan2d(leftStimDots(2,:),leftStimDots(1,:));
@@ -132,7 +132,7 @@ classdef Stereoacuity_MethodOfConstantStimuli < ArumeExperimentDesigns.EyeTracki
                 rightPolarPtY = sind(rightThetaDeg + thisTrialData.RotateDots) .* rightDistFromCenter;
                 leftStimDots = [leftPolarPtX;leftPolarPtY];
                 rightStimDots = [rightPolarPtX;rightPolarPtY];
-
+                
                 % What the response should be
                 if thisTrialData.DisparityArcMin > 0
                     thisTrialData.CorrectResponse = 'F';

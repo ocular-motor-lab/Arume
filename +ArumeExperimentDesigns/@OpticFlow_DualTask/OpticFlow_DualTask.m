@@ -60,6 +60,24 @@ classdef OpticFlow_DualTask < ArumeExperimentDesigns.EyeTracking
             %-- condition variables ---------------------------------------
             t = ArumeCore.TrialTableBuilder();
 
+            % t.AddConditionVariable( 'Distance', ["near" "far"]);
+            % t.AddConditionVariable( 'Direction', {'Left' 'Right' });
+            % t.AddConditionVariable( 'Tilt', [-30 0 30]);
+            %
+            % Add three blocks. One with all the upright trials, one with the rest,
+            % and another one with upright trials. Running only one repeatition of
+            % each upright trial and 3 repeatitions of the other trials,
+            % t.AddBlock(find(t.ConditionTable.Tilt==0), 1);
+            % t.AddBlock(find(t.ConditionTable.Tilt~=0), 3);
+            % t.AddBlock(find(t.ConditionTable.Tilt==0), 1);
+            %
+            % trialSequence = 'Random';
+            % blockSequence =  'Sequential';
+            % blockSequenceRepeatitions = 2;
+            % abortAction = 'Repeat';
+            % trialsPerSession = 10;
+            % trialTable = t.GenerateTrialTable(trialSequence, blockSequence, blockSequenceRepeatitions, abortAction,trialsPerSession);
+
             switch(this.ExperimentOptions.UniformityOptions)
                 case 'Only Uniform'
                     t.AddConditionVariable( 'Density', {'Uniform'})
@@ -240,16 +258,6 @@ classdef OpticFlow_DualTask < ArumeExperimentDesigns.EyeTracking
             % % % % % % % % % % % % % % % % % % end
         end
         
-    end
-
-
-    methods
-        function Plot_MattTesting(this)
-            samples = this.Session.samplesDataTable;
-            trials = this.Session.trialDataTable;
-
-            figure
-        end
     end
     
 end

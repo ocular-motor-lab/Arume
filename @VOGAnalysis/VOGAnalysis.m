@@ -945,14 +945,10 @@ classdef VOGAnalysis < handle
             
 
             %% Do the transformation from raw data to degs
-            data.RightPixX = s.gx(:,2);
-            data.RightPixY = s.gy(:,2);
-            data.LeftPixX =  s.gx(:,1);
-            data.LeftPixY = s.gy(:,1);
-            data.RightX = (s.gx(:,2)-2000)/1000*20;
-            data.RightY = (s.gy(:,2)-1000)/1000*20;
-            data.LeftX =  (s.gx(:,1)-2000)/1000*20;
-            data.LeftY = (s.gy(:,1)-1000)/1000*20;
+            data.RightX = s.gx(:,2);
+            data.RightY = s.gy(:,2);
+            data.LeftX =  s.gx(:,1);
+            data.LeftY = s.gy(:,1);
             data.RightT = nan(size(s.gx(:,2)));
             data.LeftT = nan(size(s.gx(:,1)));
 
