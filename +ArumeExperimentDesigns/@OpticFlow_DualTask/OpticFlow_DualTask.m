@@ -113,7 +113,6 @@ classdef OpticFlow_DualTask < ArumeExperimentDesigns.EyeTracking
             % and block derivative (block change)
             trialTable.BlockChange = double([diff(trialTable.BlockNumber);0]);
 
-
         end
         
         % run initialization before the first trial is run
@@ -121,12 +120,6 @@ classdef OpticFlow_DualTask < ArumeExperimentDesigns.EyeTracking
         % initialized before running but don't need to be initialized for
         % every single trial
         function shouldContinue = initBeforeRunning( this )
-
-            % % % % % % % % % % % % % if this.ExperimentOptions.UseEyelinkEyeTracker
-            % % % % % % % % % % % % %     % set up eyelink
-            % % % % % % % % % % % % %     this = eyelinkSetupCustomCalib(this);
-            % % % % % % % % % % % % % end
-            % % % % % % % % % % % % % this.el.justStarted = true;
 
             % create camera object with rendering properties
             this = setUpShapeAppearanceAndCameraProjectionMatrix(this);
@@ -232,22 +225,18 @@ classdef OpticFlow_DualTask < ArumeExperimentDesigns.EyeTracking
                 end
             end
 
-            % % % % % % % % % % % % % % % % % % if this.ExperimentOptions.UseEyelinkEyeTracker
-            % % % % % % % % % % % % % % % % % %     % close eyelink and copy file over to some directory
-            % % % % % % % % % % % % % % % % % %     closeEyelinkCopyData(this);
-            % % % % % % % % % % % % % % % % % % end
         end
         
     end
 
 
-    methods
-        function Plot_MattTesting(this)
-            samples = this.Session.samplesDataTable;
-            trials = this.Session.trialDataTable;
-
-            figure
-        end
-    end
+    % methods
+    %     function Plot_MattTesting(this)
+    %         samples = this.Session.samplesDataTable;
+    %         trials = this.Session.trialDataTable;
+    % 
+    %         figure
+    %     end
+    % end
     
 end
