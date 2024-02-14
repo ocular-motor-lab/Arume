@@ -17,7 +17,6 @@ classdef OpticFlow_DualTask < ArumeExperimentDesigns.EyeTracking
             dlg = GetOptionsDialog@ArumeExperimentDesigns.EyeTracking(this, importing);
 
             %% ADD new options
-            dlg.ObserverID = {'test'};
             dlg.TaskType = {{'Visual Search','Heading','Both','All interleaved'}};
             dlg.UniformityOptions = {{'Only Uniform' '{Only non-uniform}' 'both'}};
             dlg.NumShapes = {2000, 'Number of Shapes',[1000,100000]};
@@ -34,12 +33,11 @@ classdef OpticFlow_DualTask < ArumeExperimentDesigns.EyeTracking
             dlg.HeadingChangeDuration = {2, 'Heading change duration',[0,10]};
             dlg.Smoothing = {{'Gaussian','Linear','None'}};
             dlg.WalkSpeed = {3.25, 'Locomotion Speed (m/sec)',[0,100]}; % in meters per second walking = 1.31, jogging = 3.25, running = 5.76, driving = 13.41
-            dlg.ShapeLifetime = {8, 'Shape Lifetime (secs)',[0,20]}; % in secs
-            dlg.NumberTrials = {20, 'Number of Trials Per Condition',[1,10000]};
+            dlg.ShapeLifetime = {2, 'Shape Lifetime (secs)',[0,20]}; % in secs
+            dlg.NumberTrials = {1, 'Number of Trials Per Condition',[1,10000]};
             dlg.AuditoryFeedback = {{'0','{1}'}, 'Auditory Feedback?'};
 
             %% CHANGE DEFAULTS values for existing options
-
             dlg.UseEyeTracker = { {'0','{1}' }};
             dlg.EyeTracker      = { {'OpenIris' 'Fove' '{Eyelink}' 'Mouse sim'} };
             dlg.Debug.DisplayVariableSelection = 'TrialNumber TrialResult Speed Stimulus'; % which variables to display every trial in the command line separated by spaces
