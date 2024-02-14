@@ -1425,8 +1425,8 @@ classdef ExperimentDesign < handle
                                         end
 
                                         [framenumber, eyetrackertime] = this.eyeTracker.RecordEvent( ...
-                                            sprintf('TRIAL_START [trial=%d, condition=%d, PTBtime=%d]', ...
-                                            thisTrialData.TrialNumber, thisTrialData.Condition, thisTrialData.TimeTrialStart) );
+                                            sprintf('TRIAL_START [trial=%d, condition=%d]', ...
+                                            thisTrialData.TrialNumber, thisTrialData.Condition) );
 
                                         thisTrialData.EyeTrackerFrameNumberTrialStart = framenumber;
                                         thisTrialData.EyeTrackerTimeTrialStart = eyetrackertime;
@@ -1462,8 +1462,8 @@ classdef ExperimentDesign < handle
                                     
                                     if (~isempty(this.eyeTracker) )
                                         [framenumber, eyetrackertime] = this.eyeTracker.RecordEvent(....
-                                            sprintf('TRIAL_STOP [trial=%d, condition=%d, PTBtime=%d]', ...
-                                            thisTrialData.TrialNumber, thisTrialData.Condition, thisTrialData.TimeTrialStop) );
+                                            sprintf('TRIAL_STOP [trial=%d, condition=%d]', ...
+                                            thisTrialData.TrialNumber, thisTrialData.Condition) );
                                         thisTrialData.EyeTrackerFrameNumberTrialStop = framenumber;
                                         thisTrialData.EyeTrackerTimeTrialStop = eyetrackertime;
 
@@ -2253,6 +2253,14 @@ classdef ExperimentDesign < handle
                 c = classList(i);
                 if (~c.Abstract)
                     experimentList{end+1} = strrep( c.Name, 'ArumeExperimentDesigns.','');
+                end
+            end
+
+            classList = meta.package.fromName('AlconExperimentDesigns').ClassList;
+            for i=1:length(classList)
+                c = classList(i);
+                if (~c.Abstract)
+                    experimentList{end+1} = strrep( c.Name, 'AlconExperimentDesigns.','');
                 end
             end
         end

@@ -37,26 +37,20 @@ function [this,thisTrialData] = presentStimulus(this,thisTrialData)
     shapesz(this.shapes.shapetype) = 2/sqrt(pi);
     shapesz(~this.shapes.shapetype) = 1;
 
-    % % % % % % % % % % % % % % % % % % % % % start recording
-    % % % % % % % % % % % % % % % % % % % % if this.ExperimentOptions.UseEyelinkEyeTracker
-    % % % % % % % % % % % % % % % % % % % %     trialmsg = sprintf('Trial %i',thisTrialData.TrialNumber);
-    % % % % % % % % % % % % % % % % % % % %     Eyelink('Message',trialmsg)
-    % % % % % % % % % % % % % % % % % % % %     Eyelink('StartRecording');
-    % % % % % % % % % % % % % % % % % % % % end
-
     % now we prepare for looping over the frames for a single trial
     nframesctr = 1;
-    Eyelink('Message', 'Started Stimulus Presentation');
+
+
+    [framenumber, eyetrackertime] = this.eyeTracker.RecordEvent( ...
+        sprintf('STIMULUS_ONSET [trial=%d, condition=%d]', ...
+        thisTrialData.TrialNumber, thisTrialData.Condition) );
+
+    thisTrialData.EyeTrackerFrameNumberStimulusOnset = framenumber;
+    thisTrialData.EyeTrackerTimeStimulusOnset = eyetrackertime;
+
+
     while (nframesctr <= this.camera.ntrialframes) 
-        % % % % % % % % % % % % % % % % % % % % % % % % % 
-        % % % % % % % % % % % % % % % % % % % % % % % % % % check eyelink still connected
-        % % % % % % % % % % % % % % % % % % % % % % % % % if this.ExperimentOptions.UseEyelinkEyeTracker
-        % % % % % % % % % % % % % % % % % % % % % % % % %     error=Eyelink('CheckRecording');
-        % % % % % % % % % % % % % % % % % % % % % % % % %     if(error~=0)
-        % % % % % % % % % % % % % % % % % % % % % % % % %         break;
-        % % % % % % % % % % % % % % % % % % % % % % % % %     end
-        % % % % % % % % % % % % % % % % % % % % % % % % % end
-        % % % % % % % % % % % % % % % % % % % % % % % % % 
+
         % check if any dots have reached their lifetime
         ltidxs = this.shapes.lifetime > this.camera.nshapeframes;
     
@@ -164,11 +158,11 @@ function [this,thisTrialData] = presentStimulus(this,thisTrialData)
         
     end
 
-    Eyelink('Message', 'Ended Stimulus Presentation');
+    [framenumber, eyetrackertime] = this.eyeTracker.RecordEvent( ...
+        sprintf('STIMULUS_OFFSET [trial=%d, condition=%d]', ...
+        thisTrialData.TrialNumber, thisTrialData.Condition) );
 
-    % % % % % % % % % % % % % % % % % % % % % % % % % %  % stop recording at end of trial
-    % % % % % % % % % % % % % % % % % % % % % % % % % % if this.ExperimentOptions.UseEyelinkEyeTracker
-    % % % % % % % % % % % % % % % % % % % % % % % % % %     Eyelink('StopRecording');
-    % % % % % % % % % % % % % % % % % % % % % % % % % % end
+    thisTrialData.EyeTrackerFrameNumberStimulusOffset = framenumber;
+    thisTrialData.EyeTrackerTimeStimulusOffset = eyetrackertime;
 
 end
