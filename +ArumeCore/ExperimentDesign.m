@@ -238,6 +238,8 @@ classdef ExperimentDesign < handle
                 idx = trialDataTable.SampleStartTrial(i):trialDataTable.SampleStopTrial(i);
                 samplesDataTable.TrialNumber(idx) = trialDataTable.TrialNumber(i);
             end
+
+            trialDataTable = this.PrepareTrialDataTableEyeTracking2(trialDataTable, samplesDataTable,  options);
             cprintf('blue', '++ ARUME::Done with trialDataTable.\n');
 
             %% 3) Prepare session data table
@@ -552,8 +554,8 @@ classdef ExperimentDesign < handle
                         % are still useful so we will regenate them here
                         % in the trial table
                         for i=1:height(trialDataTable)
-                            i1 = find(samplesDataTable.RawTime>=trialDataTable.EyeTrackerTimeTrialStart(i),1,'first');
-                            i2 = find(samplesDataTable.RawTime<=trialDataTable.EyeTrackerTimeTrialStop(i),1,'last');
+                            i1 = find(samplesDataTable.RawTime>=trialDataTable.EyeTrackerTimeTrialStart(i)/1000,1,'first');
+                            i2 = find(samplesDataTable.RawTime<=trialDataTable.EyeTrackerTimeTrialStop(i)/1000,1,'last');
                             trialDataTable.EyeTrackerFrameNumberTrialStart(i) = samplesDataTable.RawFrameNumber(i1);
                             trialDataTable.EyeTrackerFrameNumberTrialStop(i) = samplesDataTable.RawFrameNumber(i2); 
                         end
@@ -570,8 +572,14 @@ classdef ExperimentDesign < handle
                         end
 
                 end
+            end
+        end
+        
+        function trialDataTable = PrepareTrialDataTableEyeTracking2( this, trialDataTable, samplesDataTable, options)
+               
+            if ( ~isempty( samplesDataTable ) )
                 
-                
+                 
                 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                 % CALCULATE AVERAGE EYE MOVEMENT STATS FOR EACH TRIAL
                 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -2249,6 +2257,14 @@ classdef ExperimentDesign < handle
                     experimentList{end+1} = strrep( c.Name, 'ArumeExperimentDesigns.','');
                 end
             end
+            
+            classList = meta.package.fromName('AlconExperimentDesigns').ClassList;
+            for i=1:length(classList)
+                c = classList(i);
+                if (~c.Abstract)
+                    experimentList{end+1} = strrep( c.Name, 'AlconExperimentDesigns.','');
+                end
+            end
         end
         
         function experiment = Create(experimentName)
@@ -2256,6 +2272,9 @@ classdef ExperimentDesign < handle
             if ( exist( ['ArumeExperimentDesigns.' experimentName],  'class') )
                 % Create the experiment design object
                 experiment = ArumeExperimentDesigns.(experimentName)();
+            elseif ( exist( ['AlconExperimentDesigns.' experimentName],  'class') )
+                % Create the experiment design object
+                experiment = AlconExperimentDesignsAlconExperimentDesigns.(experimentName)();
             else
                 % Create the experiment design object
                 experiment = ArumeCore.ExperimentDesign();

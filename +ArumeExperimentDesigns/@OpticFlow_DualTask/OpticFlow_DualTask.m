@@ -17,7 +17,6 @@ classdef OpticFlow_DualTask < ArumeExperimentDesigns.EyeTracking
             dlg = GetOptionsDialog@ArumeExperimentDesigns.EyeTracking(this, importing);
 
             %% ADD new options
-            dlg.ObserverID = {'test'};
             dlg.TaskType = {{'Visual Search','Heading','Both','All interleaved'}};
             dlg.UniformityOptions = {{'Only Uniform' '{Only non-uniform}' 'both'}};
             dlg.NumShapes = {2000, 'Number of Shapes',[1000,100000]};
@@ -34,12 +33,11 @@ classdef OpticFlow_DualTask < ArumeExperimentDesigns.EyeTracking
             dlg.HeadingChangeDuration = {2, 'Heading change duration',[0,10]};
             dlg.Smoothing = {{'Gaussian','Linear','None'}};
             dlg.WalkSpeed = {3.25, 'Locomotion Speed (m/sec)',[0,100]}; % in meters per second walking = 1.31, jogging = 3.25, running = 5.76, driving = 13.41
-            dlg.ShapeLifetime = {8, 'Shape Lifetime (secs)',[0,20]}; % in secs
-            dlg.NumberTrials = {20, 'Number of Trials Per Condition',[1,10000]};
+            dlg.ShapeLifetime = {2, 'Shape Lifetime (secs)',[0,20]}; % in secs
+            dlg.NumberTrials = {1, 'Number of Trials Per Condition',[1,10000]};
             dlg.AuditoryFeedback = {{'0','{1}'}, 'Auditory Feedback?'};
 
             %% CHANGE DEFAULTS values for existing options
-
             dlg.UseEyeTracker = { {'0','{1}' }};
             dlg.EyeTracker      = { {'OpenIris' 'Fove' '{Eyelink}' 'Mouse sim'} };
             dlg.Debug.DisplayVariableSelection = 'TrialNumber TrialResult Speed Stimulus'; % which variables to display every trial in the command line separated by spaces
@@ -59,24 +57,6 @@ classdef OpticFlow_DualTask < ArumeExperimentDesigns.EyeTracking
             
             %-- condition variables ---------------------------------------
             t = ArumeCore.TrialTableBuilder();
-
-            % t.AddConditionVariable( 'Distance', ["near" "far"]);
-            % t.AddConditionVariable( 'Direction', {'Left' 'Right' });
-            % t.AddConditionVariable( 'Tilt', [-30 0 30]);
-            %
-            % Add three blocks. One with all the upright trials, one with the rest,
-            % and another one with upright trials. Running only one repeatition of
-            % each upright trial and 3 repeatitions of the other trials,
-            % t.AddBlock(find(t.ConditionTable.Tilt==0), 1);
-            % t.AddBlock(find(t.ConditionTable.Tilt~=0), 3);
-            % t.AddBlock(find(t.ConditionTable.Tilt==0), 1);
-            %
-            % trialSequence = 'Random';
-            % blockSequence =  'Sequential';
-            % blockSequenceRepeatitions = 2;
-            % abortAction = 'Repeat';
-            % trialsPerSession = 10;
-            % trialTable = t.GenerateTrialTable(trialSequence, blockSequence, blockSequenceRepeatitions, abortAction,trialsPerSession);
 
             switch(this.ExperimentOptions.UniformityOptions)
                 case 'Only Uniform'
@@ -258,6 +238,16 @@ classdef OpticFlow_DualTask < ArumeExperimentDesigns.EyeTracking
             % % % % % % % % % % % % % % % % % % end
         end
         
+    end
+
+
+    methods
+        function Plot_MattTesting(this)
+            samples = this.Session.samplesDataTable;
+            trials = this.Session.trialDataTable;
+
+            figure
+        end
     end
     
 end
