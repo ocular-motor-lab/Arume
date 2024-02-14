@@ -2256,6 +2256,9 @@ classdef ExperimentDesign < handle
             if ( exist( ['ArumeExperimentDesigns.' experimentName],  'class') )
                 % Create the experiment design object
                 experiment = ArumeExperimentDesigns.(experimentName)();
+            elseif ( exist( ['AlconExperimentDesigns.' experimentName],  'class') )
+                % Create the experiment design object
+                experiment = AlconExperimentDesigns.(experimentName)();
             else
                 % Create the experiment design object
                 experiment = ArumeCore.ExperimentDesign();
