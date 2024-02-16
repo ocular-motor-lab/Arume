@@ -1,7 +1,6 @@
 classdef OpticFlow_DualTask < ArumeExperimentDesigns.EyeTracking
 
     % OpticFlow_DualTaskexperiment for Arume 
-
     properties
         camera
         uicomponents
@@ -31,13 +30,12 @@ classdef OpticFlow_DualTask < ArumeExperimentDesigns.EyeTracking
             dlg.NumberTargets = {15, 'Number of Target Shapes'};
 
             % condition parameters
-            % dlg.useeyelink = { {'{0}','1'}, 'Use Eyelink'};
             dlg.HeadingChanges = {[-15, -12.5, -10, -7.5, -5, -2.5, 2.5, 5, 7.5, 10, 12.5, 15], 'Heading Deltas (degrees)',[-100,100]}; % in meters per second walking = 1.31, jogging = 3.25, running = 5.76, driving = 13.41
             dlg.HeadingChangeDuration = {2, 'Heading change duration',[0,10]};
             dlg.Smoothing = {{'Gaussian','Linear','None'}};
             dlg.WalkSpeed = {[3.25,5.76], 'Locomotion Speed (m/sec)',[0,100]}; % in meters per second walking = 1.31, jogging = 3.25, running = 5.76, driving = 13.41
             dlg.ShapeLifetime = {1, 'Shape Lifetime (secs)',[0,20]}; % in secs
-            dlg.NumberTrials = {6, 'Number of Trials Per Condition',[1,10000]};
+            dlg.NumberTrials = {5, 'Number of Trials Per Condition',[1,10000]};
             dlg.AuditoryFeedback = {{'0','{1}'}, 'Auditory Feedback?'};
 
             %% CHANGE DEFAULTS values for existing options
@@ -244,7 +242,8 @@ classdef OpticFlow_DualTask < ArumeExperimentDesigns.EyeTracking
             Enum = ArumeCore.ExperimentDesign.getEnum();
             trialResult = Enum.trialResult.CORRECT;
 
-            % % % % % % % % % % % % % % % % % % % % endOfTrialSequence(this,thisTrialData);
+            % show block number (Arume doesn't do this by default)
+            endOfTrialSequence(this,thisTrialData);
         end
         
         % run cleaning up after the session is completed or interrupted

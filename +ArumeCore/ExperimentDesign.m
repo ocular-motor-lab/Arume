@@ -1534,7 +1534,7 @@ classdef ExperimentDesign < handle
                                 this.Session.currentRun.futureTrialTable(1,:) = [];
                                 
                                 %-- save to disk temporary data
-                                %//TODO this.SaveTempData();
+                                this.Session.save();
                                 
                                 trialsSinceBreak = trialsSinceBreak + 1;
                             else

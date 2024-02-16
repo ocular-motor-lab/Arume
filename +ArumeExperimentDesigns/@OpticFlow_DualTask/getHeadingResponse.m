@@ -59,11 +59,39 @@ function [this, thisTrialData]  = getHeadingResponse(this, thisTrialData)
     if this.ExperimentOptions.AuditoryFeedback
         
         % set some sort of threshold error in degrees?
-        if abs(thisTrialData.HeadingResponse - thisTrialData.HeadingChange) < 10
-            PsychPortAudio('Start', this.audio.pahandlecorrect, 1, 0, 1);
-        else
-            PsychPortAudio('Start', this.audio.pahandleincorrect, 1, 0, 1);
+        % if abs(thisTrialData.HeadingResponse - thisTrialData.HeadingChange) < 10
+        %     PsychPortAudio('Start', this.audio.pahandlecorrect, 1, 0, 1);
+        % else
+        %     PsychPortAudio('Start', this.audio.pahandleincorrect, 1, 0, 1);
+        % end
+
+        % equivalent of auditory feedback is showing what the ground-truth
+        % angle was
+        gtang = deg2rad(thisTrialData.HeadingChange+90);
+
+        resplinex2 = this.uicomponents.resplinex1+cos(respang)*this.uicomponents.linelen;
+        respliney2 = this.uicomponents.respliney1-sin(respang)*this.uicomponents.linelen;
+
+        resplinex3 = this.uicomponents.resplinex1+cos(gtang)*this.uicomponents.linelen;
+        respliney3 = this.uicomponents.respliney1-sin(gtang)*this.uicomponents.linelen;
+        
+        currt = GetSecs;
+        while (GetSecs-currt)<2
+
+            Screen('DrawLines', this.Graph.window, this.uicomponents.outsidelinexy, 3, [127,127,127], [], 2);
+            Screen('DrawLines', this.Graph.window, this.uicomponents.rulerlinexy, 3, [127,127,127], [], 2);
+            Screen('DrawLines', this.Graph.window, [[this.uicomponents.resplinex1;this.uicomponents.respliney1]...
+                ,[resplinex2;respliney2]], 3, [255,255,255], [], 2);
+    
+            Screen('DrawLines', this.Graph.window, [[this.uicomponents.resplinex1;this.uicomponents.respliney1]...
+                ,[resplinex3;respliney3]], 3, [50,255,50], [], 2);
+        
+            % we flip the heading so that the labels are more intuitive
+            DrawFormattedText(this.Graph.window, num2str(-round(rad2deg(respang)-90)), 'center', this.uicomponents.texty, [255,255,255]);
+            DrawFormattedText(this.Graph.window, num2str(-round(rad2deg(gtang)-90)), 'center', this.uicomponents.texty+30, [50,255,50]);
+            this.Graph.Flip(this, thisTrialData);
         end
+
 
     end
 

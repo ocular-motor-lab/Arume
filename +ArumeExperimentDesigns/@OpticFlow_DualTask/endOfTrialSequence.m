@@ -6,9 +6,7 @@ function endOfTrialSequence(this,thisTrialData)
         % end of block = break
         if thisTrialData.BlockChange
 
-            pcomplete = thisTrialData.BlockNumber/this.ExperimentOptions.numberblocks;
-            msg = sprintf('Completed: %i%%\nTake a break, then press any key to continue...', round(pcomplete*100));
-
+            msg = 'Switching Task. then press any key to continue...';
             noresp = true;
 
             while noresp
@@ -22,10 +20,6 @@ function endOfTrialSequence(this,thisTrialData)
                     % just start next block
                     noresp = false;
                 end
-            end
-
-            if exptparams.UseEyelinkEyeTracker
-                EyelinkDoTrackerSetup(el);
             end
 
         end
