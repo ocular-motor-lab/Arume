@@ -18,7 +18,7 @@ function [this, thisTrialData]  = getHeadingResponse(this, thisTrialData)
             ,[resplinex2;respliney2]], 3, [255,255,255], [], 2);
     
         % we flip the heading so that the labels are more intuitive
-        DrawFormattedText(this.Graph.window, num2str(-round(rad2deg(respang)-90)), 'center', this.uicomponents.texty, [255,255,255]);
+        DrawFormattedText(this.Graph.window, sprintf('Your Answer: %i',-round(rad2deg(respang)-90)), 'center', this.uicomponents.texty, [255,255,255]);
         this.Graph.Flip(this, thisTrialData);
     
         % enter accepts the user's response
@@ -87,8 +87,8 @@ function [this, thisTrialData]  = getHeadingResponse(this, thisTrialData)
                 ,[resplinex3;respliney3]], 3, [50,255,50], [], 2);
         
             % we flip the heading so that the labels are more intuitive
-            DrawFormattedText(this.Graph.window, num2str(-round(rad2deg(respang)-90)), 'center', this.uicomponents.texty, [255,255,255]);
-            DrawFormattedText(this.Graph.window, num2str(-round(rad2deg(gtang)-90)), 'center', this.uicomponents.texty+30, [50,255,50]);
+            DrawFormattedText(this.Graph.window, sprintf('Your Answer: %i',-round(rad2deg(respang)-90)), 'center', this.uicomponents.texty, [255,255,255]);
+            DrawFormattedText(this.Graph.window, sprintf('Correct Answer: %i',-round(rad2deg(gtang)-90)), 'center', this.uicomponents.texty+30, [50,255,50]);
             this.Graph.Flip(this, thisTrialData);
         end
 
