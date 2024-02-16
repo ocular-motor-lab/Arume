@@ -26,7 +26,7 @@ function this = initializeTargetShapes(this,thisTrialData)
         % time. We may want to have the dots disappear before the end,
         % because this means that the targets are more evenly spread
         % vertically, and may draw fixation downward. 
-        proportioncontinuousmotion = .5; % Set to 1 if we want the dots to be alive the whole trial
+        proportioncontinuousmotion = .4; % Set to 1 if we want the dots to be alive the whole trial
         startidx = 1; endidx = round(length(this.camera.deltaz)*proportioncontinuousmotion);
 
         totalzdisplacement = sum(this.camera.deltaz(startidx:endidx));

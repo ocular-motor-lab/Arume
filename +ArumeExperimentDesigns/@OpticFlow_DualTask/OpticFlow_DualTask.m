@@ -17,7 +17,10 @@ classdef OpticFlow_DualTask < ArumeExperimentDesigns.EyeTracking
             dlg = GetOptionsDialog@ArumeExperimentDesigns.EyeTracking(this, importing);
 
             %% ADD new options
-            dlg.TaskType = {{'Visual Search','Heading','Both','All interleaved'}};
+            dlg.TaskType = {{'Visual Search','Heading','Both','{Single Tasks Interleaved}','All interleaved'}};
+            % dlg.BlockTasks = {{'0','{1}'},'Block together tasks?'};
+            dlg.NumberTaskBlocks = {3, 'How many task blocks?',[1,10000]}; % based on view distance of 1.3000 meters
+
             dlg.UniformityOptions = {{'Only Uniform' '{Only non-uniform}' 'both'}};
             dlg.NumShapes = {2000, 'Number of Shapes',[1000,100000]};
             dlg.ShapeSz = {12, 'Shape size (circle diam in px)',[1,100]}; % px - preferable odd
@@ -25,16 +28,16 @@ classdef OpticFlow_DualTask < ArumeExperimentDesigns.EyeTracking
             dlg.FCP = {60, 'far clipping plane',[1,1000]}; % in meters
             dlg.ObserverHeight = {1.23, 'Observer Height',[0.1,10]}; % Center of the screen in meters
             dlg.ShapeSizeCue = {{'0','{1}'}, 'Size Cue?'};
-            dlg.NumberTargets = {20, 'Number of Target Shapes'};
+            dlg.NumberTargets = {15, 'Number of Target Shapes'};
 
             % condition parameters
             % dlg.useeyelink = { {'{0}','1'}, 'Use Eyelink'};
             dlg.HeadingChanges = {[-15, -12.5, -10, -7.5, -5, -2.5, 2.5, 5, 7.5, 10, 12.5, 15], 'Heading Deltas (degrees)',[-100,100]}; % in meters per second walking = 1.31, jogging = 3.25, running = 5.76, driving = 13.41
             dlg.HeadingChangeDuration = {2, 'Heading change duration',[0,10]};
             dlg.Smoothing = {{'Gaussian','Linear','None'}};
-            dlg.WalkSpeed = {3.25, 'Locomotion Speed (m/sec)',[0,100]}; % in meters per second walking = 1.31, jogging = 3.25, running = 5.76, driving = 13.41
-            dlg.ShapeLifetime = {2, 'Shape Lifetime (secs)',[0,20]}; % in secs
-            dlg.NumberTrials = {1, 'Number of Trials Per Condition',[1,10000]};
+            dlg.WalkSpeed = {[3.25,5.76], 'Locomotion Speed (m/sec)',[0,100]}; % in meters per second walking = 1.31, jogging = 3.25, running = 5.76, driving = 13.41
+            dlg.ShapeLifetime = {1, 'Shape Lifetime (secs)',[0,20]}; % in secs
+            dlg.NumberTrials = {6, 'Number of Trials Per Condition',[1,10000]};
             dlg.AuditoryFeedback = {{'0','{1}'}, 'Auditory Feedback?'};
 
             %% CHANGE DEFAULTS values for existing options
@@ -42,14 +45,16 @@ classdef OpticFlow_DualTask < ArumeExperimentDesigns.EyeTracking
             dlg.EyeTracker      = { {'OpenIris' 'Fove' '{Eyelink}' 'Mouse sim'} };
             dlg.Debug.DisplayVariableSelection = 'TrialNumber TrialResult Speed Stimulus'; % which variables to display every trial in the command line separated by spaces
 
-            dlg.DisplayOptions.ScreenWidth = { 121 '* (cm)' [1 3000]};
-            dlg.DisplayOptions.ScreenHeight = { 68 '* (cm)' [1 3000]};
-            dlg.DisplayOptions.ScreenDistance = { 60 '* (cm)' [1 3000]};
+            % overwrite default display parameters
+            dlg.DisplayOptions.ScreenWidth = { 170 '* (cm)' [1 3000]};
+            dlg.DisplayOptions.ScreenHeight = { 96 '* (cm)' [1 3000]};
+            dlg.DisplayOptions.ScreenDistance = { 130 '* (cm)' [1 3000]};
+            dlg.DisplayOptions.PlaySound = {{'{0}','1'},'Display Sound?'};
             
             dlg.HitKeyBeforeTrial = { {'{0}','1'} };
             dlg.TrialDuration = {8, 'Trial duration',[1,100]}; % in secs
-            dlg.TrialsBeforeBreak = 10; %             dlg.numberblocks = {5, 'Number of Blocks', [1,1000]};
-            dlg.TrialsBeforeCalibration = 10; %             dlg.numberblocks = {5, 'Number of Blocks', [1,1000]};
+            dlg.TrialsBeforeBreak = 20; %             dlg.numberblocks = {5, 'Number of Blocks', [1,1000]};
+            dlg.TrialsBeforeCalibration = 20; %             dlg.numberblocks = {5, 'Number of Blocks', [1,1000]};
             dlg.TrialAbortAction = 'Repeat';
         end
         
@@ -74,6 +79,8 @@ classdef OpticFlow_DualTask < ArumeExperimentDesigns.EyeTracking
                     t.AddConditionVariable('Task',{'Heading'});
                 case 'Both'
                     t.AddConditionVariable('Task',{'Both'});
+                case 'Single Tasks Interleaved'
+                    t.AddConditionVariable('Task',{'Visual Search','Heading'});
                 case 'All interleaved'
                     t.AddConditionVariable('Task',{'Visual Search','Heading','Both'});
             end
@@ -81,14 +88,45 @@ classdef OpticFlow_DualTask < ArumeExperimentDesigns.EyeTracking
             t.AddConditionVariable('WalkingSpeed',this.ExperimentOptions.WalkSpeed);
             t.AddConditionVariable('HeadingChange',this.ExperimentOptions.HeadingChanges);
 
+            % Specify the blocking structure of the task
+            ntrialspercondperblock = round(this.ExperimentOptions.NumberTrials/this.ExperimentOptions.NumberTaskBlocks);
+
+            switch (this.ExperimentOptions.TaskType) 
+                case 'Visual Search'
+                    t.AddBlock(find(t.ConditionTable.Task=='Visual Search'), this.ExperimentOptions.NumberTrials);
+                case 'Heading'
+                    t.AddBlock(find(t.ConditionTable.Task=='Heading'), this.ExperimentOptions.NumberTrials);
+                case 'Both'
+                    t.AddBlock(find(t.ConditionTable.Task=='Both'), this.ExperimentOptions.NumberTrials);
+                case 'Single Tasks Interleaved'
+                    % we don't really want complete randomization, because
+                    % we want the task to change regularly
+                    tasks = categorical({'Visual Search','Heading'});
+                    taskorder = tasks(randperm(length(tasks)));
+                    for i = 1:this.ExperimentOptions.NumberTaskBlocks
+                        for j = 1:length(tasks)
+                            t.AddBlock(find(t.ConditionTable.Task==taskorder(j)), ntrialspercondperblock);
+                        end
+                    end
+                case 'All interleaved'
+                    tasks = categorical({'Visual Search','Heading','Both'});
+                    taskorder = tasks(randperm(length(tasks)));
+                    for i = 1:this.ExperimentOptions.NumberTaskBlocks
+                        for j = 1:length(tasks)
+                            t.AddBlock(find(t.ConditionTable.Task==taskorder(j)), ntrialspercondperblock);
+                        end
+                    end
+            end
+
             trialSequence = 'Random';
             blockSequence =  'Sequential';
-            blockSequenceRepetitions = this.ExperimentOptions.NumberTrials; % basically how many repetitions of each unique condition. block wording confusing
+            blockSequenceRepetitions = 1; % we handle the blocking repetitions manually above
             abortAction = 'Delay';
-            trialsPerSession = this.ExperimentOptions.NumberTrials*height(t.ConditionTable); % full experiment
+            trialsPerSession = realmax; % full experiment
             trialTable = t.GenerateTrialTable(trialSequence, blockSequence, blockSequenceRepetitions, abortAction, trialsPerSession);
 
             this.ExperimentOptions.nTrialsTotal = height(trialTable);
+            fprintf('\n\n THERE ARE %i TRIALS/ROWS IN THE CONSTRUCTED TABLE \n\n',this.ExperimentOptions.nTrialsTotal)
 
             % set up delta-onset time
             mintonset = 1; % heading change cannot happen immediately
@@ -171,8 +209,6 @@ classdef OpticFlow_DualTask < ArumeExperimentDesigns.EyeTracking
                 % present optic flow stimulus. No response recorded during
                 % movie presentation
                 [this,thisTrialData] = presentStimulus(this,thisTrialData);
-
-                % gdata = this.eyeTracker.GetCurrentData();
                 
             catch ex
                 rethrow(ex)
