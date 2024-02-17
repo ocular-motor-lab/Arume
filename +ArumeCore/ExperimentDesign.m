@@ -41,6 +41,7 @@ classdef ExperimentDesign < handle
             dlg.TrialDuration = 10;
             dlg.TrialsBeforeBreak = 1000;
             dlg.TrialsBeforeCalibration = 1000;
+            dlg.TrialsBeforeSaving = 1;
 
             dlg.UseEyeTracker   = { {'0' '{1}'} };
             dlg.EyeTracker      = { {'{OpenIris}' 'Fove' 'Eyelink' 'Mouse sim'} };
@@ -1533,8 +1534,10 @@ classdef ExperimentDesign < handle
                                 %-- remove the condition that has just run from the future conditions list
                                 this.Session.currentRun.futureTrialTable(1,:) = [];
                                 
-                                %-- save to disk temporary data
-                                this.Session.save();
+                                if ( mod( nCorrectTrials, this.ExperimentOptions.TrialsBeforeSaving ) == 0 )
+                                    %-- save to disk temporary data
+                                    this.Session.save();
+                                end
                                 
                                 trialsSinceBreak = trialsSinceBreak + 1;
                             else
@@ -2253,14 +2256,6 @@ classdef ExperimentDesign < handle
                 c = classList(i);
                 if (~c.Abstract)
                     experimentList{end+1} = strrep( c.Name, 'ArumeExperimentDesigns.','');
-                end
-            end
-
-            classList = meta.package.fromName('AlconExperimentDesigns').ClassList;
-            for i=1:length(classList)
-                c = classList(i);
-                if (~c.Abstract)
-                    experimentList{end+1} = strrep( c.Name, 'AlconExperimentDesigns.','');
                 end
             end
         end
