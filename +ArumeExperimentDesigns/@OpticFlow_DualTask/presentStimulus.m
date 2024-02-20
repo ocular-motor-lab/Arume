@@ -165,4 +165,11 @@ function [this,thisTrialData] = presentStimulus(this,thisTrialData)
     thisTrialData.EyeTrackerFrameNumberStimulusOffset = framenumber;
     thisTrialData.EyeTrackerTimeStimulusOffset = eyetrackertime;
 
+    % save position data for last frame, so we can present it while we give
+    % the stimulus prompt (if we like). 
+    this.shapes.lastframecirclerects = circlerects;
+    this.shapes.lastframesquarerects = squarerects;
+    this.shapes.lastframetargetrects = targetrects;
+    this.shapes.targetdrawtype = targetdrawtype;
+
 end

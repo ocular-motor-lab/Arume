@@ -91,8 +91,9 @@ classdef Arume < handle
                     this.configuration.recentProjects =  this.configuration.recentProjects(1:min(maxNumberRecentProjects,length(this.configuration.recentProjects)));
                 end
                 this.configuration.recentProjects(strcmp(this.configuration.recentProjects, project.path)) = [];
+                
                 % add it again at the top
-                this.configuration.recentProjects = [project.path this.configuration.recentProjects];
+                this.configuration.recentProjects = [{project.path}; this.configuration.recentProjects];
                 
                 this.saveConfiguration();
                 

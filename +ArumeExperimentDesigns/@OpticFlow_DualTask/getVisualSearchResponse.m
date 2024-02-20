@@ -5,6 +5,14 @@ function [this, thisTrialData]  = getVisualSearchResponse(this, thisTrialData)
     resp = nan;
 
     while noresp
+
+        % show final frame of stimulus, but convert to grey (so they can't
+        % continue searching). 
+        Screen('FillOval', this.Graph.window, [100,100,100], this.shapes.lastframecirclerects)
+        Screen('FillRect', this.Graph.window, [100,100,100], this.shapes.lastframesquarerects)
+        if thisTrialData.TargetPresent
+            Screen(this.shapes.targetdrawtype, this.Graph.window, [100,100,100], this.shapes.lastframetargetrects)
+        end
     
         % we flip the heading so that the labels are more intuitive
         msg = sprintf( 'Were there any %s?',thisTrialData.SearchTarget);

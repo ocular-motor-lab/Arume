@@ -7,6 +7,14 @@ function [this, thisTrialData]  = getHeadingResponse(this, thisTrialData)
     noresp = true;
     
     while noresp
+
+        % show final frame of stimulus, but convert to grey (so they can't
+        % continue searching). 
+        Screen('FillOval', this.Graph.window, [100,100,100], this.shapes.lastframecirclerects)
+        Screen('FillRect', this.Graph.window, [100,100,100], this.shapes.lastframesquarerects)
+        if thisTrialData.TargetPresent
+            Screen(this.shapes.targetdrawtype, this.Graph.window, [100,100,100], this.shapes.lastframetargetrects)
+        end
     
         % convert angle into x-y position
         resplinex2 = this.uicomponents.resplinex1+cos(respang)*this.uicomponents.linelen;
@@ -29,7 +37,7 @@ function [this, thisTrialData]  = getHeadingResponse(this, thisTrialData)
                 KbName(keys(i));
     
                 switch(KbName(keys(i)))
-                    case 'y'
+                    case 'Return'
                         noresp = false;
     
                     case 'LeftArrow'

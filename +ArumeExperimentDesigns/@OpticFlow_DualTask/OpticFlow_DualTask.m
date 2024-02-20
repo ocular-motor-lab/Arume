@@ -35,7 +35,7 @@ classdef OpticFlow_DualTask < ArumeExperimentDesigns.EyeTracking
             dlg.Smoothing = {{'Gaussian','Linear','None'}};
             dlg.WalkSpeed = {[3.25,5.76], 'Locomotion Speed (m/sec)',[0,100]}; % in meters per second walking = 1.31, jogging = 3.25, running = 5.76, driving = 13.41
             dlg.ShapeLifetime = {1, 'Shape Lifetime (secs)',[0,20]}; % in secs
-            dlg.NumberTrials = {5, 'Number of Trials Per Condition',[1,10000]};
+            dlg.NumberTrials = {3, 'Number of Trials Per Condition',[1,10000]};
             dlg.AuditoryFeedback = {{'0','{1}'}, 'Auditory Feedback?'};
 
             %% CHANGE DEFAULTS values for existing options
@@ -51,8 +51,6 @@ classdef OpticFlow_DualTask < ArumeExperimentDesigns.EyeTracking
             
             dlg.HitKeyBeforeTrial = { {'{0}','1'} };
             dlg.TrialDuration = {8, 'Trial duration',[1,100]}; % in secs
-            dlg.TrialsBeforeBreak = 20; %             dlg.numberblocks = {5, 'Number of Blocks', [1,1000]};
-            dlg.TrialsBeforeCalibration = 20; %             dlg.numberblocks = {5, 'Number of Blocks', [1,1000]};
             dlg.TrialAbortAction = 'Repeat';
         end
         
@@ -87,15 +85,30 @@ classdef OpticFlow_DualTask < ArumeExperimentDesigns.EyeTracking
             t.AddConditionVariable('HeadingChange',this.ExperimentOptions.HeadingChanges);
 
             % Specify the blocking structure of the task
-            ntrialspercondperblock = round(this.ExperimentOptions.NumberTrials/this.ExperimentOptions.NumberTaskBlocks);
+            nt =  this.ExperimentOptions.NumberTrials;
+            nb = this.ExperimentOptions.NumberTaskBlocks;
 
+            % we want to always have the specified number of trials, even
+            % if they can't be evenly split into blocks. Using the below
+            % code, we split the blocks up as evenly as possible (last
+            % n blocks have 1 fewer trial
+            ntpb = zeros(1,nb);
+            ntpb = ntpb + fix(nt/nb);
+            ntpb(1:mod(nt,nb)) = ntpb(1:mod(nt,nb)) + 1;
+            
             switch (this.ExperimentOptions.TaskType) 
                 case 'Visual Search'
-                    t.AddBlock(find(t.ConditionTable.Task=='Visual Search'), this.ExperimentOptions.NumberTrials);
+                    for i = 1:this.ExperimentOptions.NumberTaskBlocks
+                        t.AddBlock(find(t.ConditionTable.Task=='Visual Search'), ntpb(i));
+                    end
                 case 'Heading'
-                    t.AddBlock(find(t.ConditionTable.Task=='Heading'), this.ExperimentOptions.NumberTrials);
+                    for i = 1:this.ExperimentOptions.NumberTaskBlocks
+                        t.AddBlock(find(t.ConditionTable.Task=='Heading'), ntpb(i));
+                    end
                 case 'Both'
-                    t.AddBlock(find(t.ConditionTable.Task=='Both'), this.ExperimentOptions.NumberTrials);
+                    for i = 1:this.ExperimentOptions.NumberTaskBlocks
+                        t.AddBlock(find(t.ConditionTable.Task=='Both'), ntpb(i));
+                    end
                 case 'Single Tasks Interleaved'
                     % we don't really want complete randomization, because
                     % we want the task to change regularly
@@ -103,7 +116,7 @@ classdef OpticFlow_DualTask < ArumeExperimentDesigns.EyeTracking
                     taskorder = tasks(randperm(length(tasks)));
                     for i = 1:this.ExperimentOptions.NumberTaskBlocks
                         for j = 1:length(tasks)
-                            t.AddBlock(find(t.ConditionTable.Task==taskorder(j)), ntrialspercondperblock);
+                            t.AddBlock(find(t.ConditionTable.Task==taskorder(j)), ntpb(i));
                         end
                     end
                 case 'All interleaved'
@@ -111,7 +124,7 @@ classdef OpticFlow_DualTask < ArumeExperimentDesigns.EyeTracking
                     taskorder = tasks(randperm(length(tasks)));
                     for i = 1:this.ExperimentOptions.NumberTaskBlocks
                         for j = 1:length(tasks)
-                            t.AddBlock(find(t.ConditionTable.Task==taskorder(j)), ntrialspercondperblock);
+                            t.AddBlock(find(t.ConditionTable.Task==taskorder(j)), ntpb(i));
                         end
                     end
             end
@@ -132,16 +145,25 @@ classdef OpticFlow_DualTask < ArumeExperimentDesigns.EyeTracking
             trange = this.ExperimentOptions.TrialDuration-this.ExperimentOptions.HeadingChangeDuration-mintoffset-mintonset;
             trialTable.HeadingChangeOnsetTime = rand(height(trialTable),1).*trange + mintonset;
 
-            % set up target type
+            % set up target type. all equally probable
             targetTypes = categorical({'red squares' 'red circles' 'green squares' 'green circles'});
-            trialTable.SearchTarget = targetTypes(randi(length(targetTypes),this.ExperimentOptions.nTrialsTotal,1))';
+            idxs = repmat(1:length(targetTypes),1,ceil(this.ExperimentOptions.nTrialsTotal/length(targetTypes)));
+            idxs = idxs(randperm(length(idxs)));
+            idxs = idxs(1:this.ExperimentOptions.nTrialsTotal);
+            trialTable.SearchTarget = targetTypes(idxs)';
 
             % set up target present/absent. Arume hates logicals so use doubles
-            trialTable.TargetPresent = double(rand(this.ExperimentOptions.nTrialsTotal,1)>.5);
+            idxs = repmat([0,1],1,ceil(this.ExperimentOptions.nTrialsTotal/2));
+            idxs = idxs(randperm(length(idxs)));
+            idxs = idxs(1:this.ExperimentOptions.nTrialsTotal);
+            trialTable.TargetPresent = idxs';
 
             % set up target present/absent
             responseOrder = categorical({'HeadingFirst' 'SearchFirst'});
-            trialTable.ResponseOrder = responseOrder(randi(length(responseOrder),this.ExperimentOptions.nTrialsTotal,1))';
+            idxs = repmat(1:length(responseOrder),1,ceil(this.ExperimentOptions.nTrialsTotal/length(responseOrder)));
+            idxs = idxs(randperm(length(idxs)));
+            idxs = idxs(1:this.ExperimentOptions.nTrialsTotal);
+            trialTable.ResponseOrder = responseOrder(idxs)';
 
             % and trial number
             trialTable.Trial = (1:this.ExperimentOptions.nTrialsTotal)';
@@ -149,6 +171,18 @@ classdef OpticFlow_DualTask < ArumeExperimentDesigns.EyeTracking
             % and block derivative (block change)
             trialTable.BlockChange = double([diff(trialTable.BlockNumber);0]);
 
+            % make sure that the break is always half way through a
+            % task-block
+            midthroughblock = length(t.Blocks.ConditionsIncluded{1})*t.Blocks.TrialsPerCondition(1)/2;
+
+            if floor(midthroughblock) ~= midthroughblock
+                warning('Breaks are not perfectly aligned with blocks')
+                midthroughblock = ceil(midthroughblock);
+            end
+
+            this.ExperimentOptions.TrialsBeforeBreak = midthroughblock; %             dlg.numberblocks = {5, 'Number of Blocks', [1,1000]};
+            this.ExperimentOptions.TrialsBeforeCalibration = midthroughblock; %             dlg.numberblocks = {5, 'Number of Blocks', [1,1000]};
+            
         end
         
         % run initialization before the first trial is run

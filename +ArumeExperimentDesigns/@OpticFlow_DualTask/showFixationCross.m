@@ -10,14 +10,17 @@ function showFixationCross(this, thisTrialData)
     switch thisTrialData.Task
         case 'Visual Search'
             msg = sprintf( 'Search for the %s',thisTrialData.SearchTarget);
+            msglen = 2;
         case 'Heading'
             msg = 'Estimate the heading';
+            msglen = 1;
         case 'Both'
             msg = sprintf( 'Search for the %s, and estimate the heading',thisTrialData.SearchTarget);
+            msglen = 2.5;
     end
 
     startt = GetSecs;
-    while (GetSecs-startt) < 2
+    while (GetSecs-startt) < msglen
         DrawFormattedText(this.Graph.window, msg, 'center', 'center', [255,255,255]);
         this.Graph.Flip(this, thisTrialData);
     end

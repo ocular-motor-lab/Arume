@@ -24,6 +24,8 @@ classdef EyeTrackerEyelink  < handle
             this.el.foregroundcolour = 1;
             this.el.msgfontcolour = 255;
             this.el.calibrationtargetcolour = [255,255,255];
+            this.el.targetbeep = 0;
+            this.el.feedbackbeep = 0;
             EyelinkUpdateDefaults(this.el);
 
             % Initialization of the connection with the Eyelink Gazetracker.
