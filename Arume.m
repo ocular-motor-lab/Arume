@@ -227,6 +227,9 @@ classdef Arume < handle
             if ( ~isfield( conf, 'defaultDataFolder') )
                 conf.defaultDataFolder = fullfile(folder, 'ArumeData');
             end
+            if ( ~iscell(conf.recentProjects) )
+                conf.recentProjects = {conf.recentProjects};
+            end
             
             % save the updated configuration
             this.configuration = conf;
