@@ -231,14 +231,7 @@ classdef ExperimentDesign < handle
             cprintf('blue', '++ ARUME::Done with samplesDataTable.\n');
 
             %% 2) Prepare the trial data table
-            trialDataTable = this.PrepareTrialDataTableEyeTracking(trialDataTable, samplesDataTable,  options);
-
-            % Build a column for the samples with the trial number
-            samplesDataTable.TrialNumber = nan(size(samplesDataTable.FrameNumber));
-            for i=1:height(trialDataTable)
-                idx = trialDataTable.SampleStartTrial(i):trialDataTable.SampleStopTrial(i);
-                samplesDataTable.TrialNumber(idx) = trialDataTable.TrialNumber(i);
-            end
+            [trialDataTable,samplesDataTable] = this.PrepareTrialDataTableEyeTracking(trialDataTable, samplesDataTable,  options);
             cprintf('blue', '++ ARUME::Done with trialDataTable.\n');
 
             %% 3) Prepare session data table
@@ -440,7 +433,7 @@ classdef ExperimentDesign < handle
             end
         end
         
-        function trialDataTable = PrepareTrialDataTableEyeTracking( this, trialDataTable, samplesDataTable, options)
+        function [trialDataTable samplesDataTable] = PrepareTrialDataTableEyeTracking( this, trialDataTable, samplesDataTable, options)
             
             if ( isfield(this.ExperimentOptions,'EyeTracker') )
                 eyeTrackerType = this.ExperimentOptions.EyeTracker;
