@@ -570,6 +570,13 @@ classdef ExperimentDesign < handle
                             trialDataTable.SampleStopTrial(i) = find(samplesDataTable.FileNumber' == trialDataTable.FileNumber(i) & samplesDataTable.RawFrameNumber'<=trialDataTable.EyeTrackerFrameNumberTrialStop(i),1,'last');
                         end
 
+                end                
+                
+                % Build a column for the samples with the trial number
+                samplesDataTable.TrialNumber = nan(size(samplesDataTable.FrameNumber));
+                for i=1:height(trialDataTable)
+                    idx = trialDataTable.SampleStartTrial(i):trialDataTable.SampleStopTrial(i);
+                    samplesDataTable.TrialNumber(idx) = trialDataTable.TrialNumber(i);
                 end
                 
                 
@@ -707,14 +714,6 @@ classdef ExperimentDesign < handle
                 end
                 
                 
-                % Build a column for the samples with the trial number
-                samplesDataTable.TrialNumber = nan(size(samplesDataTable.FrameNumber));
-                for i=1:height(trialDataTable)
-                    idx = trialDataTable.SampleStartTrial(i):trialDataTable.SampleStopTrial(i);
-                    samplesDataTable.TrialNumber(idx) = trialDataTable.TrialNumber(i);
-                end
-                
-                
                 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                 % CALCULATE AVERAGE SAMPLE PROPERTIES ACROSS TRIALS
                 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -749,14 +748,6 @@ classdef ExperimentDesign < handle
                             condition = strcat(condition,'_', string(trialDataTable{:,ConditionVarsNames(i)}));
                         end
                     end
-                end
-                
-                
-                % Build a column for the samples with the trial number
-                samplesDataTable.TrialNumber = nan(size(samplesDataTable.FrameNumber));
-                for i=1:height(trialDataTable)
-                    idx = trialDataTable.SampleStartTrial(i):trialDataTable.SampleStopTrial(i);
-                    samplesDataTable.TrialNumber(idx) = trialDataTable.TrialNumber(i);
                 end
                 
                 % add columns to quick and slow phases for trial number and
