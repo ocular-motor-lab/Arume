@@ -224,6 +224,12 @@ classdef Arume < handle
             end
             
             % double check configuration fields
+            if ( ~isfield( conf, 'recentProjects') )
+                conf.recentProjects = {};
+            end
+            if ( length(conf.recentProjects)==1 && isempty(conf.recentProjects{1}) )
+                conf.recentProjects = {};
+            end
             if ( ~isfield( conf, 'defaultDataFolder') )
                 conf.defaultDataFolder = fullfile(folder, 'ArumeData');
             end
