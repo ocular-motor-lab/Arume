@@ -215,18 +215,13 @@ classdef ExperimentDesign < handle
                 % In most cases this will just be from EyeTracking
                 % experiment but there could be others that have a
                 % different way to load sample data.
-                try
-                    [samplesDataTable, cleanedData, calibratedData, rawData] = this.PrepareSamplesDataTableEyeTracking(options);
-                    % TODO: I don't like this here. It should be moved
-                    % to session. But may have memory problems at some
-                    % point
-                    this.Session.WriteVariableIfNotEmpty(rawData,'rawDataTable');
-                    this.Session.WriteVariableIfNotEmpty(cleanedData,'cleanedData');
-                    this.Session.WriteVariableIfNotEmpty(calibratedData,'calibratedData');
-                catch ex
-                    getReport(ex)
-                    cprintf('red', sprintf('++ VOGAnalysis :: ERROR PREPARING SAMPLES. WE WILL TRY TO CONTINUE.\n'));
-                end
+                [samplesDataTable, cleanedData, calibratedData, rawData] = this.PrepareSamplesDataTableEyeTracking(options);
+                % TODO: I don't like this here. It should be moved
+                % to session. But may have memory problems at some
+                % point
+                this.Session.WriteVariableIfNotEmpty(rawData,'rawDataTable');
+                this.Session.WriteVariableIfNotEmpty(cleanedData,'cleanedData');
+                this.Session.WriteVariableIfNotEmpty(calibratedData,'calibratedData');
             end
             cprintf('blue', '++ ARUME::Done with samplesDataTable.\n');
 
