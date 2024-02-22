@@ -378,6 +378,51 @@ classdef VOGAnalysis < handle
                         dataFromFile.Int1               = dataFromFile2.Int1;
                     end
                 end
+
+                dPost = dir(strrep(dataFile,'.txt','-PostProc-*.txt'));
+                if ( ~isempty(dPost) && length(dPost)==1)
+                    postprocessedDataFile = fullfile(dPost.folder, dPost.name);
+                end
+                %% if there is a postprocessed file, we merge the appropriate columns
+                if ( exist( 'postprocessedDataFile', 'var' ) )
+                    dataPost = readtable(postprocessedDataFile);
+                    cprintf('SystemCommands','Found a postprocessed file, so loading data columns from it: %s\n', dPost.name);
+
+                    % check if length is the same
+                    if (height(dataFromFile) ~= height(dataPost))
+                        cprintf('SystemCommands','Data from postprocessed file has a different length\n');
+                    end
+
+                    idx = 1:height(dataFromFile);
+                    dataFromFile.LeftPupilX = dataPost.LeftPupilX(idx );
+                    dataFromFile.LeftPupilY = dataPost.LeftPupilY(idx);
+                    dataFromFile.RightPupilX = dataPost.RightPupilX(idx);
+                    dataFromFile.RightPupilY = dataPost.RightPupilY(idx);
+
+                    dataFromFile.LeftCR1X = dataPost.LeftCR1X(idx);
+                    dataFromFile.LeftCR1Y = dataPost.LeftCR1Y(idx);
+                    dataFromFile.RightCR1X = dataPost.RightCR1X(idx);
+                    dataFromFile.RightCR1Y = dataPost.RightCR1Y(idx);
+
+                    dataFromFile.LeftCR2X = dataPost.LeftCR2X(idx);
+                    dataFromFile.LeftCR2Y = dataPost.LeftCR2Y(idx);
+                    dataFromFile.RightCR2X = dataPost.RightCR2X(idx);
+                    dataFromFile.RightCR2Y = dataPost.RightCR2Y(idx);
+
+                    dataFromFile.LeftCR3X = dataPost.LeftCR3X(idx);
+                    dataFromFile.LeftCR3Y = dataPost.LeftCR3Y(idx);
+                    dataFromFile.RightCR3X = dataPost.RightCR3X(idx);
+                    dataFromFile.RightCR3Y = dataPost.RightCR3Y(idx);
+
+                    dataFromFile.LeftCR4X = dataPost.LeftCR4X(idx);
+                    dataFromFile.LeftCR4Y = dataPost.LeftCR4Y(idx);
+                    dataFromFile.RightCR4X = dataPost.RightCR4X(idx);
+                    dataFromFile.RightCR4Y = dataPost.RightCR4Y(idx);
+
+                    dataFromFile.LeftTorsion = dataPost.LeftTorsion(idx);
+                    dataFromFile.RightTorsion = dataPost.RightTorsion(idx);
+
+                end
                 
                 data.Time                   = dataFromFile.LeftSeconds - dataFromFile.LeftSeconds(1);
                 if ( sum(data.Time) == 0 || isnan(sum(data.Time)) )

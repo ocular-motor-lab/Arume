@@ -41,6 +41,7 @@ classdef ExperimentDesign < handle
             dlg.TrialDuration = 10;
             dlg.TrialsBeforeBreak = 1000;
             dlg.TrialsBeforeCalibration = 1000;
+            dlg.TrialsBeforeSaving = 1;
 
             dlg.UseEyeTracker   = { {'0' '{1}'} };
             dlg.EyeTracker      = { {'{OpenIris}' 'Fove' 'Eyelink' 'Mouse sim'} };
@@ -214,30 +215,18 @@ classdef ExperimentDesign < handle
                 % In most cases this will just be from EyeTracking
                 % experiment but there could be others that have a
                 % different way to load sample data.
-                try
-                    [samplesDataTable, cleanedData, calibratedData, rawData] = this.PrepareSamplesDataTableEyeTracking(options);
-                    % TODO: I don't like this here. It should be moved
-                    % to session. But may have memory problems at some
-                    % point
-                    this.Session.WriteVariableIfNotEmpty(rawData,'rawDataTable');
-                    this.Session.WriteVariableIfNotEmpty(cleanedData,'cleanedData');
-                    this.Session.WriteVariableIfNotEmpty(calibratedData,'calibratedData');
-                catch ex
-                    getReport(ex)
-                    cprintf('red', sprintf('++ VOGAnalysis :: ERROR PREPARING SAMPLES. WE WILL TRY TO CONTINUE.\n'));
-                end
+                [samplesDataTable, cleanedData, calibratedData, rawData] = this.PrepareSamplesDataTableEyeTracking(options);
+                % TODO: I don't like this here. It should be moved
+                % to session. But may have memory problems at some
+                % point
+                this.Session.WriteVariableIfNotEmpty(rawData,'rawDataTable');
+                this.Session.WriteVariableIfNotEmpty(cleanedData,'cleanedData');
+                this.Session.WriteVariableIfNotEmpty(calibratedData,'calibratedData');
             end
             cprintf('blue', '++ ARUME::Done with samplesDataTable.\n');
 
             %% 2) Prepare the trial data table
-            trialDataTable = this.PrepareTrialDataTableEyeTracking(trialDataTable, samplesDataTable,  options);
-
-            % Build a column for the samples with the trial number
-            samplesDataTable.TrialNumber = nan(size(samplesDataTable.FrameNumber));
-            for i=1:height(trialDataTable)
-                idx = trialDataTable.SampleStartTrial(i):trialDataTable.SampleStopTrial(i);
-                samplesDataTable.TrialNumber(idx) = trialDataTable.TrialNumber(i);
-            end
+            [trialDataTable,samplesDataTable] = this.PrepareTrialDataTableEyeTracking(trialDataTable, samplesDataTable,  options);
             cprintf('blue', '++ ARUME::Done with trialDataTable.\n');
 
             %% 3) Prepare session data table
@@ -439,7 +428,7 @@ classdef ExperimentDesign < handle
             end
         end
         
-        function trialDataTable = PrepareTrialDataTableEyeTracking( this, trialDataTable, samplesDataTable, options)
+        function [trialDataTable samplesDataTable] = PrepareTrialDataTableEyeTracking( this, trialDataTable, samplesDataTable, options)
             
             if ( isfield(this.ExperimentOptions,'EyeTracker') )
                 eyeTrackerType = this.ExperimentOptions.EyeTracker;
@@ -569,6 +558,13 @@ classdef ExperimentDesign < handle
                             trialDataTable.SampleStopTrial(i) = find(samplesDataTable.FileNumber' == trialDataTable.FileNumber(i) & samplesDataTable.RawFrameNumber'<=trialDataTable.EyeTrackerFrameNumberTrialStop(i),1,'last');
                         end
 
+                end                
+                
+                % Build a column for the samples with the trial number
+                samplesDataTable.TrialNumber = nan(size(samplesDataTable.FrameNumber));
+                for i=1:height(trialDataTable)
+                    idx = trialDataTable.SampleStartTrial(i):trialDataTable.SampleStopTrial(i);
+                    samplesDataTable.TrialNumber(idx) = trialDataTable.TrialNumber(i);
                 end
                 
                 
@@ -706,14 +702,6 @@ classdef ExperimentDesign < handle
                 end
                 
                 
-                % Build a column for the samples with the trial number
-                samplesDataTable.TrialNumber = nan(size(samplesDataTable.FrameNumber));
-                for i=1:height(trialDataTable)
-                    idx = trialDataTable.SampleStartTrial(i):trialDataTable.SampleStopTrial(i);
-                    samplesDataTable.TrialNumber(idx) = trialDataTable.TrialNumber(i);
-                end
-                
-                
                 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                 % CALCULATE AVERAGE SAMPLE PROPERTIES ACROSS TRIALS
                 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -748,14 +736,6 @@ classdef ExperimentDesign < handle
                             condition = strcat(condition,'_', string(trialDataTable{:,ConditionVarsNames(i)}));
                         end
                     end
-                end
-                
-                
-                % Build a column for the samples with the trial number
-                samplesDataTable.TrialNumber = nan(size(samplesDataTable.FrameNumber));
-                for i=1:height(trialDataTable)
-                    idx = trialDataTable.SampleStartTrial(i):trialDataTable.SampleStopTrial(i);
-                    samplesDataTable.TrialNumber(idx) = trialDataTable.TrialNumber(i);
                 end
                 
                 % add columns to quick and slow phases for trial number and
@@ -1533,8 +1513,10 @@ classdef ExperimentDesign < handle
                                 %-- remove the condition that has just run from the future conditions list
                                 this.Session.currentRun.futureTrialTable(1,:) = [];
                                 
-                                %-- save to disk temporary data
-                                this.Session.save();
+                                if ( mod( nCorrectTrials, this.ExperimentOptions.TrialsBeforeSaving ) == 0 )
+                                    %-- save to disk temporary data
+                                    this.Session.save();
+                                end
                                 
                                 trialsSinceBreak = trialsSinceBreak + 1;
                             else
@@ -2253,14 +2235,6 @@ classdef ExperimentDesign < handle
                 c = classList(i);
                 if (~c.Abstract)
                     experimentList{end+1} = strrep( c.Name, 'ArumeExperimentDesigns.','');
-                end
-            end
-
-            classList = meta.package.fromName('AlconExperimentDesigns').ClassList;
-            for i=1:length(classList)
-                c = classList(i);
-                if (~c.Abstract)
-                    experimentList{end+1} = strrep( c.Name, 'AlconExperimentDesigns.','');
                 end
             end
         end
