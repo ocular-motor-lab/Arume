@@ -215,7 +215,7 @@ classdef ExperimentDesign < handle
                 % In most cases this will just be from EyeTracking
                 % experiment but there could be others that have a
                 % different way to load sample data.
-                [samplesDataTable, cleanedData, calibratedData, rawData] = this.PrepareSamplesDataTableEyeTracking(options);
+                [samplesDataTable, cleanedData, calibratedData, rawData] = this.EyeTrackingLoadSamplesData(options);
                 % TODO: I don't like this here. It should be moved
                 % to session. But may have memory problems at some
                 % point
@@ -226,12 +226,22 @@ classdef ExperimentDesign < handle
             cprintf('blue', '++ ARUME::Done with samplesDataTable.\n');
 
             %% 2) Prepare the trial data table
-            [trialDataTable,samplesDataTable] = this.PrepareTrialDataTableEyeTracking(trialDataTable, samplesDataTable,  options);
+            [sampleStartTrial, sampleStopTrial, trialDataTable, samplesDataTable] = this.EyeTrackingSyncTrialsAndSamples(trialDataTable, samplesDataTable,  options);
+            trialDataTable.SampleStartTrial = sampleStartTrial;
+            trialDataTable.SampleStopTrial = sampleStopTrial;
+            % Build a column for the samples with the trial number
+            samplesDataTable.TrialNumber = nan(size(samplesDataTable.FrameNumber));
+            for i=1:height(trialDataTable)
+                idx = trialDataTable.SampleStartTrial(i):trialDataTable.SampleStopTrial(i);
+                samplesDataTable.TrialNumber(idx) = trialDataTable.TrialNumber(i);
+            end
+
+            [trialDataTable] = this.EyeTrackingGetTrialStats(trialDataTable, samplesDataTable,  options);
             cprintf('blue', '++ ARUME::Done with trialDataTable.\n');
 
             %% 3) Prepare session data table
             newSessionDataTable = this.Session.GetBasicSessionDataTable();
-            newSessionDataTable = this.PrepareSessionDataTableEyeTracking(newSessionDataTable, options);
+            newSessionDataTable = this.EyeTrackingGetSessionStats(newSessionDataTable, options);
             newSessionDataTable.LastAnalysisDateTime = char(string(datetime('now')));
 
             options = FlattenStructure(options); % eliminate strcuts with the struct so it can be made into a row of a table
@@ -254,7 +264,7 @@ classdef ExperimentDesign < handle
             sessionTable = newSessionDataTable;
         end
         
-        function [samplesDataTable, cleanedData, calibratedData, rawData] = PrepareSamplesDataTableEyeTracking(this, options)
+        function [samplesDataTable, cleanedData, calibratedData, rawData] = EyeTrackingLoadSamplesData(this, options)
             
             if ( isfield(this.ExperimentOptions,'EyeTracker') )
                 eyeTrackerType = this.ExperimentOptions.EyeTracker;
@@ -428,7 +438,7 @@ classdef ExperimentDesign < handle
             end
         end
         
-        function [trialDataTable samplesDataTable] = PrepareTrialDataTableEyeTracking( this, trialDataTable, samplesDataTable, options)
+        function [sampleStartTrial, sampleStopTrial, trialDataTable, samplesDataTable] = EyeTrackingSyncTrialsAndSamples( this, trialDataTable, samplesDataTable, options)
             
             if ( isfield(this.ExperimentOptions,'EyeTracker') )
                 eyeTrackerType = this.ExperimentOptions.EyeTracker;
@@ -501,37 +511,25 @@ classdef ExperimentDesign < handle
                         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                         
                         % Find the samples that mark the begining and ends of trials
-                        trialDataTable.SampleStartTrial = nan(size(trialDataTable.TrialNumber));
-                        trialDataTable.SampleStopTrial = nan(size(trialDataTable.TrialNumber));
+                        sampleStartTrial = nan(size(trialDataTable.TrialNumber));
+                        sampleStopTrial = nan(size(trialDataTable.TrialNumber));
                         if ( ~any(strcmp(samplesDataTable.Properties.VariableNames, 'FileNumber')))
                             samplesDataTable.FileNumber = ones(size(samplesDataTable.Time));
                         end
                         for i=1:height(trialDataTable)
-                            trialDataTable.SampleStartTrial(i) = find(samplesDataTable.FileNumber' == trialDataTable.FileNumber(i) & samplesDataTable.RawFrameNumber'>=trialDataTable.EyeTrackerFrameNumberTrialStart(i),1,'first');
-                            trialDataTable.SampleStopTrial(i) = find(samplesDataTable.FileNumber' == trialDataTable.FileNumber(i) & samplesDataTable.RawFrameNumber'<=trialDataTable.EyeTrackerFrameNumberTrialStop(i),1,'last');
+                            sampleStartTrial(i) = find(samplesDataTable.FileNumber' == trialDataTable.FileNumber(i) & samplesDataTable.RawFrameNumber'>=trialDataTable.EyeTrackerFrameNumberTrialStart(i),1,'first');
+                            sampleStopTrial(i) = find(samplesDataTable.FileNumber' == trialDataTable.FileNumber(i) & samplesDataTable.RawFrameNumber'<=trialDataTable.EyeTrackerFrameNumberTrialStop(i),1,'last');
                         end
                     case 'Fove'
                         % Find the samples that mark the begining and ends of trials
-                        trialDataTable.SampleStartTrial = nan(size(trialDataTable.TrialNumber));
-                        trialDataTable.SampleStopTrial = nan(size(trialDataTable.TrialNumber));
+                        sampleStartTrial = nan(size(trialDataTable.TrialNumber));
+                        sampleStopTrial = nan(size(trialDataTable.TrialNumber));
                         if ( ~any(strcmp(samplesDataTable.Properties.VariableNames, 'FileNumber')))
                             samplesDataTable.FileNumber = ones(size(samplesDataTable.Time));
                         end
                         for i=1:height(trialDataTable)
-                            trialDataTable.SampleStartTrial(i) = find(samplesDataTable.FileNumber' == trialDataTable.FileNumber(i) & samplesDataTable.RawTime'>=trialDataTable.TrialStartTime(i),1,'first');
-                            trialDataTable.SampleStopTrial(i) = find(samplesDataTable.FileNumber' == trialDataTable.FileNumber(i) & samplesDataTable.RawTime'<=trialDataTable.TrialEndTime(i),1,'last');
-                        end
-
-                        % Add average head position data to the trialtable
-                        trialDataTable.HeadYaw = nan(height(trialDataTable),1);
-                        trialDataTable.HeadPitch = nan(height(trialDataTable),1);
-                        trialDataTable.HeadRoll = nan(height(trialDataTable),1);
-                        for i=1:height(trialDataTable)
-                            idx = trialDataTable.SampleStartTrial(i):trialDataTable.SampleStopTrial(i);
-
-                            trialDataTable.HeadYaw(i) = mean(samplesDataTable.HeadYaw(idx),1,"omitnan");
-                            trialDataTable.HeadPitch(i) = mean(samplesDataTable.HeadPitch(idx),1,"omitnan");
-                            trialDataTable.HeadRoll(i) = mean(samplesDataTable.HeadRoll(idx),1,"omitnan");
+                            sampleStartTrial(i) = find(samplesDataTable.FileNumber' == trialDataTable.FileNumber(i) & samplesDataTable.RawTime'>=trialDataTable.TrialStartTime(i),1,'first');
+                            sampleStopTrial(i) = find(samplesDataTable.FileNumber' == trialDataTable.FileNumber(i) & samplesDataTable.RawTime'<=trialDataTable.TrialEndTime(i),1,'last');
                         end
                     case 'Eyelink'
 
@@ -548,26 +546,38 @@ classdef ExperimentDesign < handle
                         end
 
                         % Find the samples that mark the begining and ends of trials
-                        trialDataTable.SampleStartTrial = nan(size(trialDataTable.TrialNumber));
-                        trialDataTable.SampleStopTrial = nan(size(trialDataTable.TrialNumber));
+                        sampleStartTrial = nan(size(trialDataTable.TrialNumber));
+                        sampleStopTrial = nan(size(trialDataTable.TrialNumber));
                         if ( ~any(strcmp(samplesDataTable.Properties.VariableNames, 'FileNumber')))
                             samplesDataTable.FileNumber = ones(size(samplesDataTable.Time));
                         end
                         for i=1:height(trialDataTable)
-                            trialDataTable.SampleStartTrial(i) = find(samplesDataTable.FileNumber' == trialDataTable.FileNumber(i) & samplesDataTable.RawFrameNumber'>=trialDataTable.EyeTrackerFrameNumberTrialStart(i),1,'first');
-                            trialDataTable.SampleStopTrial(i) = find(samplesDataTable.FileNumber' == trialDataTable.FileNumber(i) & samplesDataTable.RawFrameNumber'<=trialDataTable.EyeTrackerFrameNumberTrialStop(i),1,'last');
+                            sampleStartTrial(i) = find(samplesDataTable.FileNumber' == trialDataTable.FileNumber(i) & samplesDataTable.RawFrameNumber'>=trialDataTable.EyeTrackerFrameNumberTrialStart(i),1,'first');
+                            sampleStopTrial(i) = find(samplesDataTable.FileNumber' == trialDataTable.FileNumber(i) & samplesDataTable.RawFrameNumber'<=trialDataTable.EyeTrackerFrameNumberTrialStop(i),1,'last');
                         end
+                end       
+            end
+        end
+        
+        function [trialDataTable ] = EyeTrackingGetTrialStats( this, trialDataTable, samplesDataTable, options)
+             
+            if ( ~isempty( samplesDataTable ) )
+                if ( contains(samplesDataTable.Properties.VariableNames,'HeadYaw') && ...
+                        contains(samplesDataTable.Properties.VariableNames,'HeadPitch') && ...
+                        contains(samplesDataTable.Properties.VariableNames,'HeadRoll') )
+                    % Add average head position data to the trialtable
+                    trialDataTable.HeadYaw = nan(height(trialDataTable),1);
+                    trialDataTable.HeadPitch = nan(height(trialDataTable),1);
+                    trialDataTable.HeadRoll = nan(height(trialDataTable),1);
+                    for i=1:height(trialDataTable)
+                        idx = trialDataTable.SampleStartTrial(i):trialDataTable.SampleStopTrial(i);
 
-                end                
-                
-                % Build a column for the samples with the trial number
-                samplesDataTable.TrialNumber = nan(size(samplesDataTable.FrameNumber));
-                for i=1:height(trialDataTable)
-                    idx = trialDataTable.SampleStartTrial(i):trialDataTable.SampleStopTrial(i);
-                    samplesDataTable.TrialNumber(idx) = trialDataTable.TrialNumber(i);
+                        trialDataTable.HeadYaw(i) = mean(samplesDataTable.HeadYaw(idx),1,"omitnan");
+                        trialDataTable.HeadPitch(i) = mean(samplesDataTable.HeadPitch(idx),1,"omitnan");
+                        trialDataTable.HeadRoll(i) = mean(samplesDataTable.HeadRoll(idx),1,"omitnan");
+                    end
                 end
-                
-                
+
                 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                 % CALCULATE AVERAGE EYE MOVEMENT STATS FOR EACH TRIAL
                 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -622,7 +632,7 @@ classdef ExperimentDesign < handle
             end
         end
         
-        function sessionDataTable = PrepareSessionDataTableEyeTracking(this, sessionDataTable, options)
+        function sessionDataTable = EyeTrackingGetSessionStats(this, sessionDataTable, options)
             return
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             % CALCULATE AVERAGE EYE MOVEMENT ACROSS TRIALS
@@ -835,9 +845,29 @@ classdef ExperimentDesign < handle
     methods(Access=public,Sealed=true) % 
 
         function [analysisResults, samplesDataTable, trialDataTable, sessionTable] = RunExperimentAnalysis(this, options)
+
             [samplesDataTable, trialDataTable, sessionTable]  = this.prepareTablesForAnalysis(options);
+            
             analysisResults  = struct();
+            
             [analysisResults, samplesDataTable, trialDataTable, sessionTable]  = this.RunDataAnalyses(analysisResults, samplesDataTable, trialDataTable, sessionTable, options);
+
+            % save data to disk
+            this.Session.WriteVariableIfNotEmpty(samplesDataTable,'samplesDataTable');
+            this.Session.WriteVariableIfNotEmpty(trialDataTable,'trialDataTable');
+            this.Session.WriteVariableIfNotEmpty(sessionTable,'sessionDataTable');
+            
+            % save the fields of AnalysisResults into separate variables
+            if ( isstruct(analysisResults))
+                fields=fieldnames(analysisResults);
+                for i=1:length(fields)
+                    field = fields{i};
+                    this.Session.WriteVariableIfNotEmpty(analysisResults.(field),['AnalysisResults_' field]);
+                end
+            else
+                this.Session.WriteVariableIfNotEmpty(analysisResults,'AnalysisResults');
+            end
+
         end
         
         function this = ExperimentDesign()

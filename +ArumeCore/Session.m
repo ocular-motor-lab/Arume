@@ -368,24 +368,9 @@ classdef Session < ArumeCore.DataDB
         function runAnalysis(this, options)
             
             cprintf('blue', '++ ARUME::Preparing %s for Analysis.\n', this.name);
-                        
-            [results, samples, trials, sessionTable]  = this.experimentDesign.RunExperimentAnalysis(options);
-        
-            this.WriteVariableIfNotEmpty(samples,'samplesDataTable');
-            this.WriteVariableIfNotEmpty(trials,'trialDataTable');
-            this.WriteVariableIfNotEmpty(sessionTable,'sessionDataTable');
-            
-            % save the fields of AnalysisResults into separate variables
-            if ( isstruct(results))
-                fields=fieldnames(results);
-                for i=1:length(fields)
-                    field = fields{i};
-                    this.WriteVariableIfNotEmpty(results.(field),['AnalysisResults_' field]);
-                end
-            else
-                this.WriteVariableIfNotEmpty(results,'AnalysisResults');
-            end
 
+            this.experimentDesign.RunExperimentAnalysis(options);
+        
             cprintf('blue', '++ ARUME::Done saving session analysis to disk.\n');
         end
                 
