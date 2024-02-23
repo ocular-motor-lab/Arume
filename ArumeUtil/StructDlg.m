@@ -1007,7 +1007,7 @@ else
    filter_spec = '';
 end
 cmd = deblank(val{1}(1:lpar-1));
-width = max(20,length(filter_label)+10);
+width = min(max(20,length(filter_label)+10), 200); % we don't want the dlg to disappear when lots of files are selected
 if (isempty(h))
    cmenu = uicontextmenu;
    item1 = uimenu(cmenu, ...
