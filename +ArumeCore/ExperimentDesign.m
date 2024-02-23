@@ -148,121 +148,6 @@ classdef ExperimentDesign < handle
     end
 
     methods (Access = private)
-
-        function  [samplesDataTable, trialDataTable, sessionTable] = prepareTablesForAnalysis( this, options)
-            Enum = ArumeCore.ExperimentDesign.getEnum();
-            
-            if ( isempty(  this.Session.currentRun ) )
-                return;
-            end
-            
-            if ( ~options.Prepare_For_Analysis_And_Plots )
-                return;
-            end
-
-            %% 0) Create the basic trial data table (without custom experiment stuff)
-            trialDataTable = this.Session.currentRun.pastTrialTable;
-
-            % remove errors and aborts for analysis
-            if (~isempty(trialDataTable))
-                % Trial attempt is just a continuos unique number for
-                % each past trial.
-                trialDataTable.TrialAttempt = (1:height(trialDataTable))';
-
-                % just in case for old data. TrialResult used to be
-                % numeric. Now it is categorical but the categories
-                % match the old numbers+1;
-                if ( ~iscategorical(trialDataTable.TrialResult) )
-                    trialDataTable.TrialResult = Enum.trialResult.PossibleResults(trialDataTable.TrialResult+1);
-                end
-                
-                KEEP_ONLY_CORRECT_TRIALS = 1;
-                if ( KEEP_ONLY_CORRECT_TRIALS )
-
-                    % in old files TrialNumber counted all trials not just
-                    % correct trials. So we fix it for code down the line
-                    % it could also be missing
-                    if ( ~any(strcmp(trialDataTable.Properties.VariableNames,'TrialNumber')) || ...
-                            sum(trialDataTable.TrialResult == Enum.trialResult.CORRECT) < max(trialDataTable.TrialNumber) )
-                        % rebuild trial number as a counter of past correct
-                        % trials plus one
-                        trialDataTable.TrialNumber = cumsum([1;trialDataTable.TrialResult(1:end-1) == Enum.trialResult.CORRECT]);
-                    end
-
-                    % keep only correct trials from now on
-                    % TODO: rethink this. Depending on how the experiment
-                    % is programmed it may be interesting to look at the
-                    % aborts.
-                    trialDataTable(trialDataTable.TrialResult ~= Enum.trialResult.CORRECT ,:) = [];
-                end
-
-                % merge the columns in trials with the ones already
-                % present in the trialDataTable.
-                % It is only necessary to rerun this stage zero if
-                % this.trialDataTable is not empty because there may be
-                % changes on the code. Otherwise we could change it to
-                % get here only if trialDataTable is empty.
-                if ( ~isempty(this.Session.trialDataTable) )
-                    rightVariables = setdiff(this.Session.trialDataTable.Properties.VariableNames, trialDataTable.Properties.VariableNames);
-                    trialDataTable =  outerjoin(trialDataTable, this.Session.trialDataTable, 'Keys', 'TrialNumber', 'MergeKeys',true, 'RightVariables', rightVariables );
-                end
-            end
-
-            %% 1) Prepare the sample data table
-            samplesDataTable = this.Session.samplesDataTable;
-
-            if ( isempty(samplesDataTable) )
-                % In most cases this will just be from EyeTracking
-                % experiment but there could be others that have a
-                % different way to load sample data.
-                [samplesDataTable, cleanedData, calibratedData, rawData] = this.EyeTrackingLoadSamplesData(options);
-                % TODO: I don't like this here. It should be moved
-                % to session. But may have memory problems at some
-                % point
-                this.Session.WriteVariableIfNotEmpty(rawData,'rawDataTable');
-                this.Session.WriteVariableIfNotEmpty(cleanedData,'cleanedData');
-                this.Session.WriteVariableIfNotEmpty(calibratedData,'calibratedData');
-            end
-            cprintf('blue', '++ ARUME::Done with samplesDataTable.\n');
-
-            %% 2) Prepare the trial data table
-            [sampleStartTrial, sampleStopTrial, trialDataTable, samplesDataTable] = this.EyeTrackingSyncTrialsAndSamples(trialDataTable, samplesDataTable,  options);
-            trialDataTable.SampleStartTrial = sampleStartTrial;
-            trialDataTable.SampleStopTrial = sampleStopTrial;
-            % Build a column for the samples with the trial number
-            samplesDataTable.TrialNumber = nan(size(samplesDataTable.FrameNumber));
-            for i=1:height(trialDataTable)
-                idx = trialDataTable.SampleStartTrial(i):trialDataTable.SampleStopTrial(i);
-                samplesDataTable.TrialNumber(idx) = trialDataTable.TrialNumber(i);
-            end
-
-            [trialDataTable] = this.EyeTrackingGetTrialStats(trialDataTable, samplesDataTable,  options);
-            cprintf('blue', '++ ARUME::Done with trialDataTable.\n');
-
-            %% 3) Prepare session data table
-            newSessionDataTable = this.Session.GetBasicSessionDataTable();
-            newSessionDataTable = this.EyeTrackingGetSessionStats(newSessionDataTable, options);
-            newSessionDataTable.LastAnalysisDateTime = char(string(datetime('now')));
-
-            options = FlattenStructure(options); % eliminate strcuts with the struct so it can be made into a row of a table
-            opts = fieldnames(options);
-            s = this.GetExperimentOptionsDialog(1);
-            for i=1:length(opts)
-                if ( isempty(options.(opts{i})))
-                    newSessionDataTable.(['AnalysisOption_' opts{i}]) = {''};
-                elseif ( ~ischar( options.(opts{i})) && numel(options.(opts{i})) <= 1)
-                    newSessionDataTable.(['AnalysisOption_' opts{i}]) = options.(opts{i});
-                elseif (isfield( s, opts{i}) && iscell(s.(opts{i})) && iscell(s.(opts{i}){1}) && length(s.(opts{i}){1}) >1)
-                    newSessionDataTable.(['AnalysisOption_' opts{i}]) = categorical(cellstr(options.(opts{i})));
-                elseif (~ischar(options.(opts{i})) && numel(options.(opts{i})) > 1 )
-                    newSessionDataTable.(['AnalysisOption_' opts{i}]) = {options.(opts{i})};
-                else
-                    newSessionDataTable.(['AnalysisOption_' opts{i}]) = string(options.(opts{i}));
-                end
-            end
-
-            sessionTable = newSessionDataTable;
-        end
         
         function [samplesDataTable, cleanedData, calibratedData, rawData] = EyeTrackingLoadSamplesData(this, options)
             
@@ -562,9 +447,9 @@ classdef ExperimentDesign < handle
         function [trialDataTable ] = EyeTrackingGetTrialStats( this, trialDataTable, samplesDataTable, options)
              
             if ( ~isempty( samplesDataTable ) )
-                if ( contains(samplesDataTable.Properties.VariableNames,'HeadYaw') && ...
-                        contains(samplesDataTable.Properties.VariableNames,'HeadPitch') && ...
-                        contains(samplesDataTable.Properties.VariableNames,'HeadRoll') )
+                if ( any(string(samplesDataTable.Properties.VariableNames)=="HeadYaw") && ...
+                        any(string(samplesDataTable.Properties.VariableNames)=="HeadPitch") && ...
+                        any(string(samplesDataTable.Properties.VariableNames)=="HeadRoll") )
                     % Add average head position data to the trialtable
                     trialDataTable.HeadYaw = nan(height(trialDataTable),1);
                     trialDataTable.HeadPitch = nan(height(trialDataTable),1);
@@ -845,8 +730,118 @@ classdef ExperimentDesign < handle
     methods(Access=public,Sealed=true) % 
 
         function [analysisResults, samplesDataTable, trialDataTable, sessionTable] = RunExperimentAnalysis(this, options)
+            Enum = ArumeCore.ExperimentDesign.getEnum();
+            
+            if ( isempty(  this.Session.currentRun ) )
+                return;
+            end
+            
+            if ( ~options.Prepare_For_Analysis_And_Plots )
+                return;
+            end
 
-            [samplesDataTable, trialDataTable, sessionTable]  = this.prepareTablesForAnalysis(options);
+            %% 0) Create the basic trial data table (without custom experiment stuff)
+            trialDataTable = this.Session.currentRun.pastTrialTable;
+
+            % remove errors and aborts for analysis
+            if (~isempty(trialDataTable))
+                % Trial attempt is just a continuos unique number for
+                % each past trial.
+                trialDataTable.TrialAttempt = (1:height(trialDataTable))';
+
+                % just in case for old data. TrialResult used to be
+                % numeric. Now it is categorical but the categories
+                % match the old numbers+1;
+                if ( ~iscategorical(trialDataTable.TrialResult) )
+                    trialDataTable.TrialResult = Enum.trialResult.PossibleResults(trialDataTable.TrialResult+1);
+                end
+                
+                KEEP_ONLY_CORRECT_TRIALS = 1;
+                if ( KEEP_ONLY_CORRECT_TRIALS )
+
+                    % in old files TrialNumber counted all trials not just
+                    % correct trials. So we fix it for code down the line
+                    % it could also be missing
+                    if ( ~any(strcmp(trialDataTable.Properties.VariableNames,'TrialNumber')) || ...
+                            sum(trialDataTable.TrialResult == Enum.trialResult.CORRECT) < max(trialDataTable.TrialNumber) )
+                        % rebuild trial number as a counter of past correct
+                        % trials plus one
+                        trialDataTable.TrialNumber = cumsum([1;trialDataTable.TrialResult(1:end-1) == Enum.trialResult.CORRECT]);
+                    end
+
+                    % keep only correct trials from now on
+                    % TODO: rethink this. Depending on how the experiment
+                    % is programmed it may be interesting to look at the
+                    % aborts.
+                    trialDataTable(trialDataTable.TrialResult ~= Enum.trialResult.CORRECT ,:) = [];
+                end
+
+                % merge the columns in trials with the ones already
+                % present in the trialDataTable.
+                % It is only necessary to rerun this stage zero if
+                % this.trialDataTable is not empty because there may be
+                % changes on the code. Otherwise we could change it to
+                % get here only if trialDataTable is empty.
+                if ( ~isempty(this.Session.trialDataTable) )
+                    rightVariables = setdiff(this.Session.trialDataTable.Properties.VariableNames, trialDataTable.Properties.VariableNames);
+                    trialDataTable =  outerjoin(trialDataTable, this.Session.trialDataTable, 'Keys', 'TrialNumber', 'MergeKeys',true, 'RightVariables', rightVariables );
+                end
+            end
+
+            %% 1) Prepare the sample data table
+            samplesDataTable = this.Session.samplesDataTable;
+
+            if ( isempty(samplesDataTable) )
+                % In most cases this will just be from EyeTracking
+                % experiment but there could be others that have a
+                % different way to load sample data.
+                [samplesDataTable, cleanedData, calibratedData, rawData] = this.EyeTrackingLoadSamplesData(options);
+                % TODO: I don't like this here. It should be moved
+                % to session. But may have memory problems at some
+                % point
+                this.Session.WriteVariableIfNotEmpty(rawData,'rawDataTable');
+                this.Session.WriteVariableIfNotEmpty(cleanedData,'cleanedData');
+                this.Session.WriteVariableIfNotEmpty(calibratedData,'calibratedData');
+            end
+            cprintf('blue', '++ ARUME::Done with samplesDataTable.\n');
+
+            %% 2) Prepare the trial data table
+            [sampleStartTrial, sampleStopTrial, trialDataTable, samplesDataTable] = this.EyeTrackingSyncTrialsAndSamples(trialDataTable, samplesDataTable,  options);
+            trialDataTable.SampleStartTrial = sampleStartTrial;
+            trialDataTable.SampleStopTrial = sampleStopTrial;
+            % Build a column for the samples with the trial number
+            samplesDataTable.TrialNumber = nan(size(samplesDataTable.FrameNumber));
+            for i=1:height(trialDataTable)
+                idx = trialDataTable.SampleStartTrial(i):trialDataTable.SampleStopTrial(i);
+                samplesDataTable.TrialNumber(idx) = trialDataTable.TrialNumber(i);
+            end
+
+            [trialDataTable] = this.EyeTrackingGetTrialStats(trialDataTable, samplesDataTable,  options);
+            cprintf('blue', '++ ARUME::Done with trialDataTable.\n');
+
+            %% 3) Prepare session data table
+            newSessionDataTable = this.Session.GetBasicSessionDataTable();
+            newSessionDataTable = this.EyeTrackingGetSessionStats(newSessionDataTable, options);
+            newSessionDataTable.LastAnalysisDateTime = char(string(datetime('now')));
+
+            options = FlattenStructure(options); % eliminate strcuts with the struct so it can be made into a row of a table
+            opts = fieldnames(options);
+            s = this.GetExperimentOptionsDialog(1);
+            for i=1:length(opts)
+                if ( isempty(options.(opts{i})))
+                    newSessionDataTable.(['AnalysisOption_' opts{i}]) = {''};
+                elseif ( ~ischar( options.(opts{i})) && numel(options.(opts{i})) <= 1)
+                    newSessionDataTable.(['AnalysisOption_' opts{i}]) = options.(opts{i});
+                elseif (isfield( s, opts{i}) && iscell(s.(opts{i})) && iscell(s.(opts{i}){1}) && length(s.(opts{i}){1}) >1)
+                    newSessionDataTable.(['AnalysisOption_' opts{i}]) = categorical(cellstr(options.(opts{i})));
+                elseif (~ischar(options.(opts{i})) && numel(options.(opts{i})) > 1 )
+                    newSessionDataTable.(['AnalysisOption_' opts{i}]) = {options.(opts{i})};
+                else
+                    newSessionDataTable.(['AnalysisOption_' opts{i}]) = string(options.(opts{i}));
+                end
+            end
+
+            sessionTable = newSessionDataTable;
             
             analysisResults  = struct();
             
