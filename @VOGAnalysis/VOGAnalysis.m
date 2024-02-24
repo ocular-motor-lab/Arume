@@ -203,7 +203,7 @@ classdef VOGAnalysis < handle
                 
                 % load and preprocess data
                 
-                [dataFile, rawDataFile] = VOGAnalysis.LoadVOGdata(dataFilePath);
+                [dataFile, rawDataFile] = VOGAnalysis.LoadOpenIrisData(dataFilePath);
                 
                 switch( params.Calibration.Calibration_Type)
                     case 'Pupil-CR'
@@ -228,7 +228,7 @@ classdef VOGAnalysis < handle
                 else
                     disp(sprintf('WARNING THIS FILE (%s) HAS AN EMPTY CALIBRATION going to default open iris calibration', dataFiles{i}));
 
-                    calibrationTable       = VOGAnalysis.ReadCalibration(calibrationFilePath);
+                    calibrationTable       = VOGAnalysis.ReadOpenIrisCalibrationFile(calibrationFilePath);
                     calibratedDataFile      = VOGAnalysis.CalibrateData(dataFile, calibrationTable);
                 end
 
@@ -287,8 +287,8 @@ classdef VOGAnalysis < handle
                 
                 % load and preprocess data
                 
-                [dataFile, rawDataFile] = VOGAnalysis.LoadVOGdata(dataFilePath);
-                calibrationTables       = VOGAnalysis.ReadCalibration(calibrationFilePath);
+                [dataFile, rawDataFile] = VOGAnalysis.LoadOpenIrisData(dataFilePath);
+                calibrationTables       = VOGAnalysis.ReadOpenIrisCalibrationFile(calibrationFilePath);
 
 
                 switch( params.Calibration.Calibration_Type)
@@ -323,11 +323,11 @@ classdef VOGAnalysis < handle
             end
         end
         
-        function [data, dataFromFile] = LoadVOGdata(dataFile, originalDataFile)
+        function [data, dataFromFile] = LoadOpenIrisData(dataFile, originalDataFile)
             % LOAD VOG DATA loads the data recorded from the eye tracker
             %   into a matlab table
             %
-            %   data = LoadVOGDataset(dataFile, (originalDataFile) )
+            %   data = LoadOpenIrisDataset(dataFile, (originalDataFile) )
             %
             %   Inputs:
             %       - dataFile: full path of the file with the data.
@@ -569,18 +569,18 @@ classdef VOGAnalysis < handle
             
             %             % Create frame number if not available
             %             if ( ~any(strcmp('FrameNumber',data.Properties.VariableNames)) )
-            %                 cprintf('Yellow', sprintf('++ VOGAnalysis :: LoadVOGdata :: FrameNumber missing, creating replacement\n'));
+            %                 cprintf('Yellow', sprintf('++ VOGAnalysis :: LoadOpenIrisData :: FrameNumber missing, creating replacement\n'));
             %                 frameNumber = cumsum(round(diff(data.Time)/median(diff(data.Time))));
             %                 data.FrameNumber = [0;frameNumber];
             %             end
             
         end
         
-        function [calibrationTable] = ReadCalibration(file)
+        function [calibrationTable] = ReadOpenIrisCalibrationFile(file)
             % READ CALIBRATION Reads the XML file containing calibration
             % information about a VOG recording
             %
-            %   [leftEye, rightEye] = ReadCalibration(file)
+            %   [leftEye, rightEye] = ReadOpenIrisCalibrationFile(file)
             %
             %   Inputs:
             %       - file: full path of the file with the calibration.

@@ -106,6 +106,10 @@ classdef ExperimentDesign < handle
         end
         
         function ImportSession( this )
+            % TODO: This only works for open iris data right now. Need to
+            % change
+
+
             newRun = ArumeCore.ExperimentRun.SetUpNewRun( this );
             vars = newRun.futureTrialTable;
             vars.TrialResult = categorical(cellstr('CORRECT'));
@@ -159,86 +163,11 @@ classdef ExperimentDesign < handle
             
             switch(eyeTrackerType)
                 case 'OpenIris'
-                    calibrationsForEachTrial = [];
-                    
+
                     % if this session is not a calibration
                     if ( ~strcmp(this.Session.experimentDesign.Name, 'Calibration') )
-
-                        % TODO: FIND A BETTER WAY TO GET ALL THE RELATED
-                        % SESSIONS
-                        arume = Arume('nogui');
-                        calibrationSessions = arume.currentProject.findSessionBySubjectAndExperiment(this.Session.subjectCode, 'Calibration');
-                        calibrationTables = {};
-                        calibrationCRTables = {};
-                        calibrationTimes = NaT(0);
-                        calibrationNames = {};
-                        for i=1:length(calibrationSessions)
-               
-                            if ( ~isfield( calibrationSessions(i).analysisResults, 'calibrationTable') || isempty(calibrationSessions(i).analysisResults.calibrationTable))
-                                % analyze the calibration sessions just in case
-                                % they have not before
-                                analysisOptions = arume.getAnalysisOptionsDefault( calibrationSessions(i) );
-                                calibrationSessions(i).runAnalysis(analysisOptions);
-                            end
-
-                            if ( isfield( calibrationSessions(i).analysisResults, 'calibrationTable') )
-                                calibrationTables{i} = calibrationSessions(i).analysisResults.calibrationTable;
-                                calibrationCRTables{i} = calibrationSessions(i).analysisResults.calibrationTableCR;
-                            else
-                                calibrationTables{i} = table();
-                                calibrationCRTables{i} = table();
-                            end
-                            calibrationTimes(i) = datetime(calibrationSessions(i).currentRun.pastTrialTable.DateTimeTrialStart{end});
-                            calibrationNames{i} =  calibrationSessions(i).name;
-                        end
-
-                        calibrations = table(string(calibrationNames'), calibrationTables', calibrationCRTables', calibrationTimes','VariableNames',{'SessionName','CalibrationTable','CalibrationCRTable','DateTime'});
-                        calibrations = sortrows(calibrations,'DateTime');
-
-                        % loop through trials to find the relavant calibration
-                        calibrationsForEachTrial = nan(height(this.Session.currentRun.pastTrialTable),1);
-                        for i=1:height(this.Session.currentRun.pastTrialTable)
-                            if ( isempty( calibrations))
-                                continue;
-                            end
-                            trialStartTime = datetime(this.Session.currentRun.pastTrialTable.DateTimeTrialStart(i));
-
-                            pastClosestCalibration = find((trialStartTime - calibrations.DateTime)>0,1, 'last');
-                            if ( isempty( pastClosestCalibration))
-                                continue;
-                            end
-
-                            if (i==1)
-                                if ( (trialStartTime-calibrations.DateTime(pastClosestCalibration)) < minutes(5) )
-                                    calibrationsForEachTrial(i) = pastClosestCalibration;
-                                end
-                            else
-                                previousTrialCalibration = calibrationsForEachTrial(i-1);
-                                % TODO consider the case when you take a
-                                % break and forget to do a calibration
-                                % before restarting. Right now we will keep
-                                % the calibration from the previous trial
-                                
-                                if( previousTrialCalibration == pastClosestCalibration)
-                                    % this is the case for a following trial
-                                    % after a calibration
-                                    calibrationsForEachTrial(i) = previousTrialCalibration;
-                                else
-                                    % this is the case for trial following a
-                                    % break when one or more calibrations where
-                                    % performed
-                                    calibrationsForEachTrial(i) = pastClosestCalibration;
-                                end
-                            end
-                        end
-
-                        % if we did not find any calibration for the trials
-                        % we behave as if there were no calibrations
-                        if ( all(isnan(calibrationsForEachTrial)))
-                            calibrationsForEachTrial = [];
-                        end
+                        [calibrationTablesPerFile] = this.EyeTrackingFindCalibrationSessions();
                     end
-
 
                     samplesDataTable = table();
                     cleanedData = table();
@@ -266,23 +195,10 @@ classdef ExperimentDesign < handle
                         error('ERROR preparing sample data set: The session should have the same number of calibration files as data files or 1 calibration file');
                     end
                     
-
-
-
-
-                    if ( isempty(calibrationsForEachTrial) )
+                    if ( ~exist("calibrationTablesPerFile",'var'))
                         [samplesDataTable, cleanedData, calibratedData, rawData] = VOGAnalysis.LoadCleanAndResampleData(this.Session.dataPath, dataFiles, calibrationFiles, options);
                     else
-                        % Dealing with trials without a calibration. Add an
-                        % empty calibration to the table and change the NaN
-                        % indices for the index of the empty table
-                        calibrations.CalibrationTable{end+1} = table();
-                        calibrationsForEachTrial(isnan(calibrationsForEachTrial)) = height(calibrations);
-                        
-                        calibrationTables = [calibrations(calibrationsForEachTrial,:) this.Session.currentRun.pastTrialTable(:,'FileNumber')];
-                        [~,idx] = unique(calibrationTables.SessionName);
-                        calibrfationTablesPerFile = calibrationTables(idx,:);
-                        [samplesDataTable, cleanedData, calibratedData, rawData] = VOGAnalysis.LoadCleanAndResampleDataArumeMultiCalibration(this.Session.dataPath, dataFiles, calibrationFiles, calibrfationTablesPerFile , options);
+                        [samplesDataTable, cleanedData, calibratedData, rawData] = VOGAnalysis.LoadCleanAndResampleDataArumeMultiCalibration(this.Session.dataPath, dataFiles, calibrationFiles, calibrationTablesPerFile , options);
                     end
 
                 case 'Fove'
@@ -322,7 +238,100 @@ classdef ExperimentDesign < handle
 
             end
         end
-        
+
+        function [calibrationTablesPerFile] = EyeTrackingFindCalibrationSessions(this)
+            % TODO: maybe move this to a posthoc calibration option
+            % that pops up with the analysis options. So we could
+            % potentially do post hoc calibration for any type of
+            % data
+            % also think of left and right eye
+
+
+            % TODO: FIND A BETTER WAY TO GET ALL THE RELATED
+            % SESSIONS
+            arume = Arume('nogui');
+            calibrationSessions = arume.currentProject.findSessionBySubjectAndExperiment(this.Session.subjectCode, 'Calibration');
+            calibrationTables = {};
+            calibrationCRTables = {};
+            calibrationTimes = NaT(0);
+            calibrationNames = {};
+            for i=1:length(calibrationSessions)
+
+                if ( ~isfield( calibrationSessions(i).analysisResults, 'calibrationTable') || isempty(calibrationSessions(i).analysisResults.calibrationTable))
+                    % analyze the calibration sessions just in case
+                    % they have not before
+                    analysisOptions = arume.getAnalysisOptionsDefault( calibrationSessions(i) );
+                    calibrationSessions(i).runAnalysis(analysisOptions);
+                end
+
+                if ( isfield( calibrationSessions(i).analysisResults, 'calibrationTable') )
+                    calibrationTables{i} = calibrationSessions(i).analysisResults.calibrationTable;
+                    calibrationCRTables{i} = calibrationSessions(i).analysisResults.calibrationTableCR;
+                else
+                    calibrationTables{i} = table();
+                    calibrationCRTables{i} = table();
+                end
+                calibrationTimes(i) = datetime(calibrationSessions(i).currentRun.pastTrialTable.DateTimeTrialStart{end});
+                calibrationNames{i} =  calibrationSessions(i).name;
+            end
+
+            calibrations = table(string(calibrationNames'), calibrationTables', calibrationCRTables', calibrationTimes','VariableNames',{'SessionName','CalibrationTable','CalibrationCRTable','DateTime'});
+            calibrations = sortrows(calibrations,'DateTime');
+
+            % loop through trials to find the relavant calibration
+            calibrationsForEachTrial = nan(height(this.Session.currentRun.pastTrialTable),1);
+            for i=1:height(this.Session.currentRun.pastTrialTable)
+                if ( isempty( calibrations))
+                    continue;
+                end
+                trialStartTime = datetime(this.Session.currentRun.pastTrialTable.DateTimeTrialStart(i));
+
+                pastClosestCalibration = find((trialStartTime - calibrations.DateTime)>0,1, 'last');
+                if ( isempty( pastClosestCalibration))
+                    continue;
+                end
+
+                if (i==1)
+                    if ( (trialStartTime-calibrations.DateTime(pastClosestCalibration)) < minutes(5) )
+                        calibrationsForEachTrial(i) = pastClosestCalibration;
+                    end
+                else
+                    previousTrialCalibration = calibrationsForEachTrial(i-1);
+                    % TODO consider the case when you take a
+                    % break and forget to do a calibration
+                    % before restarting. Right now we will keep
+                    % the calibration from the previous trial
+
+                    if( previousTrialCalibration == pastClosestCalibration)
+                        % this is the case for a following trial
+                        % after a calibration
+                        calibrationsForEachTrial(i) = previousTrialCalibration;
+                    else
+                        % this is the case for trial following a
+                        % break when one or more calibrations where
+                        % performed
+                        calibrationsForEachTrial(i) = pastClosestCalibration;
+                    end
+                end
+            end
+
+            % if we did not find any calibration for the trials
+            % we behave as if there were no calibrations
+            if ( all(isnan(calibrationsForEachTrial)))
+                calibrationsForEachTrial = [];
+            end
+
+            % Dealing with trials without a calibration. Add an
+            % empty calibration to the table and change the NaN
+            % indices for the index of the empty table
+            calibrations.CalibrationTable{end+1} = table();
+            calibrationsForEachTrial(isnan(calibrationsForEachTrial)) = height(calibrations);
+
+            calibrationTables = [calibrations(calibrationsForEachTrial,:) this.Session.currentRun.pastTrialTable(:,'FileNumber')];
+            [~,idx] = unique(calibrationTables.FileNumber);
+            calibrationTablesPerFile = calibrationTables(idx,:);
+        end
+
         function [sampleStartTrial, sampleStopTrial, trialDataTable, samplesDataTable] = EyeTrackingSyncTrialsAndSamples( this, trialDataTable, samplesDataTable, options)
             
             if ( isfield(this.ExperimentOptions,'EyeTracker') )
@@ -736,118 +745,110 @@ classdef ExperimentDesign < handle
                 return;
             end
             
-            if ( ~options.Prepare_For_Analysis_And_Plots )
-                return;
-            end
+            if ( options.Prepare_For_Analysis_And_Plots )
 
-            %% 0) Create the basic trial data table (without custom experiment stuff)
-            trialDataTable = this.Session.currentRun.pastTrialTable;
+                %% 1) Create the basic trial data table (without custom experiment stuff)
+                trialDataTable = this.Session.currentRun.pastTrialTable;
 
-            % remove errors and aborts for analysis
-            if (~isempty(trialDataTable))
-                % Trial attempt is just a continuos unique number for
-                % each past trial.
-                trialDataTable.TrialAttempt = (1:height(trialDataTable))';
+                % remove errors and aborts for analysis
+                if (~isempty(trialDataTable))
+                    % Trial attempt is just a continuos unique number for
+                    % each past trial.
+                    trialDataTable.TrialAttempt = (1:height(trialDataTable))';
 
-                % just in case for old data. TrialResult used to be
-                % numeric. Now it is categorical but the categories
-                % match the old numbers+1;
-                if ( ~iscategorical(trialDataTable.TrialResult) )
-                    trialDataTable.TrialResult = Enum.trialResult.PossibleResults(trialDataTable.TrialResult+1);
-                end
-                
-                KEEP_ONLY_CORRECT_TRIALS = 1;
-                if ( KEEP_ONLY_CORRECT_TRIALS )
-
-                    % in old files TrialNumber counted all trials not just
-                    % correct trials. So we fix it for code down the line
-                    % it could also be missing
-                    if ( ~any(strcmp(trialDataTable.Properties.VariableNames,'TrialNumber')) || ...
-                            sum(trialDataTable.TrialResult == Enum.trialResult.CORRECT) < max(trialDataTable.TrialNumber) )
-                        % rebuild trial number as a counter of past correct
-                        % trials plus one
-                        trialDataTable.TrialNumber = cumsum([1;trialDataTable.TrialResult(1:end-1) == Enum.trialResult.CORRECT]);
+                    % just in case for old data. TrialResult used to be
+                    % numeric. Now it is categorical but the categories
+                    % match the old numbers+1;
+                    if ( ~iscategorical(trialDataTable.TrialResult) )
+                        trialDataTable.TrialResult = Enum.trialResult.PossibleResults(trialDataTable.TrialResult+1);
                     end
 
-                    % keep only correct trials from now on
-                    % TODO: rethink this. Depending on how the experiment
-                    % is programmed it may be interesting to look at the
-                    % aborts.
-                    trialDataTable(trialDataTable.TrialResult ~= Enum.trialResult.CORRECT ,:) = [];
+                    KEEP_ONLY_CORRECT_TRIALS = 1;
+                    if ( KEEP_ONLY_CORRECT_TRIALS )
+
+                        % in old files TrialNumber counted all trials not just
+                        % correct trials. So we fix it for code down the line
+                        % it could also be missing
+                        if ( ~any(strcmp(trialDataTable.Properties.VariableNames,'TrialNumber')) || ...
+                                sum(trialDataTable.TrialResult == Enum.trialResult.CORRECT) < max(trialDataTable.TrialNumber) )
+                            % rebuild trial number as a counter of past correct
+                            % trials plus one
+                            trialDataTable.TrialNumber = cumsum([1;trialDataTable.TrialResult(1:end-1) == Enum.trialResult.CORRECT]);
+                        end
+
+                        % keep only correct trials from now on
+                        % TODO: rethink this. Depending on how the experiment
+                        % is programmed it may be interesting to look at the
+                        % aborts.
+                        trialDataTable(trialDataTable.TrialResult ~= Enum.trialResult.CORRECT ,:) = [];
+                    end
+
+                    % merge the columns in trials with the ones already
+                    % present in the trialDataTable.
+                    % It is only necessary to rerun this stage zero if
+                    % this.trialDataTable is not empty because there may be
+                    % changes on the code. Otherwise we could change it to
+                    % get here only if trialDataTable is empty.
+                    if ( ~isempty(this.Session.trialDataTable) )
+                        rightVariables = setdiff(this.Session.trialDataTable.Properties.VariableNames, trialDataTable.Properties.VariableNames);
+                        trialDataTable =  outerjoin(trialDataTable, this.Session.trialDataTable, 'Keys', 'TrialNumber', 'MergeKeys',true, 'RightVariables', rightVariables );
+                    end
                 end
 
-                % merge the columns in trials with the ones already
-                % present in the trialDataTable.
-                % It is only necessary to rerun this stage zero if
-                % this.trialDataTable is not empty because there may be
-                % changes on the code. Otherwise we could change it to
-                % get here only if trialDataTable is empty.
-                if ( ~isempty(this.Session.trialDataTable) )
-                    rightVariables = setdiff(this.Session.trialDataTable.Properties.VariableNames, trialDataTable.Properties.VariableNames);
-                    trialDataTable =  outerjoin(trialDataTable, this.Session.trialDataTable, 'Keys', 'TrialNumber', 'MergeKeys',true, 'RightVariables', rightVariables );
-                end
-            end
+                %% 2) Prepare the sample data table
 
-            %% 1) Prepare the sample data table
-            samplesDataTable = this.Session.samplesDataTable;
-
-            if ( isempty(samplesDataTable) )
-                % In most cases this will just be from EyeTracking
-                % experiment but there could be others that have a
-                % different way to load sample data.
                 [samplesDataTable, cleanedData, calibratedData, rawData] = this.EyeTrackingLoadSamplesData(options);
-                % TODO: I don't like this here. It should be moved
-                % to session. But may have memory problems at some
-                % point
                 this.Session.WriteVariableIfNotEmpty(rawData,'rawDataTable');
                 this.Session.WriteVariableIfNotEmpty(cleanedData,'cleanedData');
                 this.Session.WriteVariableIfNotEmpty(calibratedData,'calibratedData');
-            end
-            cprintf('blue', '++ ARUME::Done with samplesDataTable.\n');
 
-            %% 2) Prepare the trial data table
-            [sampleStartTrial, sampleStopTrial, trialDataTable, samplesDataTable] = this.EyeTrackingSyncTrialsAndSamples(trialDataTable, samplesDataTable,  options);
-            trialDataTable.SampleStartTrial = sampleStartTrial;
-            trialDataTable.SampleStopTrial = sampleStopTrial;
-            % Build a column for the samples with the trial number
-            samplesDataTable.TrialNumber = nan(size(samplesDataTable.FrameNumber));
-            for i=1:height(trialDataTable)
-                idx = trialDataTable.SampleStartTrial(i):trialDataTable.SampleStopTrial(i);
-                samplesDataTable.TrialNumber(idx) = trialDataTable.TrialNumber(i);
-            end
+                cprintf('blue', '++ ARUME::Done with samplesDataTable.\n');
 
-            [trialDataTable] = this.EyeTrackingGetTrialStats(trialDataTable, samplesDataTable,  options);
-            cprintf('blue', '++ ARUME::Done with trialDataTable.\n');
-
-            %% 3) Prepare session data table
-            newSessionDataTable = this.Session.GetBasicSessionDataTable();
-            newSessionDataTable = this.EyeTrackingGetSessionStats(newSessionDataTable, options);
-            newSessionDataTable.LastAnalysisDateTime = char(string(datetime('now')));
-
-            options = FlattenStructure(options); % eliminate strcuts with the struct so it can be made into a row of a table
-            opts = fieldnames(options);
-            s = this.GetExperimentOptionsDialog(1);
-            for i=1:length(opts)
-                if ( isempty(options.(opts{i})))
-                    newSessionDataTable.(['AnalysisOption_' opts{i}]) = {''};
-                elseif ( ~ischar( options.(opts{i})) && numel(options.(opts{i})) <= 1)
-                    newSessionDataTable.(['AnalysisOption_' opts{i}]) = options.(opts{i});
-                elseif (isfield( s, opts{i}) && iscell(s.(opts{i})) && iscell(s.(opts{i}){1}) && length(s.(opts{i}){1}) >1)
-                    newSessionDataTable.(['AnalysisOption_' opts{i}]) = categorical(cellstr(options.(opts{i})));
-                elseif (~ischar(options.(opts{i})) && numel(options.(opts{i})) > 1 )
-                    newSessionDataTable.(['AnalysisOption_' opts{i}]) = {options.(opts{i})};
-                else
-                    newSessionDataTable.(['AnalysisOption_' opts{i}]) = string(options.(opts{i}));
+                %% 3) Prepare the trial data table
+                [sampleStartTrial, sampleStopTrial, trialDataTable, samplesDataTable] = this.EyeTrackingSyncTrialsAndSamples(trialDataTable, samplesDataTable,  options);
+                trialDataTable.SampleStartTrial = sampleStartTrial;
+                trialDataTable.SampleStopTrial = sampleStopTrial;
+                % Build a column for the samples with the trial number
+                samplesDataTable.TrialNumber = nan(size(samplesDataTable.FrameNumber));
+                for i=1:height(trialDataTable)
+                    idx = trialDataTable.SampleStartTrial(i):trialDataTable.SampleStopTrial(i);
+                    samplesDataTable.TrialNumber(idx) = trialDataTable.TrialNumber(i);
                 end
-            end
 
-            sessionTable = newSessionDataTable;
+                [trialDataTable] = this.EyeTrackingGetTrialStats(trialDataTable, samplesDataTable,  options);
+                cprintf('blue', '++ ARUME::Done with trialDataTable.\n');
+
+                %% 4) Prepare session data table
+                newSessionDataTable = this.Session.GetBasicSessionDataTable();
+                newSessionDataTable = this.EyeTrackingGetSessionStats(newSessionDataTable, options);
+                newSessionDataTable.LastAnalysisDateTime = char(string(datetime('now')));
+
+                options = FlattenStructure(options); % eliminate strcuts with the struct so it can be made into a row of a table
+                opts = fieldnames(options);
+                s = this.GetExperimentOptionsDialog(1);
+                for i=1:length(opts)
+                    if ( isempty(options.(opts{i})))
+                        newSessionDataTable.(['AnalysisOption_' opts{i}]) = {''};
+                    elseif ( ~ischar( options.(opts{i})) && numel(options.(opts{i})) <= 1)
+                        newSessionDataTable.(['AnalysisOption_' opts{i}]) = options.(opts{i});
+                    elseif (isfield( s, opts{i}) && iscell(s.(opts{i})) && iscell(s.(opts{i}){1}) && length(s.(opts{i}){1}) >1)
+                        newSessionDataTable.(['AnalysisOption_' opts{i}]) = categorical(cellstr(options.(opts{i})));
+                    elseif (~ischar(options.(opts{i})) && numel(options.(opts{i})) > 1 )
+                        newSessionDataTable.(['AnalysisOption_' opts{i}]) = {options.(opts{i})};
+                    else
+                        newSessionDataTable.(['AnalysisOption_' opts{i}]) = string(options.(opts{i}));
+                    end
+                end
+
+                sessionTable = newSessionDataTable;
+
+                analysisResults  = struct();
+            end
             
-            analysisResults  = struct();
-            
+            %% 5) Run analysis for the experiment
             [analysisResults, samplesDataTable, trialDataTable, sessionTable]  = this.RunDataAnalyses(analysisResults, samplesDataTable, trialDataTable, sessionTable, options);
 
-            % save data to disk
+            %% 6) Save data to disk
             this.Session.WriteVariableIfNotEmpty(samplesDataTable,'samplesDataTable');
             this.Session.WriteVariableIfNotEmpty(trialDataTable,'trialDataTable');
             this.Session.WriteVariableIfNotEmpty(sessionTable,'sessionDataTable');
