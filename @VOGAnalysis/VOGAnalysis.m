@@ -203,7 +203,7 @@ classdef VOGAnalysis < handle
                 
                 % load and preprocess data
                 
-                [dataFile, rawDataFile] = VOGAnalysis.LoadVOGdata(dataFilePath);
+                [dataFile, rawDataFile] = VOGAnalysis.LoadOpenIrisData(dataFilePath);
                 
                 switch( params.Calibration.Calibration_Type)
                     case 'Pupil-CR'
@@ -228,7 +228,7 @@ classdef VOGAnalysis < handle
                 else
                     disp(sprintf('WARNING THIS FILE (%s) HAS AN EMPTY CALIBRATION going to default open iris calibration', dataFiles{i}));
 
-                    calibrationTable       = VOGAnalysis.ReadCalibration(calibrationFilePath);
+                    calibrationTable       = VOGAnalysis.ReadOpenIrisCalibrationFile(calibrationFilePath);
                     calibratedDataFile      = VOGAnalysis.CalibrateData(dataFile, calibrationTable);
                 end
 
@@ -287,8 +287,8 @@ classdef VOGAnalysis < handle
                 
                 % load and preprocess data
                 
-                [dataFile, rawDataFile] = VOGAnalysis.LoadVOGdata(dataFilePath);
-                calibrationTables       = VOGAnalysis.ReadCalibration(calibrationFilePath);
+                [dataFile, rawDataFile] = VOGAnalysis.LoadOpenIrisData(dataFilePath);
+                calibrationTables       = VOGAnalysis.ReadOpenIrisCalibrationFile(calibrationFilePath);
 
 
                 switch( params.Calibration.Calibration_Type)
@@ -323,11 +323,11 @@ classdef VOGAnalysis < handle
             end
         end
         
-        function [data, dataFromFile] = LoadVOGdata(dataFile, originalDataFile)
+        function [data, dataFromFile] = LoadOpenIrisData(dataFile, originalDataFile)
             % LOAD VOG DATA loads the data recorded from the eye tracker
             %   into a matlab table
             %
-            %   data = LoadVOGDataset(dataFile, (originalDataFile) )
+            %   data = LoadOpenIrisDataset(dataFile, (originalDataFile) )
             %
             %   Inputs:
             %       - dataFile: full path of the file with the data.
@@ -377,6 +377,51 @@ classdef VOGAnalysis < handle
                         dataFromFile.Int0               = dataFromFile2.Int0;
                         dataFromFile.Int1               = dataFromFile2.Int1;
                     end
+                end
+
+                dPost = dir(strrep(dataFile,'.txt','-PostProc-*.txt'));
+                if ( ~isempty(dPost) && length(dPost)==1)
+                    postprocessedDataFile = fullfile(dPost.folder, dPost.name);
+                end
+                %% if there is a postprocessed file, we merge the appropriate columns
+                if ( exist( 'postprocessedDataFile', 'var' ) )
+                    dataPost = readtable(postprocessedDataFile);
+                    cprintf('SystemCommands','Found a postprocessed file, so loading data columns from it: %s\n', dPost.name);
+
+                    % check if length is the same
+                    if (height(dataFromFile) ~= height(dataPost))
+                        cprintf('SystemCommands','Data from postprocessed file has a different length\n');
+                    end
+
+                    idx = 1:height(dataFromFile);
+                    dataFromFile.LeftPupilX = dataPost.LeftPupilX(idx );
+                    dataFromFile.LeftPupilY = dataPost.LeftPupilY(idx);
+                    dataFromFile.RightPupilX = dataPost.RightPupilX(idx);
+                    dataFromFile.RightPupilY = dataPost.RightPupilY(idx);
+
+                    dataFromFile.LeftCR1X = dataPost.LeftCR1X(idx);
+                    dataFromFile.LeftCR1Y = dataPost.LeftCR1Y(idx);
+                    dataFromFile.RightCR1X = dataPost.RightCR1X(idx);
+                    dataFromFile.RightCR1Y = dataPost.RightCR1Y(idx);
+
+                    dataFromFile.LeftCR2X = dataPost.LeftCR2X(idx);
+                    dataFromFile.LeftCR2Y = dataPost.LeftCR2Y(idx);
+                    dataFromFile.RightCR2X = dataPost.RightCR2X(idx);
+                    dataFromFile.RightCR2Y = dataPost.RightCR2Y(idx);
+
+                    dataFromFile.LeftCR3X = dataPost.LeftCR3X(idx);
+                    dataFromFile.LeftCR3Y = dataPost.LeftCR3Y(idx);
+                    dataFromFile.RightCR3X = dataPost.RightCR3X(idx);
+                    dataFromFile.RightCR3Y = dataPost.RightCR3Y(idx);
+
+                    dataFromFile.LeftCR4X = dataPost.LeftCR4X(idx);
+                    dataFromFile.LeftCR4Y = dataPost.LeftCR4Y(idx);
+                    dataFromFile.RightCR4X = dataPost.RightCR4X(idx);
+                    dataFromFile.RightCR4Y = dataPost.RightCR4Y(idx);
+
+                    dataFromFile.LeftTorsion = dataPost.LeftTorsion(idx);
+                    dataFromFile.RightTorsion = dataPost.RightTorsion(idx);
+
                 end
                 
                 data.Time                   = dataFromFile.LeftSeconds - dataFromFile.LeftSeconds(1);
@@ -524,18 +569,18 @@ classdef VOGAnalysis < handle
             
             %             % Create frame number if not available
             %             if ( ~any(strcmp('FrameNumber',data.Properties.VariableNames)) )
-            %                 cprintf('Yellow', sprintf('++ VOGAnalysis :: LoadVOGdata :: FrameNumber missing, creating replacement\n'));
+            %                 cprintf('Yellow', sprintf('++ VOGAnalysis :: LoadOpenIrisData :: FrameNumber missing, creating replacement\n'));
             %                 frameNumber = cumsum(round(diff(data.Time)/median(diff(data.Time))));
             %                 data.FrameNumber = [0;frameNumber];
             %             end
             
         end
         
-        function [calibrationTable] = ReadCalibration(file)
+        function [calibrationTable] = ReadOpenIrisCalibrationFile(file)
             % READ CALIBRATION Reads the XML file containing calibration
             % information about a VOG recording
             %
-            %   [leftEye, rightEye] = ReadCalibration(file)
+            %   [leftEye, rightEye] = ReadOpenIrisCalibrationFile(file)
             %
             %   Inputs:
             %       - file: full path of the file with the calibration.
@@ -863,6 +908,100 @@ classdef VOGAnalysis < handle
             data.HeadRoll = eulerAnglesDegrees(:,3);
 
             data.Properties.UserData.sampleRate = framerate;
+        end
+
+        function [samplesDataTable, cleanedData, calibratedData, rawData] = LoadCleanAndResampleDataEyelink(dataFolder, dataFiles, params)
+
+            if ( nargin == 1)
+                [dataFolder, dataFiles,ext] = fileparts(dataFolder);
+                dataFiles = [dataFiles,ext];
+            end
+            
+            if (~iscell(dataFiles))
+                dataFiles = {dataFiles};
+            end
+            
+            if  (~exist('params','var') )
+                params = VOGAnalysis.GetParameters;
+            end
+
+            samplesDataTable = table();
+            rawData = table();
+            cleanedData = table();
+            
+            for i=1:length(dataFiles)
+                dataFile = dataFiles{i};
+                cprintf('blue','++ VOGAnalysis :: Reading data File %d of %d = %s ...\n', i, length(dataFiles), dataFile);
+                
+                dataFilePath = fullfile(dataFolder, dataFile);
+                
+                % load and preprocess data
+                
+                [rawDataFile]           = VOGAnalysis.LoadEyelinkData(dataFilePath);
+                cleanedDataFile         = VOGAnalysis.CleanData(rawDataFile, params);
+                fileSamplesDataSet      = cleanedDataFile;
+%                 fileSamplesDataSet      = VOGAnalysis.ResampleData(cleanedDataFile, params);
+
+                rawsamplerate = rawDataFile.Properties.UserData.sampleRate;
+                
+                % add a column to indicate which file the samples came from
+                fileSamplesDataSet  = [table(repmat(i,height(fileSamplesDataSet),1),'variablenames',{'FileNumber'}), fileSamplesDataSet];
+                rawDataFile         = [table(repmat(i,height(rawDataFile),1),       'variablenames',{'FileNumber'}), rawDataFile];
+                cleanedDataFile     = [table(repmat(i,height(cleanedDataFile),1),   'variablenames',{'FileNumber'}), cleanedDataFile];
+                
+                % TODO: change if resampling! 
+                fileSamplesDataSet.Properties.UserData.sampleRate = rawsamplerate;
+                
+                if( i>1)
+                    % fix timestamps while concatenating so they
+                    gapSeconds = 100; % gap to add in beteen files
+                    fileSamplesDataSet.Time = fileSamplesDataSet.Time - fileSamplesDataSet.Time(1) + samplesDataTable.Time(end) + gapSeconds;
+                    fileSamplesDataSet.FrameNumber = fileSamplesDataSet.FrameNumber - fileSamplesDataSet.FrameNumber(1) + samplesDataTable.FrameNumber(end) + gapSeconds*fileSamplesDataSet.Properties.UserData.sampleRate;
+                end
+                
+                samplesDataTable = cat(1,samplesDataTable,fileSamplesDataSet);
+                rawData = cat(1,rawData,rawDataFile);
+                cleanedData = cat(1,cleanedData,cleanedDataFile);
+                calibratedData = rawData;
+            end
+        end
+
+        function [data] = LoadEyelinkData(dataFile)
+
+            %%
+            [path,fname, ext] = fileparts(dataFile);
+            tmpfile = fullfile(path, 'temp.edf');
+            copyfile(dataFile, tmpfile);
+            edf0 = ArumeHardware.Edf2Mat(char(tmpfile));
+            delete(tmpfile);
+
+            
+            s = edf0.Samples;
+
+            samplerate = 1/median(diff(s.time))*1000;
+
+            data = table();
+            data.FrameNumber = round(edf0.Samples.time/median(diff(s.time)));
+            
+            
+            data.LeftFrameNumberRaw = data.FrameNumber;
+            data.RightFrameNumberRaw = data.FrameNumber;
+            data.Time = edf0.Samples.time/1000;
+            
+
+            %% Do the transformation from raw data to degs
+            data.RightPixX = s.gx(:,2);
+            data.RightPixY = s.gy(:,2);
+            data.LeftPixX =  s.gx(:,1);
+            data.LeftPixY = s.gy(:,1);
+            data.RightX = (s.gx(:,2)-2000)/1000*20;
+            data.RightY = (s.gy(:,2)-1000)/1000*20;
+            data.LeftX =  (s.gx(:,1)-2000)/1000*20;
+            data.LeftY = (s.gy(:,1)-1000)/1000*20;
+            data.RightT = nan(size(s.gx(:,2)));
+            data.LeftT = nan(size(s.gx(:,1)));
+
+            data.Properties.UserData.sampleRate = samplerate;
         end
     end
     

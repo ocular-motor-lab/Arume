@@ -55,31 +55,17 @@ classdef Demo < ArumeExperimentDesigns.EyeTracking
         
         function trialTable = SetUpTrialTable(this)
             
-            %-- condition variables ---------------------------------------
-            i= 0;
-            
-            i = i+1;
-            conditionVars(i).name   = 'Speed';
-            conditionVars(i).values = this.ExperimentOptions.Max_Speed/this.ExperimentOptions.Number_of_Speeds * [0:this.ExperimentOptions.Number_of_Speeds];
-            
-            i = i+1;
-            conditionVars(i).name   = 'Direction';
-            conditionVars(i).values = {'CW' 'CCW'};
-            
-            i = i+1;
-            conditionVars(i).name   = 'Stimulus';
-            if ( this.ExperimentOptions.Do_Blank ) 
-                conditionVars(i).values = {'Blank' 'Dots'};
+            t = ArumeCore.TrialTableBuilder();
+
+            t.AddConditionVariable('Speed',this.ExperimentOptions.Max_Speed/this.ExperimentOptions.Number_of_Speeds * [0:this.ExperimentOptions.Number_of_Speeds]);
+            t.AddConditionVariable('Direction',{'CW' 'CCW'})
+            if ( this.ExperimentOptions.Do_Blank )
+                t.AddConditionVariable('Stimulus',{'Blank' 'Dots'});
             else
-                conditionVars(i).values = {'Dots'};
+                t.AddConditionVariable('Stimulus',{'Dots'});
             end
-            
-            trialTableOptions = this.GetDefaultTrialTableOptions();
-            trialTableOptions.trialSequence = 'Random';
-            trialTableOptions.trialAbortAction = 'Delay';
-            trialTableOptions.trialsPerSession = 1000;
-            trialTableOptions.numberOfTimesRepeatBlockSequence = this.ExperimentOptions.NumberOfRepetitions;
-            trialTable = this.GetTrialTableFromConditions(conditionVars, trialTableOptions);
+
+            trialTable = t.GenerateTrialTable();
         end
         
 

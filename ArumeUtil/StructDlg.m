@@ -986,6 +986,20 @@ elseif (~isempty(lpar))
 else
    lpar = length(val{1});
 end
+
+% convert to plaintext string of comma-separated arguments
+replacewithcellarray = false;
+if iscell(filter_spec) & (isstring(filter_spec{1}) | ischar(filter_spec{1}))
+    replacewithcellarray = true;
+    origfilter_spec = filter_spec;
+    tempfilter_spec = '';
+    for i = 1:length(filter_spec)
+        tempfilter_spec = [tempfilter_spec,filter_spec{i},','];
+    end
+    tempfilter_spec(end) = [];
+    filter_spec = tempfilter_spec;
+end
+
 if (filter_spec(1) == '{') % if the filter is a complex set of filters then don't present it.
    filter_label = ['Files of types: ' filter_spec];
 else
@@ -993,7 +1007,7 @@ else
    filter_spec = '';
 end
 cmd = deblank(val{1}(1:lpar-1));
-width = max(20,length(filter_label)+10);
+width = min(max(20,length(filter_label)+10), 200); % we don't want the dlg to disappear when lots of files are selected
 if (isempty(h))
    cmenu = uicontextmenu;
    item1 = uimenu(cmenu, ...
@@ -1034,7 +1048,12 @@ end
 str_h = findobj(h, 'style', 'edit');
 set(str_h,'string',filter_label);
 update_uicontrol_width(str_h,width);
-ud.vals = setfield(ud.vals,f,filter_label);
+
+if replacewithcellarray
+    ud.vals = setfield(ud.vals,f,origfilter_spec);
+else
+    ud.vals = setfield(ud.vals,f,filter_label);
+end
 % ud.def = setfield(ud.def,f,filter_spec);
 return;
 

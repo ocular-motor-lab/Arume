@@ -92,7 +92,7 @@ classdef Arume < handle
                 end
                 this.configuration.recentProjects(strcmp(this.configuration.recentProjects, project.path)) = [];
                 % add it again at the top
-                this.configuration.recentProjects = [project.path this.configuration.recentProjects];
+                this.configuration.recentProjects = {project.path this.configuration.recentProjects{:}};
                 
                 this.saveConfiguration();
                 
@@ -201,20 +201,40 @@ classdef Arume < handle
         function initConfiguration( this )
             % find the folder of arume
             folder = fileparts(which('Arume'));
+            configFile = fullfile(folder,'arumeconf.json');
             
             % find the configuration file
-            if ( ~exist(fullfile(folder,'arumeconf.mat'),'file'))
-                conf = [];
-                conf.recentProjects = {};
+            if ( ~exist(configFile,'file'))
+                if ( exist(fullfile(folder,'arumeconf.mat'),'file'))
+                    confdata = load(fullfile(folder,'arumeconf.mat'));
+                    conf = confdata.conf;
+                else
+                    conf = [];
+                    conf.recentProjects = {};
+                end
                 this.configuration = conf;
-                save(fullfile(folder,'arumeconf.mat'), 'conf');
+                this.saveConfiguration();
+            else
+                % read the json file
+                fid = fopen(configFile);
+                raw = fread(fid,inf);
+                str = char(raw');
+                fclose(fid);
+                conf = jsondecode(str);
             end
-            confdata = load(fullfile(folder,'arumeconf.mat'));
-            conf = confdata.conf;
             
             % double check configuration fields
+            if ( ~isfield( conf, 'recentProjects') )
+                conf.recentProjects = {};
+            end
+            if ( length(conf.recentProjects)==1 && isempty(conf.recentProjects{1}) )
+                conf.recentProjects = {};
+            end
             if ( ~isfield( conf, 'defaultDataFolder') )
                 conf.defaultDataFolder = fullfile(folder, 'ArumeData');
+            end
+            if ( ~iscell(conf.recentProjects) )
+                conf.recentProjects = {conf.recentProjects};
             end
             
             % save the updated configuration
@@ -222,10 +242,17 @@ classdef Arume < handle
             this.saveConfiguration()
         end
         
-        function saveConfiguration( this )
-            conf = this.configuration;
+        function saveConfiguration( this, conf )
+            if ( ~exist('conf','var'))
+                conf = this.configuration;
+            end
             [folder, ~, ~] = fileparts(which('Arume'));
-            save(fullfile(folder,'arumeconf.mat'), 'conf');
+            configFile = fullfile(folder,'arumeconf.json');
+
+            jconf = jsonencode(conf,'PrettyPrint',true);
+            fid = fopen(configFile,'w');
+            fprintf(fid,'%s',jconf);
+            fclose(fid);
         end
         
         %

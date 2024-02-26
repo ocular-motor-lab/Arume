@@ -20,7 +20,6 @@ classdef DataDB < handle
     end
     
     methods (Access = protected)
-        
         function InitDB( this, folder)
             
             if ( ~ischar(folder) )
@@ -33,6 +32,13 @@ classdef DataDB < handle
                 mkdir(this.folder);
             end
         end
+        
+        
+        function ClearCache( this )
+            this.cache = struct();
+        end
+    end
+    methods (Access = public)
         
         function result = IsVariableInDB( this, variableName )
             d = dir( fullfile( this.folder, [variableName '.mat'] ) );
@@ -127,10 +133,6 @@ classdef DataDB < handle
             else
                 disp('ClusterDetection.DataDB: cannot write to the database, it is set as read only');
             end
-        end
-        
-        function ClearCache( this )
-            this.cache = struct();
         end
     end
 end

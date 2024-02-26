@@ -208,7 +208,7 @@ classdef ArumeGui < matlab.apps.AppBase
             app.menuSessionImportSession.Callback =  @app.importSession;
                         
             app.menuSessionCopy = uimenu(app.menuSession);
-            app.menuSessionCopy.Label = 'Copy sessions ...';
+            app.menuSessionCopy.Label = 'Copy sessions (no data)...';
             app.menuSessionCopy.Callback = @app.CopySessions;
             app.menuSessionCopy.Separator = 'on';
             
