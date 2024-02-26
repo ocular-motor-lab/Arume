@@ -1,3 +1,13 @@
+     
+
+
+
+  
+
+
+
+
+clear screen
 %           Screen('Preference', 'VisualDebugLevel', 3);
 Screen('Preference', 'SkipSyncTests', 1);
 Screen('Preference', 'VisualDebugLevel', 0);
@@ -19,10 +29,10 @@ Screen('Preference', 'ConserveVRAM', 64);
             [mx, my] = RectCenter(graph.wRect);
             fixRect = [0 0 10 10];
             fixRect = CenterRectOnPointd( fixRect, mx, my );
-            Screen('FillOval', graph.window,  255, fixRect);
+            Screen('FillOval', graph.window,  100, fixRect);
             
-            Screen('DrawLine', graph.window, 255, mx, my-2500, mx, my+2500, 1);
-            Screen('DrawLine', graph.window, 255, mx-2500, my, mx+2500, my, 1);
+            Screen('DrawLine', graph.window, 100, mx, my-2500, mx, my+2500, 1);
+            Screen('DrawLine', graph.window, 100, mx-2500, my, mx+2500, my, 1);
 
             fl0iptime = Screen('Flip', graph.window);
             
