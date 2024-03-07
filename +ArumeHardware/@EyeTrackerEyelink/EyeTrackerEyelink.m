@@ -30,10 +30,11 @@ classdef EyeTrackerEyelink  < handle
 
             % Initialization of the connection with the Eyelink Gazetracker.
             % exit program if this fails.
-            if ~EyelinkInit()
+            Eyelink('Shutdown');
+            if Eyelink('Initialize',  'PsychEyelinkDispatchCallback') ~= 0
                 fprintf('Eyelink Init aborted.\n');
                 Eyelink('Shutdown');  % cleanup function
-                return;
+                error('EYELINK could not be initialized');
             end
 
             % set up some basic calibration stuff after we initialize the eyelink

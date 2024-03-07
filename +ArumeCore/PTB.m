@@ -83,24 +83,18 @@ classdef PTB < handle
         function graph = PTB( debugMode, displayOptions)
             
             if ( ~exist('displayOptions','var') )
-                selectedScreenFromOptions = 1; 
-                stereoMode = 0;
-
-                foregroundColor = 100;
-                backgroundColor = 128;
-                mmWidthOptions    = 140*10;
-                mmHeightOptions   = 80*10;
-                distanceToMonitorOptions = 85;
-            else
-                selectedScreenFromOptions = displayOptions.SelectedScreen;
-                stereoMode = displayOptions.StereoMode;
-
-                foregroundColor = displayOptions.ForegroundColor;
-                backgroundColor = displayOptions.BackgroundColor;
-                mmWidthOptions    = displayOptions.ScreenWidth;
-                mmHeightOptions          = displayOptions.ScreenHeight;
-                distanceToMonitorOptions = displayOptions.ScreenDistance;
+                displayOptions = ArumeCore.PTB.GetDisplayOptionsDefault();
             end
+
+            selectedScreenFromOptions = displayOptions.SelectedScreen;
+            stereoMode = displayOptions.StereoMode;
+
+            foregroundColor = displayOptions.ForegroundColor;
+            backgroundColor = displayOptions.BackgroundColor;
+            mmWidthOptions    = displayOptions.ScreenWidth;
+            mmHeightOptions          = displayOptions.ScreenHeight;
+            distanceToMonitorOptions = displayOptions.ScreenDistance;
+
 
 
             % -- GRAPHICS KEYBOARD and MOUSE
@@ -337,13 +331,13 @@ classdef PTB < handle
             while(1)
                 
                 try
-                    g = ArumeHardware.GamePad();
-                    [ ~, ~, ~, a, b, x, y] = g.Query;
-                    
-                    if ( a || b || x || y)
-                        result = char('a');
-                        break;
-                    end
+                    % g = ArumeHardware.GamePad();
+                    % [ ~, ~, ~, a, b, x, y] = g.Query;
+                    % 
+                    % if ( a || b || x || y)
+                    %     result = char('a');
+                    %     break;
+                    % end
                     
                     [~,~,buttons] = GetMouse();
                     
