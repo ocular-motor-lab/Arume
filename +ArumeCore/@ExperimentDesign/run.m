@@ -51,6 +51,7 @@ while(1)
                             this.eyeTracker = ArumeHardware.VOG();
                         case 'Eyelink'
                             this.eyeTracker = ArumeHardware.EyeTrackerEyelink();
+                            this.eyeTracker.experimentOptions = this.ExperimentOptions;
                     end
 
                     shouldContinue = this.eyeTracker.Connect(this.Graph);

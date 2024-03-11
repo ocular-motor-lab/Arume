@@ -5,7 +5,7 @@ classdef EyeTrackerEyelink  < handle
     properties
         graph
         el
-        
+        experimentOptions
     end
     
     methods
@@ -19,11 +19,11 @@ classdef EyeTrackerEyelink  < handle
             % change the calibration point properties
             this.el.calibrationtargetsize = 1;
             this.el.calibrationtargetwidth = .25;
-            this.el.backgroundcolour = 0;
-            this.el.imgtitlecolour = 1;
-            this.el.foregroundcolour = 1;
-            this.el.msgfontcolour = 255;
-            this.el.calibrationtargetcolour = [255,255,255];
+            this.el.backgroundcolour = this.experimentOptions.DisplayOptions.BackgroundColor;
+            this.el.imgtitlecolour = this.experimentOptions.DisplayOptions.ForegroundColor;
+            this.el.foregroundcolour = this.experimentOptions.DisplayOptions.ForegroundColor;
+            this.el.msgfontcolour = this.experimentOptions.DisplayOptions.ForegroundColor;
+            this.el.calibrationtargetcolour = this.experimentOptions.DisplayOptions.ForegroundColor;
             this.el.targetbeep = 0;
             this.el.feedbackbeep = 0;
             EyelinkUpdateDefaults(this.el);
