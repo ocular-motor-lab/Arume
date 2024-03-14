@@ -83,20 +83,20 @@ if ( options.Prepare_For_Analysis_And_Plots )
     newSessionDataTable = this.EyeTrackingGetSessionStats(newSessionDataTable, options);
     newSessionDataTable.LastAnalysisDateTime = char(string(datetime('now')));
 
-    options = FlattenStructure(options); % eliminate strcuts with the struct so it can be made into a row of a table
-    opts = fieldnames(options);
+    optionsf = FlattenStructure(options); % eliminate strcuts with the struct so it can be made into a row of a table
+    opts = fieldnames(optionsf);
     s = this.GetExperimentOptionsDialog(1);
     for i=1:length(opts)
-        if ( isempty(options.(opts{i})))
+        if ( isempty(optionsf.(opts{i})))
             newSessionDataTable.(['AnalysisOption_' opts{i}]) = {''};
-        elseif ( ~ischar( options.(opts{i})) && numel(options.(opts{i})) <= 1)
-            newSessionDataTable.(['AnalysisOption_' opts{i}]) = options.(opts{i});
+        elseif ( ~ischar( optionsf.(opts{i})) && numel(optionsf.(opts{i})) <= 1)
+            newSessionDataTable.(['AnalysisOption_' opts{i}]) = optionsf.(opts{i});
         elseif (isfield( s, opts{i}) && iscell(s.(opts{i})) && iscell(s.(opts{i}){1}) && length(s.(opts{i}){1}) >1)
-            newSessionDataTable.(['AnalysisOption_' opts{i}]) = categorical(cellstr(options.(opts{i})));
-        elseif (~ischar(options.(opts{i})) && numel(options.(opts{i})) > 1 )
-            newSessionDataTable.(['AnalysisOption_' opts{i}]) = {options.(opts{i})};
+            newSessionDataTable.(['AnalysisOption_' opts{i}]) = categorical(cellstr(optionsf.(opts{i})));
+        elseif (~ischar(optionsf.(opts{i})) && numel(optionsf.(opts{i})) > 1 )
+            newSessionDataTable.(['AnalysisOption_' opts{i}]) = {optionsf.(opts{i})};
         else
-            newSessionDataTable.(['AnalysisOption_' opts{i}]) = string(options.(opts{i}));
+            newSessionDataTable.(['AnalysisOption_' opts{i}]) = string(optionsf.(opts{i}));
         end
     end
 
@@ -106,6 +106,7 @@ if ( options.Prepare_For_Analysis_And_Plots )
 end
 
 %% 5) Run analysis for the experiment
+[analysisResults, samplesDataTable, trialDataTable, sessionTable]  = this.RunDataAnalysesEyeTracking(analysisResults, samplesDataTable, trialDataTable, sessionTable, options);
 [analysisResults, samplesDataTable, trialDataTable, sessionTable]  = this.RunDataAnalyses(analysisResults, samplesDataTable, trialDataTable, sessionTable, options);
 
 %% 6) Save data to disk

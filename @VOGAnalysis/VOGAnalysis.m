@@ -77,6 +77,15 @@ classdef VOGAnalysis < handle
             if ( sum(strcmp('RightT',calibratedData.Properties.VariableNames))>0 || sum(strcmp('LeftT',calibratedData.Properties.VariableNames))>0 )
                 eyeSignals{end+1} = 'T';
             end
+            if ( sum(strcmp('RightPixX',calibratedData.Properties.VariableNames))>0 || sum(strcmp('LeftPixX',calibratedData.Properties.VariableNames))>0 )
+                eyeSignals{end+1} = 'PixX';
+            end
+            if ( sum(strcmp('RightPixY',calibratedData.Properties.VariableNames))>0 || sum(strcmp('LeftPixY',calibratedData.Properties.VariableNames))>0 )
+                eyeSignals{end+1} = 'PixY';
+            end
+            % if ( sum(strcmp('RightPixT',calibratedData.Properties.VariableNames))>0 || sum(strcmp('LeftPixT',calibratedData.Properties.VariableNames))>0 )
+            %     eyeSignals{end+1} = 'PixT';
+            % end
             if ( sum(strcmp('RightPupil',calibratedData.Properties.VariableNames))>0 || sum(strcmp('LeftPupil',calibratedData.Properties.VariableNames))>0 )
                 eyeSignals{end+1} = 'Pupil';
             end
@@ -989,15 +998,25 @@ classdef VOGAnalysis < handle
             data.Time = edf0.Samples.time/1000;
             
 
-            %% Do the transformation from raw data to degs
+            %% save pixel coords
             data.RightPixX = s.gx(:,2);
             data.RightPixY = s.gy(:,2);
             data.LeftPixX =  s.gx(:,1);
             data.LeftPixY = s.gy(:,1);
-            data.RightX = (s.gx(:,2)-2000)/1000*20;
-            data.RightY = (s.gy(:,2)-1000)/1000*20;
-            data.LeftX =  (s.gx(:,1)-2000)/1000*20;
-            data.LeftY = (s.gy(:,1)-1000)/1000*20;
+
+            %% Do the transformation from raw data to degs
+            %% TO CHANGE -- ONLY APPLIES TO EYELINK-OLED SETUP (03/07/24)
+            vdist_cm = 130;
+            screenw_cm = 170;
+            w_px = 3840;
+            h_px = 2160;
+            widthdeg = rad2deg(atan((screenw_cm/2)/vdist_cm))*2;
+            pxperdeg = w_px/widthdeg;
+
+            data.RightX = (s.gx(:,2)-w_px/2)/pxperdeg;
+            data.RightY = (s.gy(:,2)-h_px/2)/pxperdeg;
+            data.LeftX =  (s.gx(:,1)-w_px/2)/pxperdeg;
+            data.LeftY = (s.gy(:,1)-h_px/2)/pxperdeg;
             data.RightT = nan(size(s.gx(:,2)));
             data.LeftT = nan(size(s.gx(:,1)));
 
@@ -1468,6 +1487,21 @@ classdef VOGAnalysis < handle
                     accy = [0;diff(vy)./dt];
                     acct = [0;diff(vt)./dt];
                     acc = sqrt(accx.^2+accy.^2);
+                    
+                    % sometimes we may also want to save the gaze position
+                    % in raw pixel coordinates
+                    if any(strcmp([eyes{i} 'PixX'],cleanedData.Properties.VariableNames))
+                        xpx = cleanedData.([eyes{i} 'PixX']);
+                        ypx = cleanedData.([eyes{i} 'PixY']);
+                        % tpx = cleanedData.([eyes{i} 'PixT']);
+                        vxpx = [0;diff(xpx)./dt];
+                        vypx = [0;diff(ypx)./dt];
+                        % vtpx = [0;diff(tpx)./dt];
+                        accxpx = [0;diff(vxpx)./dt];
+                        accypx = [0;diff(vypx)./dt];
+                        % acctpx = [0;diff(vtpx)./dt];
+                        accpx = sqrt(accxpx.^2+accypx.^2);
+                    end
                     
                     % find blinks and other abnormal pupil sizes or eye movements
                     
