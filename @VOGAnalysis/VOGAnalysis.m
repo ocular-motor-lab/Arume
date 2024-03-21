@@ -1014,9 +1014,9 @@ classdef VOGAnalysis < handle
             pxperdeg = w_px/widthdeg;
 
             data.RightX = (s.gx(:,2)-w_px/2)/pxperdeg;
-            data.RightY = (s.gy(:,2)-h_px/2)/pxperdeg;
+            data.RightY = -(s.gy(:,2)-h_px/2)/pxperdeg; % invert so 0-0 is bottom left
             data.LeftX =  (s.gx(:,1)-w_px/2)/pxperdeg;
-            data.LeftY = (s.gy(:,1)-h_px/2)/pxperdeg;
+            data.LeftY = -(s.gy(:,1)-h_px/2)/pxperdeg;
             data.RightT = nan(size(s.gx(:,2)));
             data.LeftT = nan(size(s.gx(:,1)));
 
