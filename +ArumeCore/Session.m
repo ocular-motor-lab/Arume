@@ -383,6 +383,7 @@ classdef Session < ArumeCore.DataDB
                 newSessionDataTable.Subject = categorical(cellstr(this.subjectCode));
                 newSessionDataTable.SessionCode = categorical(cellstr(this.sessionCode));
                 newSessionDataTable.Experiment = categorical(cellstr(this.experimentDesign.Name));
+                newSessionDataTable.Comment = cellstr(this.comment);
                 
                 NoYes = {'No' 'Yes'};
                 newSessionDataTable.Started = categorical(NoYes(this.isStarted+1));
