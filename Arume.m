@@ -31,6 +31,8 @@ classdef Arume < handle
         possiblePlots
         priv_currentProject      
         priv_selectedSessions   
+
+        SIMPLEMODE = 0 ;
     end
     
     properties(Dependent=true)
@@ -157,6 +159,8 @@ classdef Arume < handle
                 
                 arumeSingleton = arumeController;
                 arumeSingleton.init();
+
+                arumeSingleton.SIMPLEMODE = arumeSingleton.configuration.userMode=="Simple";
             end
             
             if ( loadlast )
@@ -235,6 +239,11 @@ classdef Arume < handle
             end
             if ( ~iscell(conf.recentProjects) )
                 conf.recentProjects = {conf.recentProjects};
+            end
+
+
+            if ( ~isfield( conf, 'userMode') )
+                conf.userMode = 'Normal';
             end
             
             % save the updated configuration

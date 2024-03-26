@@ -60,8 +60,7 @@ classdef ArumeGui < matlab.apps.AppBase
         
         menuTools
         menuToolsBiteBarGui
-        menuToolsOpenProjectFolderInExplorer
-        
+        menuToolsOpenProjectFolderInExplorer        
     end
     
     %% Constructor
@@ -74,7 +73,7 @@ classdef ArumeGui < matlab.apps.AppBase
         end
         
         function InitUI(app )
-            
+
             screenSize = get(groot,'ScreenSize');
             screenWidth = screenSize(3);
             screenHeight = screenSize(4);
@@ -164,6 +163,8 @@ classdef ArumeGui < matlab.apps.AppBase
         
         function InitMenu(app)
             
+            SIMPLEMODE = app.arumeController.SIMPLEMODE;
+
             % menu
             set(app.figureHandle,'MenuBar','none');
             
@@ -186,14 +187,16 @@ classdef ArumeGui < matlab.apps.AppBase
             app.menuProjectCloseProject.Text = 'Close project';
             app.menuProjectCloseProject.Callback =  @app.closeProject;
             
-            app.menuProjectSaveProjectBackup = uimenu(app.menuProject);
-            app.menuProjectSaveProjectBackup.Text = 'Backup project ...';
-            app.menuProjectSaveProjectBackup.Separator = 'on';
-            app.menuProjectSaveProjectBackup.Callback = @app.saveProjectBackup;
-            
-            app.menuProjectLoadProjectBackup = uimenu(app.menuProject);
-            app.menuProjectLoadProjectBackup.Text = 'Restore project backup ...';
-            app.menuProjectLoadProjectBackup.Callback = @app.loadProjectBackup;
+            if ( ~SIMPLEMODE )
+                app.menuProjectSaveProjectBackup = uimenu(app.menuProject);
+                app.menuProjectSaveProjectBackup.Text = 'Backup project ...';
+                app.menuProjectSaveProjectBackup.Separator = 'on';
+                app.menuProjectSaveProjectBackup.Callback = @app.saveProjectBackup;
+
+                app.menuProjectLoadProjectBackup = uimenu(app.menuProject);
+                app.menuProjectLoadProjectBackup.Text = 'Restore project backup ...';
+                app.menuProjectLoadProjectBackup.Callback = @app.loadProjectBackup;
+            end
             
             
             app.menuSession = uimenu(app.figureHandle);
@@ -203,9 +206,11 @@ classdef ArumeGui < matlab.apps.AppBase
             app.menuSessionNewSession.Text = 'New session';
             app.menuSessionNewSession.Callback = @app.newSession;
             
-            app.menuSessionImportSession = uimenu(app.menuSession);
-            app.menuSessionImportSession.Text = 'Import session';
-            app.menuSessionImportSession.Callback =  @app.importSession;
+            if ( ~SIMPLEMODE )
+                app.menuSessionImportSession = uimenu(app.menuSession);
+                app.menuSessionImportSession.Text = 'Import session';
+                app.menuSessionImportSession.Callback =  @app.importSession;
+            end
                         
             app.menuSessionCopy = uimenu(app.menuSession);
             app.menuSessionCopy.Label = 'Copy sessions (no data)...';
@@ -224,14 +229,16 @@ classdef ArumeGui < matlab.apps.AppBase
             app.menuSessionEditSettings.Label = 'Edit settings ...';
             app.menuSessionEditSettings.Callback = @app.EditSessionSettings;
             
-            app.menuSessionSendDataToWorkspace = uimenu(app.menuSession);
-            app.menuSessionSendDataToWorkspace.Label = 'Send data to workspace ...';
-            app.menuSessionSendDataToWorkspace.Callback = @app.SendDataToWorkspace;
-            
-            app.menuSessionNewSessionAggregate = uimenu(app.menuSession);
-            app.menuSessionNewSessionAggregate.Label = 'New session aggreage ...';
-            app.menuSessionNewSessionAggregate.Callback = @app.NewSessionAggregate;
-            app.menuSessionNewSessionAggregate.Separator = 'on';
+            if ( ~SIMPLEMODE )
+                app.menuSessionSendDataToWorkspace = uimenu(app.menuSession);
+                app.menuSessionSendDataToWorkspace.Label = 'Send data to workspace ...';
+                app.menuSessionSendDataToWorkspace.Callback = @app.SendDataToWorkspace;
+
+                app.menuSessionNewSessionAggregate = uimenu(app.menuSession);
+                app.menuSessionNewSessionAggregate.Label = 'New session aggreage ...';
+                app.menuSessionNewSessionAggregate.Callback = @app.NewSessionAggregate;
+                app.menuSessionNewSessionAggregate.Separator = 'on';
+            end
             
             app.menuRun = uimenu(app.figureHandle);
             app.menuRun.Text = 'Run';
@@ -248,28 +255,32 @@ classdef ArumeGui < matlab.apps.AppBase
             app.menuRunRestartSession.Text = 'Restart session';
             app.menuRunRestartSession.Callback = @app.restartSession;
             
-            app.menuResumeSessionFrom = uimenu(app.menuRun);
-            app.menuResumeSessionFrom.Text = 'Resume session from ...';
-            app.menuResumeSessionFrom.Separator = 'on' ;
+            if ( ~SIMPLEMODE )
+                app.menuResumeSessionFrom = uimenu(app.menuRun);
+                app.menuResumeSessionFrom.Text = 'Resume session from ...';
+                app.menuResumeSessionFrom.Separator = 'on' ;
+            end
             
             
-            app.menuAnalyze = uimenu(app.figureHandle);
-            app.menuAnalyze.Text = 'Analyze';
-            
-            app.menuAnalyzeRunAnalyses = uimenu(app.menuAnalyze);
-            app.menuAnalyzeRunAnalyses.Text = 'Run data analyses ...';
-            app.menuAnalyzeRunAnalyses.Callback = @app.RunDataAnalyses;
-            
-            app.menuAnalyzeMarkData = uimenu(app.menuAnalyze);
-            app.menuAnalyzeMarkData.Text = 'Mark data ...';
-            app.menuAnalyzeMarkData.Separator = 'on';
-            app.menuAnalyzeMarkData.Callback = @app.MarkData;
-            
-                        
-            app.menuAnalyzeClearAll = uimenu(app.menuAnalyze);
-            app.menuAnalyzeClearAll.Text = 'Clear all data';
-            app.menuAnalyzeClearAll.Separator = 'on';
-            app.menuAnalyzeClearAll.Callback = @app.ClearAllPrepareAndAnalyses;
+                app.menuAnalyze = uimenu(app.figureHandle);
+                app.menuAnalyze.Text = 'Analyze';
+
+                app.menuAnalyzeRunAnalyses = uimenu(app.menuAnalyze);
+                app.menuAnalyzeRunAnalyses.Text = 'Run data analyses ...';
+                app.menuAnalyzeRunAnalyses.Callback = @app.RunDataAnalyses;
+
+            if ( ~SIMPLEMODE )
+                app.menuAnalyzeMarkData = uimenu(app.menuAnalyze);
+                app.menuAnalyzeMarkData.Text = 'Mark data ...';
+                app.menuAnalyzeMarkData.Separator = 'on';
+                app.menuAnalyzeMarkData.Callback = @app.MarkData;
+
+
+                app.menuAnalyzeClearAll = uimenu(app.menuAnalyze);
+                app.menuAnalyzeClearAll.Text = 'Clear all data';
+                app.menuAnalyzeClearAll.Separator = 'on';
+                app.menuAnalyzeClearAll.Callback = @app.ClearAllPrepareAndAnalyses;
+            end
             
             
             app.menuPlot = uimenu(app.figureHandle);
@@ -278,9 +289,11 @@ classdef ArumeGui < matlab.apps.AppBase
             app.menuTools = uimenu(app.figureHandle);
             app.menuTools.Text = 'Tools';
             
-            app.menuToolsBiteBarGui = uimenu(app.menuTools);
-            app.menuToolsBiteBarGui.Text = 'Bite bar GUI';
-            app.menuToolsBiteBarGui.Callback = @BitebarGUI;
+            if ( ~SIMPLEMODE )
+                app.menuToolsBiteBarGui = uimenu(app.menuTools);
+                app.menuToolsBiteBarGui.Text = 'Bite bar GUI';
+                app.menuToolsBiteBarGui.Callback = @BitebarGUI;
+            end
             
             app.menuToolsOpenProjectFolderInExplorer = uimenu(app.menuTools);
             app.menuToolsOpenProjectFolderInExplorer.Text = 'Open project folder in explorer...';
