@@ -39,8 +39,12 @@ classdef EyeTrackerEyelink  < handle
 
             % set up some basic calibration stuff after we initialize the eyelink
             % (we cannot do this before EyelinkInit)
-            Eyelink('Command','calibration_area_proportion = 0.4 0.4'); % should be about 32 deg across!!!
-            Eyelink('Command','validation_area_proportion = 0.4 0.4');
+            Eyelink('Command',sprintf('calibration_area_proportion = %.2f %.2f',...
+                this.experimentOptions.EyeTrackerCalibProportion(1),...
+                this.experimentOptions.EyeTrackerCalibProportion(2))); % should be about 32 deg across!!!
+            Eyelink('Command',sprintf('calibration_area_proportion = %.2f %.2f',...
+                this.experimentOptions.EyeTrackerCalibProportion(1),...
+                this.experimentOptions.EyeTrackerCalibProportion(2))); 
 
             % make sure that we get gaze data from the Eyelink
             Eyelink('command', 'link_sample_data = LEFT,RIGHT,GAZE,AREA,INPUT');
@@ -49,6 +53,25 @@ classdef EyeTrackerEyelink  < handle
             % we can also extract event data if we like
             Eyelink('command', 'link_event_filter = LEFT,RIGHT,FIXATION,SACCADE,BLINK,MESSAGE,BUTTON,FIXUPDATE,INPUT');
             Eyelink('command', 'file_event_filter = LEFT,RIGHT,FIXATION,SACCADE,BLINK,MESSAGE,BUTTON,FIXUPDATE,INPUT');
+
+            % make sure that the EL viewing distance and screen coordinates
+            % are set correctly, even if the user forgets to manually
+            % update them on the eyelink UI
+            wsz = [-(this.experimentOptions.DisplayOptions.ScreenWidth*10/2),...
+                (this.experimentOptions.DisplayOptions.ScreenHeight*10/2),...
+                (this.experimentOptions.DisplayOptions.ScreenWidth*10/2),...
+                -(this.experimentOptions.DisplayOptions.ScreenHeight*10/2)]; % mm relative to center
+            wszpx = [0, 0, graph.pxWidth, graph.pxHeight];
+
+            % set screen distance at middle of screen (f user is not
+            % perfectly centered, we can provide distance to top and bottom
+            % for better velocity calculations...
+            sdist = this.experimentOptions.DisplayOptions.ScreenDistance*10;
+
+            % all physical distances are specified in mm
+            Eyelink('command', sprintf('screen_phys_coords = %i, %i, %i, %i',wsz(1),wsz(2),wsz(3),wsz(4)));
+            Eyelink('command', sprintf('screen_pixel_coords = %i, %i, %i, %i',wszpx(1),wszpx(2),wszpx(3),wszpx(4)));
+            Eyelink('command', sprintf('screen_distance = %i',sdist));
 
             % open file to record data to
             this.el.edfFile = sprintf('ArumeTmp.edf'); % TODO: maybe change this

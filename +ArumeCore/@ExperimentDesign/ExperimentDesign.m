@@ -632,7 +632,15 @@ classdef ExperimentDesign < handle
                 end
                 condition = [];
                 for i=1:length(ConditionVarsNames)
-                    conditionVarLevels = categories(categorical(this.Session.currentRun.pastTrialTable{:,ConditionVarsNames{i}}));
+                    try
+                        conditionVarLevels = categories(categorical(this.Session.currentRun.pastTrialTable{:,ConditionVarsNames{i}}));
+                    catch
+                        % when we have a random variable, and two values
+                        % are very close, the categorical function errors
+                        % out. The minimum separation between two
+                        % categories is .00005
+                        conditionVarLevels = unique(this.Session.currentRun.pastTrialTable{:,ConditionVarsNames{i}});
+                    end
                     if ( numel(conditionVarLevels)>1)
                         if (isempty(condition) )
                             condition = string(trialDataTable{:,ConditionVarsNames(i)});
@@ -661,7 +669,11 @@ classdef ExperimentDesign < handle
                         qp{:,ConditionVarsNames{i}} = nan(height(qp),1);
                         qp{~isnan(qp.TrialNumber),ConditionVarsNames{i}} =  trialDataTable{qp.TrialNumber(~isnan(qp.TrialNumber)),ConditionVarsNames{i}};
                     end
-                    sp{~isnan(sp.TrialNumber),ConditionVarsNames{i}} =  categorical(trialDataTable{sp.TrialNumber(~isnan(sp.TrialNumber)),ConditionVarsNames{i}});
+                    try
+                        sp{~isnan(sp.TrialNumber),ConditionVarsNames{i}} =  categorical(trialDataTable{sp.TrialNumber(~isnan(sp.TrialNumber)),ConditionVarsNames{i}});
+                    catch
+                        sp{~isnan(sp.TrialNumber),ConditionVarsNames{i}} =  (trialDataTable{sp.TrialNumber(~isnan(sp.TrialNumber)),ConditionVarsNames{i}});
+                    end
                 end
                 warning('on','MATLAB:table:RowsAddedNewVars');
                 
