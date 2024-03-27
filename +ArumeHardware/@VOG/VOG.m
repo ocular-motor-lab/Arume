@@ -110,7 +110,7 @@ classdef VOG  < handle
         end
         
         
-        function [files]= DownloadFile(this, path)
+        function [files]= DownloadFile(this, path, newfilename)
             files = [];
             if ( ~isempty( this.eyeTracker) )
                 try
@@ -121,6 +121,17 @@ classdef VOG  < handle
                 files = cell(files.ToArray)';
             end
         end
+
+
+
+        function calibrationSuccessful = Calibrate(this)
+            calibrationSuccessful = 1;
+        end
+
+        function Disconnect(this)
+
+        end
+
     end
     
     methods(Static = true)
