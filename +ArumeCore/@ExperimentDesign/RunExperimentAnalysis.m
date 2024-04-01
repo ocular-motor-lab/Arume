@@ -106,8 +106,11 @@ if ( options.Prepare_For_Analysis_And_Plots )
 end
 
 %% 5) Run analysis for the experiment
-[analysisResults, samplesDataTable, trialDataTable, sessionTable]  = this.RunDataAnalysesEyeTracking(analysisResults, samplesDataTable, trialDataTable, sessionTable, options);
 [analysisResults, samplesDataTable, trialDataTable, sessionTable]  = this.RunDataAnalyses(analysisResults, samplesDataTable, trialDataTable, sessionTable, options);
+
+[analysisResults, samplesDataTable, trialDataTable, sessionTable]  = this.RunDataAnalysesEyeTracking(analysisResults, samplesDataTable, trialDataTable, sessionTable, options);
+            
+
 
 %% 6) Save data to disk
 this.Session.WriteVariableIfNotEmpty(samplesDataTable,'samplesDataTable');
