@@ -23,7 +23,7 @@ classdef VOGAnalysis < handle
         
         function optionsDlg = GetParameterOptions()
             
-            optionsDlg.Detect_Quik_and_Slow_Phases =  { {'{0}','1'} };
+            optionsDlg.Detect_Quik_and_Slow_Phases =  { {'0','{1}'} };
             
             
             optionsDlg.CleanUp.smoothRloessSpan = 5;
@@ -38,7 +38,7 @@ classdef VOGAnalysis < handle
             optionsDlg.CleanUp.TVelMax = 200;
             optionsDlg.CleanUp.AccelMax = 50000;
             optionsDlg.CleanUp.TAccelMax = 50000;
-            optionsDlg.CleanUp.DETECT_FLAT_PERIODS =  { {'0','{1}'} };
+            optionsDlg.CleanUp.DETECT_FLAT_PERIODS =  { {'{0}','1'} };
             optionsDlg.CleanUp.Remove_Bad_Data = { {'0','{1}'} };
             optionsDlg.CleanUp.Interpolate_Spikes_of_Bad_Data = { {'0','{1}'} };
             optionsDlg.CleanUp.Interpolate_Pupil_Spikes_of_Bad_Data = { {'0','{1}'} };
@@ -46,14 +46,15 @@ classdef VOGAnalysis < handle
             
             optionsDlg.Calibration.Calibration_Type = {'Pupil-CR|{Pupil}|DPI|None'};
 
-            optionsDlg.Detection.Detection_Method = {'Manual|New|{Engbert}|cluster|Sai'};
+            % optionsDlg.Detection.Detection_Method = {'Manual|New|{Engbert}|cluster|Sai'};
+            optionsDlg.Detection.Detection_Method = {'Manual|{Engbert}|cluster'};
             
-            optionsDlg.Detection.New.VFAC = 4; % saccade detection threshold factor
-            optionsDlg.Detection.New.HFAC = 4;
-            optionsDlg.Detection.New.InterPeakMinInterval = 50; % ms
+            % optionsDlg.Detection.New.VFAC = 4; % saccade detection threshold factor
+            % optionsDlg.Detection.New.HFAC = 4;
+            % optionsDlg.Detection.New.InterPeakMinInterval = 50; % ms
             
             optionsDlg.Detection.Engbert    = VOGAnalysis.DetectQuickPhasesEngbertKliegl('get_options');
-            optionsDlg.Detection.Sai        = VOGAnalysis.DetectQuickPhasesSai('get_options');
+            % optionsDlg.Detection.Sai        = VOGAnalysis.DetectQuickPhasesSai('get_options');
             
         end
         
