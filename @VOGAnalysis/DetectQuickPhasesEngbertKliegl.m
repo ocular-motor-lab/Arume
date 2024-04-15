@@ -200,8 +200,13 @@ if ( (LEFT && ~isempty(lrsac.Left)) || (RIGHT && ~isempty(lrsac.Right)) ) % some
     textprogressbar(5/Nprogsteps);
 
     timeElapsed = toc;
-    textprogressbar(sprintf('Done in %0.2f seconds.', timeElapsed));
 
+end
+
+textprogressbar(sprintf('Done in %0.2f seconds.', timeElapsed));
+
+if ( (LEFT && ~isempty(lrsac.Left)) || (RIGHT && ~isempty(lrsac.Right)) ) % some saccades detected
+    
 
     %% refine beginings and ends
 
@@ -293,6 +298,9 @@ if ( (LEFT && ~isempty(lrsac.Left)) || (RIGHT && ~isempty(lrsac.Right)) ) % some
             end
         end
         sac = newqp;
+
+        timeElapsed = toc;
+        textprogressbar(sprintf('Done in %0.2f seconds.', timeElapsed));
     end
 
 
@@ -315,15 +323,14 @@ else
     data.QuickPhase = zeros(height(data),1);
 end
 
-timeElapsed = toc;
-textprogressbar(sprintf('Done in %0.2f seconds.', timeElapsed));
-
 info.Engbert_Vth = rad;
 
 for k=1:length(eyes)
     cprintf('blue', sprintf('++ VOGAnalysis :: Engbert thresholds %s (H V T deg/s) %0.1f %0.1f %0.1f\n', ...
         eyes{k}, radEyes{k}(1), radEyes{k}(2), radEyes{k}(3) ));
 end
+
+
 
 end
 

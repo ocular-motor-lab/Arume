@@ -3033,15 +3033,21 @@ classdef VOGAnalysis < handle
             COLOR.Right = [0.9000 0.2000 0.2000];
             
             eyes = {'Left' 'Right'};
-            lr = [0 0];
-            switch(options.Which_Eye)
-                case 'Both'
-                    lr = [ 1 1];
-                case 'Left'
-                    lr = [ 1 0];
-                case 'Right'
-                    lr = [ 0 1];
+            lr = [data.Properties.UserData.LEFT,data.Properties.UserData.RIGHT];
+
+            % only allow user to actually choose plotted eye if that eye
+            % exists in the recording
+            if sum(lr)>1
+                switch(options.Which_Eye)
+                    case 'Both'
+                        lr = [ 1 1];
+                    case 'Left'
+                        lr = [ 1 0];
+                    case 'Right'
+                        lr = [ 0 1];
+                end
             end
+
             comps = {'Horizontal', 'Vertical', 'Torsion'};
             comps2 = {'X', 'Y', 'T'};
             
