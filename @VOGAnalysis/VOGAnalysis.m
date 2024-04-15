@@ -998,12 +998,6 @@ classdef VOGAnalysis < handle
             data.Time = edf0.Samples.time/1000;
             
 
-            %% save pixel coords
-            data.RightPixX = s.gx(:,2);
-            data.RightPixY = s.gy(:,2);
-            data.LeftPixX =  s.gx(:,1);
-            data.LeftPixY = s.gy(:,1);
-
             %% Do the transformation from raw data to degs
             %% TO CHANGE -- ONLY APPLIES TO EYELINK-OLED SETUP (03/07/24)
             vdist_cm = 130;
@@ -1013,12 +1007,23 @@ classdef VOGAnalysis < handle
             widthdeg = rad2deg(atan((screenw_cm/2)/vdist_cm))*2;
             pxperdeg = w_px/widthdeg;
 
-            data.RightX = (s.gx(:,2)-w_px/2)/pxperdeg;
-            data.RightY = -(s.gy(:,2)-h_px/2)/pxperdeg; % invert so 0-0 is bottom left
-            data.LeftX =  (s.gx(:,1)-w_px/2)/pxperdeg;
-            data.LeftY = -(s.gy(:,1)-h_px/2)/pxperdeg;
-            data.RightT = nan(size(s.gx(:,2)));
-            data.LeftT = nan(size(s.gx(:,1)));
+            %% save pixel coords
+            if ( edf0.RawEdf.RECORDINGS(1).eye == edf0.EYES.RIGHT || edf0.RawEdf.RECORDINGS(1).eye == edf0.EYES.BINOCULAR  )
+                data.RightPixX = s.gx(:,2);
+                data.RightPixY = s.gy(:,2);
+
+                data.RightX = (s.gx(:,2)-w_px/2)/pxperdeg;
+                data.RightY = -(s.gy(:,2)-h_px/2)/pxperdeg; % invert so 0-0 is bottom left
+                data.RightT = nan(size(s.gx(:,2)));
+            end
+            if ( edf0.RawEdf.RECORDINGS(1).eye == edf0.EYES.LEFT || edf0.RawEdf.RECORDINGS(1).eye == edf0.EYES.BINOCULAR  )
+                data.LeftPixX =  s.gx(:,1);
+                data.LeftPixY = s.gy(:,1);
+
+                data.LeftX =  (s.gx(:,1)-w_px/2)/pxperdeg;
+                data.LeftY = -(s.gy(:,1)-h_px/2)/pxperdeg;
+                data.LeftT = nan(size(s.gx(:,1)));
+            end
 
             data.Properties.UserData.sampleRate = samplerate;
         end
@@ -1616,6 +1621,14 @@ classdef VOGAnalysis < handle
                 cprintf('blue', sprintf('++ VOGAnalysis :: Data cleaned in %0.1f s: LXY %d%%%% RXY %d%%%% LT %d%%%% RT %d%%%% is good data.\n', ...
                     timeCleaning, Lbad, Rbad, LbadT, RbadT ));
                 
+
+                cleanedData.Properties.UserData.Eyes = eyes;
+                cleanedData.Properties.UserData.Signals = eyeSignals;
+                cleanedData.Properties.UserData.EyeSignals = intersect(eyeSignals, {'X', 'Y','T'});
+                cleanedData.Properties.UserData.LEFT = any(strcmp(eyes,'Left'));
+                cleanedData.Properties.UserData.RIGHT = any(strcmp(eyes,'Right'));
+                
+                cleanedData.Properties.UserData.params = params;
                 
             catch ex
                 getReport(ex)

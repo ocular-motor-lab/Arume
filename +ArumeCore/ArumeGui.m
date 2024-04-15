@@ -52,7 +52,7 @@ classdef ArumeGui < matlab.apps.AppBase
 
         menuAnalyze
         menuAnalyzeRunAnalyses
-        menuAnalyzeMarkData = uimenu();
+        menuAnalyzeMarkData 
         menuAnalyzeClearAll
 
 
