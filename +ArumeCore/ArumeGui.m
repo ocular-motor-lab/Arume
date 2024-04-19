@@ -754,14 +754,13 @@ classdef ArumeGui < matlab.apps.AppBase
             optionsDlg = experiment.GetExperimentOptionsDialog( );
             if ( ~isempty( optionsDlg) )
                 options = StructDlg(optionsDlg, 'Edit experiment options');
-                if ( isempty( options ) )
-                    options = StructDlg(optionsDlg,'',[],[],'off');
+                if ( ~isempty( options ) )
+                    app.arumeController.newSession( session.Experiment, session.Subject_Code, session.Session_Code, options );
                 end
             else
                 options = [];
+                app.arumeController.newSession( session.Experiment, session.Subject_Code, session.Session_Code, options );
             end
-
-            app.arumeController.newSession( session.Experiment, session.Subject_Code, session.Session_Code, options );
 
             app.UpdateGui();
         end
