@@ -84,9 +84,6 @@ classdef VOGAnalysis < handle
             if ( sum(strcmp('RightPixY',calibratedData.Properties.VariableNames))>0 || sum(strcmp('LeftPixY',calibratedData.Properties.VariableNames))>0 )
                 eyeSignals{end+1} = 'PixY';
             end
-            % if ( sum(strcmp('RightPixT',calibratedData.Properties.VariableNames))>0 || sum(strcmp('LeftPixT',calibratedData.Properties.VariableNames))>0 )
-            %     eyeSignals{end+1} = 'PixT';
-            % end
             if ( sum(strcmp('RightPupil',calibratedData.Properties.VariableNames))>0 || sum(strcmp('LeftPupil',calibratedData.Properties.VariableNames))>0 )
                 eyeSignals{end+1} = 'Pupil';
             end
@@ -1025,6 +1022,21 @@ classdef VOGAnalysis < handle
                 data.LeftY = -(s.gy(:,1)-h_px/2)/pxperdeg;
                 data.LeftT = nan(size(s.gx(:,1)));
             end
+
+            % for now, let's assume that the pupil is a perfect circle. 
+            paL = edf0.Samples.pa(:,1);
+            data.LeftPupil = paL;
+
+            pdL = 2.*sqrt(paL./pi);
+            data.LeftPupilWidth = pdL;
+            data.LeftPupilHeight = pdL;
+
+            paR = edf0.Samples.pa(:,2);
+            data.RightPupil = paR;
+
+            pdR = 2.*sqrt(paR./pi);
+            data.RightPupilWidth = pdR;
+            data.RightPupilHeight = pdR;
 
             data.Properties.UserData.sampleRate = samplerate;
         end
