@@ -536,8 +536,8 @@ for i=1:length(ls)
         end
     end
 end
-left_monoculars_idx = setdiff(1:length(lsac),binocs2(:,1));
-right_monoculars_idx = setdiff(1:length(rsac),binocs2(:,2));
+left_monoculars_idx = setdiff(1:size(lsac,1),binocs2(:,1));
+right_monoculars_idx = setdiff(1:size(rsac,1),binocs2(:,2));
 
 if ( Recover_Monoculars )
     left_monoculars_idx(ltest(left_monoculars_idx)>Recover_Monoculars_Threshold) = [];
