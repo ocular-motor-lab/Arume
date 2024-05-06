@@ -120,6 +120,7 @@ classdef EyeTrackerEyelink  < handle
         
         function evt = GetCurrentData(this, message)
             % data =[];
+            % evt = struct([]);
             if ( ~isempty( this.el) )
 
                 eye_used = Eyelink('EyeAvailable'); % get eye that's tracked
@@ -128,7 +129,7 @@ classdef EyeTrackerEyelink  < handle
                 end
                 
                 % get all gaze pos and pupil data 
-                if Eyelink('NewFloatSampleAvailable') > 0
+                % if Eyelink('NewFloatSampleAvailable') > 0
 
                     % get the sample in the form of an event structure
                     evt = Eyelink('NewestFloatSample');
@@ -144,7 +145,7 @@ classdef EyeTrackerEyelink  < handle
                             evt.my=y;
                         end
                     end
-                end
+                % end
 
                 if exist('message','var')
                     Eyelink('Message',message);
@@ -162,7 +163,6 @@ classdef EyeTrackerEyelink  < handle
         end
 
         function Disconnect(this)
-
             Eyelink('Shutdown');
         end
         

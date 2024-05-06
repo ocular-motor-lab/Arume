@@ -228,6 +228,12 @@ classdef PTB < handle
             %-- Check for keyboard press
             [keyIsDown,secs,keyCode] = KbCheck;
             if keyCode(Enum.keys.ESCAPE)
+
+                % in the special case where a movie is playing, close the
+                % movie to stop audio playback (and subsequent interference
+                % with other movies if the user continues the experiment)
+                Screen('CloseMovie');
+
                 if nargin >1
                     exper.abortExperiment();
                 else
