@@ -155,10 +155,18 @@ classdef ExperimentDesign < handle
         
         function [samplesDataTable, cleanedData, calibratedData, rawData] = EyeTrackingLoadSamplesData(this, options)
             
-            if ( isfield(this.ExperimentOptions,'EyeTracker') )
-                eyeTrackerType = this.ExperimentOptions.EyeTracker;
-            else
-                eyeTrackerType = 'OpenIris';
+            samplesDataTable = [];
+            calibratedData = [];
+            cleanedData = [];
+            rawData = [];
+            eyeTrackerType = '';
+            
+            if ( isfield(this.ExperimentOptions, 'UseEyeTracker') && this.ExperimentOptions.UseEyeTracker == 1 )
+                if ( isfield(this.ExperimentOptions,'EyeTracker') )
+                    eyeTrackerType = this.ExperimentOptions.EyeTracker;
+                else
+                    eyeTrackerType = 'OpenIris';
+                end
             end
             
             switch(eyeTrackerType)
@@ -235,7 +243,6 @@ classdef ExperimentDesign < handle
                     end
                    
                     [samplesDataTable, cleanedData, rawData] = VOGAnalysis.LoadCleanAndResampleDataEyelink(this.Session.dataPath, dataFiles, options);
-
             end
         end
 

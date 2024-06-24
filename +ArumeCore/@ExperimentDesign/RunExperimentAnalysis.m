@@ -65,14 +65,16 @@ if ( options.Prepare_For_Analysis_And_Plots )
     cprintf('blue', '++ ARUME::Done with samplesDataTable.\n');
 
     %% 3) Prepare the trial data table
-    [sampleStartTrial, sampleStopTrial, trialDataTable, samplesDataTable] = this.EyeTrackingSyncTrialsAndSamples(trialDataTable, samplesDataTable,  options);
-    trialDataTable.SampleStartTrial = sampleStartTrial;
-    trialDataTable.SampleStopTrial = sampleStopTrial;
-    % Build a column for the samples with the trial number
-    samplesDataTable.TrialNumber = nan(size(samplesDataTable.FrameNumber));
-    for i=1:height(trialDataTable)
-        idx = trialDataTable.SampleStartTrial(i):trialDataTable.SampleStopTrial(i);
-        samplesDataTable.TrialNumber(idx) = trialDataTable.TrialNumber(i);
+    if ( ~isempty(samplesDataTable) )
+        [sampleStartTrial, sampleStopTrial, trialDataTable, samplesDataTable] = this.EyeTrackingSyncTrialsAndSamples(trialDataTable, samplesDataTable,  options);
+        trialDataTable.SampleStartTrial = sampleStartTrial;
+        trialDataTable.SampleStopTrial = sampleStopTrial;
+        % Build a column for the samples with the trial number
+        samplesDataTable.TrialNumber = nan(size(samplesDataTable.FrameNumber));
+        for i=1:height(trialDataTable)
+            idx = trialDataTable.SampleStartTrial(i):trialDataTable.SampleStopTrial(i);
+            samplesDataTable.TrialNumber(idx) = trialDataTable.TrialNumber(i);
+        end
     end
 
     [trialDataTable] = this.EyeTrackingGetTrialStats(trialDataTable, samplesDataTable,  options);
