@@ -29,17 +29,16 @@ classdef CalibrationStereo < ArumeExperimentDesigns.EyeTracking
 
             %% Add new options
             dlg.TargetSize = 1;
-            dlg.Calibration_Type = { {'5 dots' '{9 dots}' '13 dots' '17 dots'} };
-            dlg.Calibration_Distance_H = { 5 '* (deg)' [1 3000] }; % radius
-            dlg.Calibration_Distance_V = { 5 '* (deg)' [1 3000] };
+            dlg.Calibration_Position_H = { 5 '* (deg)' [1 3000] }; % radius
+            dlg.Calibration_Position_V = { 5 '* (deg)' [1 3000] };
             dlg.BackgroundBrightness = 0;
         end
 
 
         function trialTable = SetUpTrialTable(this)
             t = ArumeCore.TrialTableBuilder();
-            h = this.ExperimentOptions.Calibration_Distance_H;
-            v = this.ExperimentOptions.Calibration_Distance_V;
+            h = this.ExperimentOptions.Calibration_Position_H;
+            v = this.ExperimentOptions.Calibration_Position_V;
             
             t.AddConditionVariable( 'TargetPosition', {[0,0],[h,0],[-h,0],[0,v],[0,-v],[h,v],[h,-v],[-h,v],[-h,-v]}); % arcmins
             t.AddConditionVariable( 'Eye', ["right" "left"] ); % arcmins
@@ -69,7 +68,7 @@ classdef CalibrationStereo < ArumeExperimentDesigns.EyeTracking
                 thisTrialData.TimeStartLoop = lastFlipTime;
                 
                 if ( ~isempty(this.eyeTracker) )
-                    thisTrialData.EyeTrackerFrameStartLoop = this.eyeTracker.RecordEvent(sprintf('TRIAL_START_LOOP %d %d %d', thisTrialData.TrialNumber, thisTrialData.Condition, thisTrialData.TargetPosition) );
+                    thisTrialData.EyeTrackerFrameStartLoop = this.eyeTracker.RecordEvent(sprintf('TRIAL_START_LOOP %d %d %d %d', thisTrialData.TrialNumber, thisTrialData.Condition, thisTrialData.TargetPosition{1}(1), thisTrialData.TargetPosition{1}(2)) );
                 end
                 
                 % Calculate the location of the target for this  trial
@@ -103,33 +102,6 @@ classdef CalibrationStereo < ArumeExperimentDesigns.EyeTracking
                         Screen('FrameRect', this.Graph.window, [0 1 0], [], 5);
                     end
 
-
-
-
-
-
-
-
-                   % 
-                   %  Screen('FillRect', graph.window, this.ExperimentOptions.BackgroundBrightness);
-                   % 
-                   %  %-- Draw fixation spot
-                   %  [mx, my] = RectCenter(this.Graph.wRect);
-                   % % this.Graph.pxWidth
-                   % % targetHPix
-                   %  targetPix = this.Graph.pxWidth/this.ExperimentOptions.DisplayOptions.ScreenWidth * this.ExperimentOptions.DisplayOptions.ScreenDistance * tand(this.ExperimentOptions.TargetSize);
-                   %  targetHPix = this.Graph.pxWidth/this.ExperimentOptions.DisplayOptions.ScreenWidth * this.ExperimentOptions.DisplayOptions.ScreenDistance * tand(this.targetPositions{thisTrialData.TargetPosition}(1));
-                   %  targetYPix = this.Graph.pxWidth/this.ExperimentOptions.DisplayOptions.ScreenWidth * this.ExperimentOptions.DisplayOptions.ScreenDistance * tand(this.targetPositions{thisTrialData.TargetPosition}(2));
-                   %  fixRect = [0 0 targetPix/2 targetPix/2];
-                   %  fixRect = CenterRectOnPointd( fixRect, mx+targetHPix/2, my+targetYPix/2 );
-                   %  Screen('FillOval', graph.window, this.fixColor, fixRect);
-                   % 
-                   %  fixRectCenter = CenterRectOnPointd( fixRect./2, mx+targetHPix/2, my+targetYPix/2 );
-                   %  Screen('FillOval', graph.window, [250,250,250], fixRectCenter);
-                   % 
-                   %  Screen('DrawingFinished', graph.window); % Tell PTB that no further drawing commands will follow before Screen('Flip')
-                   % 
-                   % 
                     % -----------------------------------------------------------------
                     % --- END Drawing of stimulus -------------------------------------
                     % -----------------------------------------------------------------
@@ -138,15 +110,6 @@ classdef CalibrationStereo < ArumeExperimentDesigns.EyeTracking
                     % -- Flip buffers to refresh screen -------------------------------
                     % -----------------------------------------------------------------
                     this.Graph.Flip();
-                    % -----------------------------------------------------------------
-                    
-                    
-                    % -----------------------------------------------------------------
-                    % --- Collecting responses  ---------------------------------------
-                    % -----------------------------------------------------------------
-                    
-                    % -----------------------------------------------------------------
-                    % --- END Collecting responses  -----------------------------------
                     % -----------------------------------------------------------------
                     
                 end
