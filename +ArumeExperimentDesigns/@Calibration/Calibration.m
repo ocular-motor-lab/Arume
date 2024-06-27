@@ -28,10 +28,10 @@ classdef Calibration < ArumeExperimentDesigns.EyeTracking
             dlg.DisplayOptions.StereoMode = { 4 '* (mode)' [0 9] };  % 0=no stereo, 4=stereo
 
             %% Add new options
-            dlg.TargetSize = 10;
+            dlg.TargetSize = 10; %1
             dlg.Calibration_Type = { {'5 dots' '{9 dots}' '13 dots' '17 dots' 'Stereo'} };
-            dlg.Calibration_Distance_H = { 20 '* (deg)' [1 3000] };
-            dlg.Calibration_Distance_V = { 20 '* (deg)' [1 3000] };
+            dlg.Calibration_Distance_H = { 5 '* (deg)' [1 3000] };
+            dlg.Calibration_Distance_V = { 5 '* (deg)' [1 3000] };
             
             dlg.BackgroundBrightness = 0;
         end
