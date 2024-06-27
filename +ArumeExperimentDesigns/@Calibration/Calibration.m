@@ -1,9 +1,8 @@
 classdef Calibration < ArumeExperimentDesigns.EyeTracking
-    %OPTOKINETICTORSION Summary of this class goes here
+    %Calibration Summary of this class goes here
     %   Detailed explanation goes here
     
     properties
-        fixRad = 20;
         fixColor = [255 0 0];
         targetPositions =[];
     end
@@ -20,28 +19,36 @@ classdef Calibration < ArumeExperimentDesigns.EyeTracking
             dlg.Debug.DisplayVariableSelection = 'TrialNumber TrialResult TargetPosition'; % which variables to display every trial in the command line separated by spaces
               
             %% Change defauls
-            dlg.DisplayOptions.ScreenWidth = { 142.8 '* (cm)' [1 3000] };
-            dlg.DisplayOptions.ScreenHeight = { 80 '* (cm)' [1 3000] };
-            dlg.DisplayOptions.ScreenDistance = { 85 '* (cm)' [1 3000] };
+            dlg.DisplayOptions.ScreenWidth = { 142.8 '* (cm)' [1 3000] }; % these settings are for the main eye tracking room
+            dlg.DisplayOptions.ScreenHeight = { 80 '* (cm)' [1 3000] }; 
+            dlg.DisplayOptions.ScreenDistance = { 85 '* (cm)' [1 3000] }; 
             dlg.TrialDuration =  { 3 '* (s)' [1 100] };
             dlg.DisplayOptions.SelectedScreen = { 1 '* (screen)' [0 5] };
             dlg.DisplayOptions.StereoMode = { 4 '* (mode)' [0 9] };  % 0=no stereo, 4=stereo
-
+            dlg.NumberOfRepetitions = 1;
+            
             %% Add new options
-            dlg.TargetSize = 10; %1
-            dlg.Calibration_Type = { {'5 dots' '{9 dots}' '13 dots' '17 dots' 'Stereo'} };
+            dlg.TargetSize = 10;
+            dlg.Calibration_Type = { {'5 dots' '9 dots' '13 dots' '17 dots' '{Stereo}'} };
             dlg.Calibration_Distance_H = { 5 '* (deg)' [1 3000] };
             dlg.Calibration_Distance_V = { 5 '* (deg)' [1 3000] };
-            
             dlg.BackgroundBrightness = 0;
         end
 
 
         function trialTable = SetUpTrialTable(this)
             
+            % Update the screen parameters for stereo automatically if
+            % you're doing a stereo calibration
+            if (this.ExperimentOptions.Calibration_Type == "Stereo")
+                this.ExperimentOptions.DisplayOptions.ScreenWidth = 60;
+                this.ExperimentOptions.DisplayOptions.ScreenHeight = 33.5;
+                this.ExperimentOptions.DisplayOptions.ScreenDistance = 57;
+            end
+            
+            % Prep the target positions depending on the calibration type
             h = this.ExperimentOptions.Calibration_Distance_H;
             v = this.ExperimentOptions.Calibration_Distance_V;
-            
             temp = 1.5;
             switch(this.ExperimentOptions.Calibration_Type)
                 
@@ -56,47 +63,23 @@ classdef Calibration < ArumeExperimentDesigns.EyeTracking
                     this.targetPositions = {[0,0],[h,0],[-h,0],[0,v],[0,-v],[h,v],[h,-v],[-h,v],[-h,-v],...
                         [h/temp,0],[-h/temp,0],[0,v/temp],[0,-v/temp],[h/temp,v/temp],[h/temp,-v/temp],[-h/temp,v/temp],[-h/temp,-v/temp]};
                 case 'Stereo'
-                    this.targetPositions = {[0,0],[h,0],[-h,0],[0,v],[0,-v],[h,v],[h,-v],[-h,v],[-h,-v]}; 
-                    
+                    this.targetPositions = {[0,0],[h,0],[-h,0],[0,v],[0,-v],[h,v],[h,-v],[-h,v],[-h,-v]};
             end
             
-            % If the calibration is a stereo calibration
-            if this.ExperimentOptions.Calibration_Type == 'Stereo'
-                t = ArumeCore.TrialTableBuilder();
-                t.AddConditionVariable( 'TargetPosition', 1:length(this.targetPositions));
-                t.AddConditionVariable( 'Eye', ["right" "left"] ); % arcmins
+            % Build the trial table using updated methods 
+            t = ArumeCore.TrialTableBuilder();
+            t.AddConditionVariable( 'TargetPosition', 1:length(this.targetPositions));
+            if this.ExperimentOptions.Calibration_Type == "Stereo" % if the calibration is a stereo calibration, add another column for eye
+                t.AddConditionVariable( 'Eye', ["right" "left"] ); 
                 t.AddBlock(find(t.ConditionTable.Eye=="right"), 1);
                 t.AddBlock(find(t.ConditionTable.Eye=="left"), 1);
-                
-                trialSequence = 'Random';
-                blockSequence =  'Random';
-                blockSequenceRepeatitions = 1; % same as dlg.NumberOfRepetitions
-                abortAction = 'Repeat';
-                trialsPerSession = 100000;
-                trialTable = t.GenerateTrialTable(trialSequence, blockSequence,blockSequenceRepeatitions, abortAction,trialsPerSession);
-            
-            % If the calibration is a non-stereo calibration
-            else
-                targets = 1:length(this.targetPositions);
-                i= 0;
-                i = i+1;
-                conditionVars(i).name   = 'TargetPosition';
-                conditionVars(i).values = targets;
-                
-                trialTableOptions = this.GetDefaultTrialTableOptions();
-                trialTableOptions.trialSequence = 'Random';
-                trialTableOptions.trialAbortAction = 'Delay';
-                trialTableOptions.trialsPerSession = (length(targets)+1)*1;
-                
-                trialTableOptions.blockSequence       = 'Sequential';	% Sequential, Random, Random with repetition, ...numberOfTimesRepeatBlockSequence = 1;
-                trialTableOptions.blocksToRun         = 3;
-                trialTableOptions.blocks                = struct( 'fromCondition', 1, 'toCondition', 1, 'trialsToRun', 1 );
-                trialTableOptions.blocks(2)             = struct( 'fromCondition', 2, 'toCondition', length(targets), 'trialsToRun', length(targets)-1 );
-                trialTableOptions.blocks(3)             = struct( 'fromCondition', 1, 'toCondition', 1, 'trialsToRun', 1 );
-                trialTableOptions.numberOfTimesRepeatBlockSequence = 21;
-                trialTable = this.GetTrialTableFromConditions(conditionVars, trialTableOptions);
             end
-            
+            trialSequence = 'Random';
+            blockSequence =  'Random';
+            blockSequenceRepeatitions = this.ExperimentOptions.NumberOfRepetitions;
+            abortAction = 'Repeat';
+            trialsPerSession = 100000;
+            trialTable = t.GenerateTrialTable(trialSequence, blockSequence,blockSequenceRepeatitions, abortAction,trialsPerSession);
             
         end
 
@@ -107,11 +90,9 @@ classdef Calibration < ArumeExperimentDesigns.EyeTracking
                 graph = this.Graph;
                 trialResult = Enum.trialResult.CORRECT;
                 
-                
                 lastFlipTime        = GetSecs;
                 secondsRemaining    = this.ExperimentOptions.TrialDuration;
                 thisTrialData.TimeStartLoop = lastFlipTime;
-                
                 
                 if ( ~isempty(this.eyeTracker) )
                     thisTrialData.EyeTrackerFrameStartLoop = this.eyeTracker.RecordEvent(sprintf('TRIAL_START_LOOP %d %d %d', thisTrialData.TrialNumber, thisTrialData.Condition, thisTrialData.TargetPosition) );
