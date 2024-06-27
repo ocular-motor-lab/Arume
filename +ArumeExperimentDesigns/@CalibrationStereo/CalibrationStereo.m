@@ -28,7 +28,6 @@ classdef CalibrationStereo < ArumeExperimentDesigns.EyeTracking
             dlg.DisplayOptions.SelectedScreen = { 1 '* (screen)' [0 5] };
 
             %% Add new options
-            dlg.TargetSize = 1;
             dlg.Calibration_Position_H = { 5 '* (deg)' [1 3000] }; % radius
             dlg.Calibration_Position_V = { 5 '* (deg)' [1 3000] };
             dlg.BackgroundBrightness = 0;
