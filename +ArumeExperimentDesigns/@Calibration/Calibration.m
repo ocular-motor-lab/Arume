@@ -18,15 +18,18 @@ classdef Calibration < ArumeExperimentDesigns.EyeTracking
             end
             dlg = GetOptionsDialog@ArumeExperimentDesigns.EyeTracking(this, importing);
             dlg.Debug.DisplayVariableSelection = 'TrialNumber TrialResult TargetPosition'; % which variables to display every trial in the command line separated by spaces
-                
+              
+            %% Change defauls
             dlg.DisplayOptions.ScreenWidth = { 142.8 '* (cm)' [1 3000] };
             dlg.DisplayOptions.ScreenHeight = { 80 '* (cm)' [1 3000] };
             dlg.DisplayOptions.ScreenDistance = { 85 '* (cm)' [1 3000] };
-                      
             dlg.TrialDuration =  { 3 '* (s)' [1 100] };
-            
-            dlg.TargetSize = 1;
-            dlg.Calibration_Type = { {'5 dots' '{9 dots}' '13 dots' '17 dots'} };
+            dlg.DisplayOptions.SelectedScreen = { 1 '* (screen)' [0 5] };
+            dlg.DisplayOptions.StereoMode = { 4 '* (mode)' [0 9] };  % 0=no stereo, 4=stereo
+
+            %% Add new options
+            dlg.TargetSize = 10;
+            dlg.Calibration_Type = { {'5 dots' '{9 dots}' '13 dots' '17 dots' 'Stereo'} };
             dlg.Calibration_Distance_H = { 20 '* (deg)' [1 3000] };
             dlg.Calibration_Distance_V = { 20 '* (deg)' [1 3000] };
             
@@ -38,45 +41,63 @@ classdef Calibration < ArumeExperimentDesigns.EyeTracking
             
             h = this.ExperimentOptions.Calibration_Distance_H;
             v = this.ExperimentOptions.Calibration_Distance_V;
-
+            
             temp = 1.5;
             switch(this.ExperimentOptions.Calibration_Type)
                 
-                case '5 dots' 
+                case '5 dots'
                     this.targetPositions = {[0,0],[h,v],[h,-v],[-h,v],[-h,-v]};
                 case '9 dots'
                     this.targetPositions = {[0,0],[h,0],[-h,0],[0,v],[0,-v],[h,v],[h,-v],[-h,v],[-h,-v]};
-                case '13 dots' 
+                case '13 dots'
                     this.targetPositions = {[0,0],[h,0],[-h,0],[0,v],[0,-v],[h,v],[h,-v],[-h,v],[-h,-v],...
-                [h/temp,v/temp],[h/temp,-v/temp],[-h/temp,v/temp],[-h/temp,-v/temp]};
+                        [h/temp,v/temp],[h/temp,-v/temp],[-h/temp,v/temp],[-h/temp,-v/temp]};
                 case '17 dots'
                     this.targetPositions = {[0,0],[h,0],[-h,0],[0,v],[0,-v],[h,v],[h,-v],[-h,v],[-h,-v],...
-                [h/temp,0],[-h/temp,0],[0,v/temp],[0,-v/temp],[h/temp,v/temp],[h/temp,-v/temp],[-h/temp,v/temp],[-h/temp,-v/temp]};
+                        [h/temp,0],[-h/temp,0],[0,v/temp],[0,-v/temp],[h/temp,v/temp],[h/temp,-v/temp],[-h/temp,v/temp],[-h/temp,-v/temp]};
+                case 'Stereo'
+                    this.targetPositions = {[0,0],[h,0],[-h,0],[0,v],[0,-v],[h,v],[h,-v],[-h,v],[-h,-v]}; 
+                    
             end
             
-
-            targets = 1:length(this.targetPositions);
-
-            %-- condition variables ---------------------------------------
-            i= 0;
+            % If the calibration is a stereo calibration
+            if this.ExperimentOptions.Calibration_Type == 'Stereo'
+                t = ArumeCore.TrialTableBuilder();
+                t.AddConditionVariable( 'TargetPosition', 1:length(this.targetPositions));
+                t.AddConditionVariable( 'Eye', ["right" "left"] ); % arcmins
+                t.AddBlock(find(t.ConditionTable.Eye=="right"), 1);
+                t.AddBlock(find(t.ConditionTable.Eye=="left"), 1);
+                
+                trialSequence = 'Random';
+                blockSequence =  'Random';
+                blockSequenceRepeatitions = 1; % same as dlg.NumberOfRepetitions
+                abortAction = 'Repeat';
+                trialsPerSession = 100000;
+                trialTable = t.GenerateTrialTable(trialSequence, blockSequence,blockSequenceRepeatitions, abortAction,trialsPerSession);
             
-            i = i+1;
-            conditionVars(i).name   = 'TargetPosition';
-            conditionVars(i).values = targets;
+            % If the calibration is a non-stereo calibration
+            else
+                targets = 1:length(this.targetPositions);
+                i= 0;
+                i = i+1;
+                conditionVars(i).name   = 'TargetPosition';
+                conditionVars(i).values = targets;
+                
+                trialTableOptions = this.GetDefaultTrialTableOptions();
+                trialTableOptions.trialSequence = 'Random';
+                trialTableOptions.trialAbortAction = 'Delay';
+                trialTableOptions.trialsPerSession = (length(targets)+1)*1;
+                
+                trialTableOptions.blockSequence       = 'Sequential';	% Sequential, Random, Random with repetition, ...numberOfTimesRepeatBlockSequence = 1;
+                trialTableOptions.blocksToRun         = 3;
+                trialTableOptions.blocks                = struct( 'fromCondition', 1, 'toCondition', 1, 'trialsToRun', 1 );
+                trialTableOptions.blocks(2)             = struct( 'fromCondition', 2, 'toCondition', length(targets), 'trialsToRun', length(targets)-1 );
+                trialTableOptions.blocks(3)             = struct( 'fromCondition', 1, 'toCondition', 1, 'trialsToRun', 1 );
+                trialTableOptions.numberOfTimesRepeatBlockSequence = 21;
+                trialTable = this.GetTrialTableFromConditions(conditionVars, trialTableOptions);
+            end
             
             
-            trialTableOptions = this.GetDefaultTrialTableOptions();
-            trialTableOptions.trialSequence = 'Random';
-            trialTableOptions.trialAbortAction = 'Delay';
-            trialTableOptions.trialsPerSession = (length(targets)+1)*1;
-
-            trialTableOptions.blockSequence       = 'Sequential';	% Sequential, Random, Random with repetition, ...numberOfTimesRepeatBlockSequence = 1;
-            trialTableOptions.blocksToRun         = 3;
-            trialTableOptions.blocks                = struct( 'fromCondition', 1, 'toCondition', 1, 'trialsToRun', 1 );
-            trialTableOptions.blocks(2)             = struct( 'fromCondition', 2, 'toCondition', length(targets), 'trialsToRun', length(targets)-1 );
-            trialTableOptions.blocks(3)             = struct( 'fromCondition', 1, 'toCondition', 1, 'trialsToRun', 1 );
-            trialTableOptions.numberOfTimesRepeatBlockSequence = 21;
-            trialTable = this.GetTrialTableFromConditions(conditionVars, trialTableOptions);
         end
 
         function [trialResult, thisTrialData] = runTrial( this, thisTrialData )
@@ -105,24 +126,40 @@ classdef Calibration < ArumeExperimentDesigns.EyeTracking
                     % -----------------------------------------------------------------
                     % --- Drawing of stimulus -----------------------------------------
                     % -----------------------------------------------------------------
-                    Screen('FillRect', graph.window, this.ExperimentOptions.BackgroundBrightness);
                     
-                    %-- Draw fixation spot
-                    [mx, my] = RectCenter(this.Graph.wRect);
-                   % this.Graph.pxWidth
-                   % targetHPix
-                    targetPix = this.Graph.pxWidth/this.ExperimentOptions.DisplayOptions.ScreenWidth * this.ExperimentOptions.DisplayOptions.ScreenDistance * tand(this.ExperimentOptions.TargetSize);
-                    targetHPix = this.Graph.pxWidth/this.ExperimentOptions.DisplayOptions.ScreenWidth * this.ExperimentOptions.DisplayOptions.ScreenDistance * tand(this.targetPositions{thisTrialData.TargetPosition}(1));
-                    targetYPix = this.Graph.pxWidth/this.ExperimentOptions.DisplayOptions.ScreenWidth * this.ExperimentOptions.DisplayOptions.ScreenDistance * tand(this.targetPositions{thisTrialData.TargetPosition}(2));
-                    fixRect = [0 0 targetPix/2 targetPix/2];
-                    fixRect = CenterRectOnPointd( fixRect, mx+targetHPix/2, my+targetYPix/2 );
-                    Screen('FillOval', graph.window, this.fixColor, fixRect);
+                    % If the calibration is a stereo calibration
+                    if this.ExperimentOptions.Calibration_Type == 'Stereo'
+                        ok=cell2mat(this.targetPositions(thisTrialData.TargetPosition));
+                        targetHPix = this.Graph.pxWidth/(this.ExperimentOptions.DisplayOptions.ScreenWidth/2) * this.ExperimentOptions.DisplayOptions.ScreenDistance * tand(ok(1));
+                        targetVPix = this.Graph.pxWidth/(this.ExperimentOptions.DisplayOptions.ScreenWidth/2) * this.ExperimentOptions.DisplayOptions.ScreenDistance * tand(ok(2));
+                        if thisTrialData.Eye == "left"
+                            % Draw left stim:
+                            Screen('SelectStereoDrawBuffer', this.Graph.window, 0);
+                            Screen('DrawDots', this.Graph.window, [targetHPix; targetVPix], this.ExperimentOptions.TargetSize, this.fixColor, this.Graph.wRect(3:4)/2, 1); % fixation spot
+                            Screen('FrameRect', this.Graph.window, [1 0 0], [], 5);
+                            
+                        elseif thisTrialData.Eye == "right"
+                            % Draw right stim:
+                            Screen('SelectStereoDrawBuffer', this.Graph.window, 1);
+                            Screen('DrawDots', this.Graph.window, [targetHPix; targetVPix], this.ExperimentOptions.TargetSize, this.fixColor, this.Graph.wRect(3:4)/2, 1); % fixation spot
+                            Screen('FrameRect', this.Graph.window, [0 1 0], [], 5);
+                        end
                     
-                    fixRectCenter = CenterRectOnPointd( fixRect./2, mx+targetHPix/2, my+targetYPix/2 );
-                    Screen('FillOval', graph.window, [250,250,250], fixRectCenter);
-
-                    Screen('DrawingFinished', graph.window); % Tell PTB that no further drawing commands will follow before Screen('Flip')
-                    
+                    % If the calibration is a non-stereo calibration
+                    else
+                        Screen('FillRect', graph.window, this.ExperimentOptions.BackgroundBrightness);
+                        %-- Draw fixation spot
+                        [mx, my] = RectCenter(this.Graph.wRect);
+                        targetPix = this.Graph.pxWidth/this.ExperimentOptions.DisplayOptions.ScreenWidth * this.ExperimentOptions.DisplayOptions.ScreenDistance * tand(this.ExperimentOptions.TargetSize);
+                        targetHPix = this.Graph.pxWidth/this.ExperimentOptions.DisplayOptions.ScreenWidth * this.ExperimentOptions.DisplayOptions.ScreenDistance * tand(this.targetPositions{thisTrialData.TargetPosition}(1));
+                        targetYPix = this.Graph.pxWidth/this.ExperimentOptions.DisplayOptions.ScreenWidth * this.ExperimentOptions.DisplayOptions.ScreenDistance * tand(this.targetPositions{thisTrialData.TargetPosition}(2));
+                        fixRect = [0 0 targetPix/2 targetPix/2];
+                        fixRect = CenterRectOnPointd( fixRect, mx+targetHPix/2, my+targetYPix/2 );
+                        Screen('FillOval', graph.window, this.fixColor, fixRect);
+                        fixRectCenter = CenterRectOnPointd( fixRect./2, mx+targetHPix/2, my+targetYPix/2 );
+                        Screen('FillOval', graph.window, [250,250,250], fixRectCenter);
+                        Screen('DrawingFinished', graph.window); % Tell PTB that no further drawing commands will follow before Screen('Flip')
+                    end
                     
                     % -----------------------------------------------------------------
                     % --- END Drawing of stimulus -------------------------------------
@@ -132,15 +169,6 @@ classdef Calibration < ArumeExperimentDesigns.EyeTracking
                     % -- Flip buffers to refresh screen -------------------------------
                     % -----------------------------------------------------------------
                     this.Graph.Flip();
-                    % -----------------------------------------------------------------
-                    
-                    
-                    % -----------------------------------------------------------------
-                    % --- Collecting responses  ---------------------------------------
-                    % -----------------------------------------------------------------
-                    
-                    % -----------------------------------------------------------------
-                    % --- END Collecting responses  -----------------------------------
                     % -----------------------------------------------------------------
                     
                 end
