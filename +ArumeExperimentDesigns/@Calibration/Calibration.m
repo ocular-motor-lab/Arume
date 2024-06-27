@@ -109,7 +109,7 @@ classdef Calibration < ArumeExperimentDesigns.EyeTracking
                     % -----------------------------------------------------------------
                     
                     % If the calibration is a stereo calibration
-                    if this.ExperimentOptions.Calibration_Type == 'Stereo'
+                    if this.ExperimentOptions.Calibration_Type == "Stereo"
                         ok=cell2mat(this.targetPositions(thisTrialData.TargetPosition));
                         targetHPix = this.Graph.pxWidth/(this.ExperimentOptions.DisplayOptions.ScreenWidth/2) * this.ExperimentOptions.DisplayOptions.ScreenDistance * tand(ok(1));
                         targetVPix = this.Graph.pxWidth/(this.ExperimentOptions.DisplayOptions.ScreenWidth/2) * this.ExperimentOptions.DisplayOptions.ScreenDistance * tand(ok(2));
