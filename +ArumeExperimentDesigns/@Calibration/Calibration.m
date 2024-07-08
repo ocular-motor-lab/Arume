@@ -32,7 +32,7 @@ classdef Calibration < ArumeExperimentDesigns.EyeTracking
             dlg.Calibration_Type = { {'5 dots' '9 dots' '13 dots' '17 dots' '{Stereo}'} };
             dlg.Calibration_Distance_H = { 5 '* (deg)' [1 3000] };
             dlg.Calibration_Distance_V = { 5 '* (deg)' [1 3000] };
-            dlg.BackgroundBrightness = 0;
+            dlg.BackgroundBrightness = 255/2; % scalar between 0 (black) and 255 (white)
         end
 
 
@@ -116,14 +116,16 @@ classdef Calibration < ArumeExperimentDesigns.EyeTracking
                         if thisTrialData.Eye == "left"
                             % Draw left stim:
                             Screen('SelectStereoDrawBuffer', this.Graph.window, 0);
+                            Screen('FillRect', this.Graph.window, this.ExperimentOptions.BackgroundBrightness);
                             Screen('DrawDots', this.Graph.window, [targetHPix; targetVPix], this.ExperimentOptions.TargetSize, this.fixColor, this.Graph.wRect(3:4)/2, 1); % fixation spot
-                            Screen('FrameRect', this.Graph.window, [1 0 0], [], 5);
+                            %Screen('FrameRect', this.Graph.window, [1 0 0], [], 5);
                             
                         elseif thisTrialData.Eye == "right"
                             % Draw right stim:
                             Screen('SelectStereoDrawBuffer', this.Graph.window, 1);
+                            Screen('FillRect', this.Graph.window, this.ExperimentOptions.BackgroundBrightness);
                             Screen('DrawDots', this.Graph.window, [targetHPix; targetVPix], this.ExperimentOptions.TargetSize, this.fixColor, this.Graph.wRect(3:4)/2, 1); % fixation spot
-                            Screen('FrameRect', this.Graph.window, [0 1 0], [], 5);
+                            %Screen('FrameRect', this.Graph.window, [0 1 0], [], 5);
                         end
                     
                     % If the calibration is a non-stereo calibration
