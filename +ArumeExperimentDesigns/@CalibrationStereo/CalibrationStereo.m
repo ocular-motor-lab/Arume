@@ -30,7 +30,7 @@ classdef CalibrationStereo < ArumeExperimentDesigns.EyeTracking
             %% Add new options
             dlg.Calibration_Position_H = { 5 '* (deg)' [1 3000] }; % radius
             dlg.Calibration_Position_V = { 5 '* (deg)' [1 3000] };
-            dlg.BackgroundBrightness = 0;
+            dlg.BackgroundBrightness = { 50 '* (percent)' [0 100] }; %100 is white, 0 is black
         end
 
 
@@ -76,7 +76,7 @@ classdef CalibrationStereo < ArumeExperimentDesigns.EyeTracking
                 targetVPix = this.Graph.pxWidth/(this.ExperimentOptions.DisplayOptions.ScreenWidth/2) * this.ExperimentOptions.DisplayOptions.ScreenDistance * tand(ok(2));
                     
                 % Initialize
-                fixSizePix = 10;
+                fixSizePix = 20;
 
                 while secondsRemaining > 0
 
@@ -91,14 +91,16 @@ classdef CalibrationStereo < ArumeExperimentDesigns.EyeTracking
                     if thisTrialData.Eye == "left"
                         % Draw left stim:
                         Screen('SelectStereoDrawBuffer', this.Graph.window, 0);
+                        Screen('FillRect', this.Graph.window, [255*(this.ExperimentOptions.BackgroundBrightness/100),255*(this.ExperimentOptions.BackgroundBrightness/100),255*(this.ExperimentOptions.BackgroundBrightness/100)]);
                         Screen('DrawDots', this.Graph.window, [targetHPix; targetVPix], fixSizePix, this.fixColor, this.Graph.wRect(3:4)/2, 1); % fixation spot
-                        Screen('FrameRect', this.Graph.window, [1 0 0], [], 5);
+                        %Screen('FrameRect', this.Graph.window, [1 0 0], [], 5);
 
                     elseif thisTrialData.Eye == "right"
                         % Draw right stim:
                         Screen('SelectStereoDrawBuffer', this.Graph.window, 1);
+                        Screen('FillRect', this.Graph.window, [255*(this.ExperimentOptions.BackgroundBrightness/100),255*(this.ExperimentOptions.BackgroundBrightness/100),255*(this.ExperimentOptions.BackgroundBrightness/100)]);
                         Screen('DrawDots', this.Graph.window, [targetHPix; targetVPix], fixSizePix, this.fixColor, this.Graph.wRect(3:4)/2, 1); % fixation spot
-                        Screen('FrameRect', this.Graph.window, [0 1 0], [], 5);
+                        %Screen('FrameRect', this.Graph.window, [0 1 0], [], 5);
                     end
 
                     % -----------------------------------------------------------------
