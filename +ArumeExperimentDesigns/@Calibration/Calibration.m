@@ -185,9 +185,9 @@ classdef Calibration < ArumeExperimentDesigns.EyeTracking
                  t = nan(size(samplesDataTable,1),4);
                  if trialDataTable.Eye(1) =="left"
                     calibrationPointsLeft = [[calibrationPointsX(1:length(calibrationPointsX)/2); nan(length(calibrationPointsX)/2,1)], [calibrationPointsY(1:length(calibrationPointsY)/2); nan(length(calibrationPointsY)/2,1)]];
-                    calibrationPointsRight = [[nan(length(calibrationPointsX)/2,1); calibrationPointsX(1:length(calibrationPointsX)/2)], [nan(length(calibrationPointsY)/2,1); calibrationPointsY(1:length(calibrationPointsY)/2)]];
+                    calibrationPointsRight = [[nan(length(calibrationPointsX)/2,1); calibrationPointsX(length(calibrationPointsX)/2+1:end)], [nan(length(calibrationPointsY)/2,1); calibrationPointsY(length(calibrationPointsY)/2+1:end)]];
                  elseif trialDataTable.Eye(1) == "right"
-                    calibrationPointsLeft = [[nan(length(calibrationPointsX)/2,1); calibrationPointsX(1:length(calibrationPointsX)/2)], [nan(length(calibrationPointsY)/2,1); calibrationPointsY(1:length(calibrationPointsY)/2)]];
+                    calibrationPointsLeft = [[nan(length(calibrationPointsX)/2,1); calibrationPointsX(length(calibrationPointsX)/2+1:end)], [nan(length(calibrationPointsY)/2,1); calibrationPointsY(length(calibrationPointsY)/2+1:end)]];
                     calibrationPointsRight = [[calibrationPointsX(1:length(calibrationPointsX)/2); nan(length(calibrationPointsX)/2,1)], [calibrationPointsY(1:length(calibrationPointsY)/2); nan(length(calibrationPointsY)/2,1)]];
                  else
                      disp('Debug here')
@@ -258,9 +258,9 @@ classdef Calibration < ArumeExperimentDesigns.EyeTracking
                                   t = nan(size(samplesDataTable,1),4);
                  if trialDataTable.Eye(1) =="left"
                     calibrationPointsLeft = [[calibrationPointsX(1:length(calibrationPointsX)/2); nan(length(calibrationPointsX)/2,1)], [calibrationPointsY(1:length(calibrationPointsY)/2); nan(length(calibrationPointsY)/2,1)]];
-                    calibrationPointsRight = [[nan(length(calibrationPointsX)/2,1); calibrationPointsX(1:length(calibrationPointsX)/2)], [nan(length(calibrationPointsY)/2,1); calibrationPointsY(1:length(calibrationPointsY)/2)]];
+                    calibrationPointsRight = [[nan(length(calibrationPointsX)/2,1); calibrationPointsX(length(calibrationPointsX)/2+1:end)], [nan(length(calibrationPointsY)/2,1); calibrationPointsY(length(calibrationPointsY)/2+1:end)]];
                  elseif trialDataTable.Eye(1) == "right"
-                    calibrationPointsLeft = [[nan(length(calibrationPointsX)/2,1); calibrationPointsX(1:length(calibrationPointsX)/2)], [nan(length(calibrationPointsY)/2,1); calibrationPointsY(1:length(calibrationPointsY)/2)]];
+                    calibrationPointsLeft = [[nan(length(calibrationPointsX)/2,1); calibrationPointsX(length(calibrationPointsX)/2+1:end)], [nan(length(calibrationPointsY)/2,1); calibrationPointsY(length(calibrationPointsY)/2+1:end)]];
                     calibrationPointsRight = [[calibrationPointsX(1:length(calibrationPointsX)/2); nan(length(calibrationPointsX)/2,1)], [calibrationPointsY(1:length(calibrationPointsY)/2); nan(length(calibrationPointsY)/2,1)]];
                  else
                      disp('Debug here')
@@ -453,8 +453,8 @@ end
             
             subplot(4,3,2,'nextplot','add')
             title('Eye positions X/Y (pixels)');
-            plot(rawCalibrationData.LeftX_UNCALIBRATED,rawCalibrationData.LeftY_UNCALIBRATED,'.');
-            plot(rawCalibrationData.RightX_UNCALIBRATED,rawCalibrationData.RightY_UNCALIBRATED,'.');
+            plot(rawCalibrationData.LeftX_UNCALIBRATED(~isnan(targetPosition.LeftX)),rawCalibrationData.LeftY_UNCALIBRATED(~isnan(targetPosition.LeftY)),'.');
+            plot(rawCalibrationData.RightX_UNCALIBRATED(~isnan(targetPosition.RightX)),rawCalibrationData.RightY_UNCALIBRATED(~isnan(targetPosition.RightY)),'.');
             
             subplot(4,3,3,'nextplot','add')
             title('Eye positions in time');
@@ -469,15 +469,19 @@ end
             y = [-22 22];
             subplot(4,3,4,'nextplot','add')
             title('Horizontal target vs eye pos. (deg)');
-            h1 = plot(targetPosition.LeftX+randn(size(t))/5,rawCalibrationData.LeftX_UNCALIBRATED,'.');
-            h2 = plot(targetPosition.RightX+randn(size(t))/5,rawCalibrationData.RightX_UNCALIBRATED,'.');
+            %h1 = plot(targetPosition.LeftX+randn(size(t))/5,rawCalibrationData.LeftX_UNCALIBRATED,'.');
+            h1 = plot((targetPosition.LeftX(~isnan(targetPosition.LeftX)))+(randn(size(targetPosition.LeftX(~isnan(targetPosition.LeftX))))/5),rawCalibrationData.LeftX_UNCALIBRATED(~isnan(targetPosition.LeftX)),'.')
+            %h2 = plot(targetPosition.RightX+randn(size(t))/5,rawCalibrationData.RightX_UNCALIBRATED,'.');
+            h2 = plot((targetPosition.RightX(~isnan(targetPosition.RightX)))+(randn(size(targetPosition.RightX(~isnan(targetPosition.RightX))))/5),rawCalibrationData.RightX_UNCALIBRATED(~isnan(targetPosition.RightX)),'.')
             line(x,calibrationCoefficients.OffsetX('LeftEye')+calibrationCoefficients.GainX('LeftEye')*x,'color',get(h1,'color'));
             line(x,calibrationCoefficients.OffsetX('RightEye')+calibrationCoefficients.GainX('RightEye')*x,'color',get(h2,'color'));
             
             subplot(4,3,5,'nextplot','add')
             title('Vertical target vs eye pos. (deg)');
-            h1 = plot(targetPosition.LeftY+randn(size(t))/5,rawCalibrationData.LeftY_UNCALIBRATED,'.');
-            h2 = plot(targetPosition.RightY+randn(size(t))/5,rawCalibrationData.RightY_UNCALIBRATED,'.');
+            %h1 = plot(targetPosition.LeftY+randn(size(t))/5,rawCalibrationData.LeftY_UNCALIBRATED,'.');
+            h1 = plot((targetPosition.LeftY(~isnan(targetPosition.LeftY)))+(randn(size(targetPosition.LeftY(~isnan(targetPosition.LeftY))))/5),rawCalibrationData.LeftY_UNCALIBRATED(~isnan(targetPosition.LeftY)),'.')
+            %h2 = plot(targetPosition.RightY+randn(size(t))/5,rawCalibrationData.RightY_UNCALIBRATED,'.');
+            h2 = plot((targetPosition.RightY(~isnan(targetPosition.RightY)))+(randn(size(targetPosition.RightY(~isnan(targetPosition.RightY))))/5),rawCalibrationData.RightY_UNCALIBRATED(~isnan(targetPosition.RightY)),'.')
             line(y,calibrationCoefficients.OffsetY('LeftEye')+calibrationCoefficients.GainY('LeftEye')*y,'color',get(h1,'color'));
             line(y,calibrationCoefficients.OffsetY('RightEye')+calibrationCoefficients.GainY('RightEye')*y,'color',get(h2,'color'));
             
@@ -491,8 +495,8 @@ end
             subplot(4,3,[7:9],'nextplot','add')
             plot(t,calibratedCalibrationData.LeftX);
             plot(t,calibratedCalibrationData.RightX);
-            plot(t,targetPosition.LeftX,'color','k','linewidth',3)
-            plot(t,targetPosition.RightX,'color','k','linewidth',3)
+            plot(t,targetPosition.LeftX,'color','b','linewidth',3)
+            plot(t,targetPosition.RightX,'color','r','linewidth',3)
             set(gca,'ylim',x);
             ylabel('Horizontal (deg)');
             legend('Left Eye','Right Eye')
@@ -500,8 +504,8 @@ end
             subplot(4,3,[10:12],'nextplot','add')
             plot(t,calibratedCalibrationData.LeftY);
             plot(t,calibratedCalibrationData.RightY);
-            plot(t,targetPosition.LeftY,'color','k','linewidth',3)
-            plot(t,targetPosition.RightY,'color','k','linewidth',3)
+            plot(t,targetPosition.LeftY,'color','b','linewidth',3)
+            plot(t,targetPosition.RightY,'color','r','linewidth',3)
             set(gca,'ylim',y);
             ylabel('Vertical (deg)');
             legend('Left Eye','Right Eye')
@@ -562,8 +566,8 @@ end
             subplot(4,3,[7:9],'nextplot','add')
             plot(t,calibratedCalibrationData.LeftX);
             plot(t,calibratedCalibrationData.RightX);
-            plot(t,targetPosition.LeftX,'color','k','linewidth',3)
-            plot(t,targetPosition.RightX,'color','k','linewidth',3)
+            plot(t,targetPosition.LeftX,'color','b','linewidth',3)
+            plot(t,targetPosition.RightX,'color','r','linewidth',3)
             set(gca,'ylim',x);
             ylabel('Horizontal (deg)');
             legend('Left Eye','Right Eye')
@@ -571,8 +575,8 @@ end
             subplot(4,3,[10:12],'nextplot','add')
             plot(t,calibratedCalibrationData.LeftY);
             plot(t,calibratedCalibrationData.RightY);
-            plot(t,targetPosition.LeftY,'color','k','linewidth',3)
-            plot(t,targetPosition.RightY,'color','k','linewidth',3)
+            plot(t,targetPosition.LeftY,'color','b','linewidth',3)
+            plot(t,targetPosition.RightY,'color','r','linewidth',3)
             set(gca,'ylim',y);
             ylabel('Vertical (deg)');
             legend('Left Eye','Right Eye')
