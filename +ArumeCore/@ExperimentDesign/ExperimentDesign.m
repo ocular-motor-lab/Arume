@@ -262,7 +262,12 @@ classdef ExperimentDesign < handle
             calibrationCRTables = {};
             calibrationTimes = NaT(0);
             calibrationNames = {};
+            rownumber = 0;
             for i=1:length(calibrationSessions)
+                if ( isempty(calibrationSessions(i).currentRun))
+                    continue;
+                end
+                rownumber = rownumber + 1;
 
                 if ( ~isfield( calibrationSessions(i).analysisResults, 'calibrationTable') || isempty(calibrationSessions(i).analysisResults.calibrationTable))
                     % analyze the calibration sessions just in case
@@ -272,14 +277,14 @@ classdef ExperimentDesign < handle
                 end
 
                 if ( isfield( calibrationSessions(i).analysisResults, 'calibrationTable') )
-                    calibrationTables{i} = calibrationSessions(i).analysisResults.calibrationTable;
-                    calibrationCRTables{i} = calibrationSessions(i).analysisResults.calibrationTableCR;
+                    calibrationTables{rownumber} = calibrationSessions(i).analysisResults.calibrationTable;
+                    calibrationCRTables{rownumber} = calibrationSessions(i).analysisResults.calibrationTableCR;
                 else
-                    calibrationTables{i} = table();
-                    calibrationCRTables{i} = table();
+                    calibrationTables{rownumber} = table();
+                    calibrationCRTables{rownumber} = table();
                 end
-                calibrationTimes(i) = datetime(calibrationSessions(i).currentRun.pastTrialTable.DateTimeTrialStart{end});
-                calibrationNames{i} =  calibrationSessions(i).name;
+                calibrationTimes(rownumber) = datetime(calibrationSessions(i).currentRun.pastTrialTable.DateTimeTrialStart{end});
+                calibrationNames{rownumber} =  calibrationSessions(i).name;
             end
 
             calibrations = table(string(calibrationNames'), calibrationTables', calibrationCRTables', calibrationTimes','VariableNames',{'SessionName','CalibrationTable','CalibrationCRTable','DateTime'});
