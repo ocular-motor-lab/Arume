@@ -3187,7 +3187,8 @@ classdef VOGAnalysis < handle
                     
                     figure
                     timeL = data.LeftSeconds;
-                    timeR = data.RightSeconds;
+%                     timeR = data.RightSeconds;
+                    timeR = timeL;
                     
                     h(1) = subplot(3,1,1,'nextplot','add');
                     plot(timeL, data.LeftPupilX, 'color', [ MEDIUM_BLUE ])
