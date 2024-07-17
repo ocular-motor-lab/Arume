@@ -33,6 +33,7 @@ state = INITIALIZNG_HARDWARE;
 trialsSinceBreak = 0;
 trialsSinceCalibration = 0;
 calibrationCounter = [];
+lastError = [];
 while(1)
     try
         switch( state )
@@ -81,8 +82,8 @@ while(1)
             case IDLE
                 result = this.Graph.DlgSelect( ...
                     'What do you want to do next:', ...
-                    { 'n' 'c' 'q'}, ...
-                    { 'Continue with next trial' 'Calibrate' 'Quit'} , [],[]);
+                    { 'n' 'c' 'q' 'e'}, ...
+                    { 'Continue with next trial' 'Calibrate' 'Quit' 'Show last error'} , [],[]);
 
                 switch( result )
                     case 'n'
@@ -93,6 +94,12 @@ while(1)
                         dlgResult = this.Graph.DlgYesNo( 'Are you sure you want to exit?',[],[],20,20);
                         if( dlgResult )
                             state = FINILIZING_EXPERIMENT;
+                        end
+                    case 'e'
+                        if ( ~isempty(lastError) )
+                            disp(lastError.getReport)
+                        else
+                            disp('NO ERRROS');
                         end
                 end
 
@@ -268,12 +275,13 @@ while(1)
                     end
 
 
-                catch err
-                    if ( streq(err.identifier, 'PSYCORTEX:USERQUIT' ) )
+                catch lastError
+                    if ( streq(lastError.identifier, 'PSYCORTEX:USERQUIT' ) )
                         thisTrialData.TrialResult = Enum.trialResult.QUIT;
+                        lastError = [];
                     else
                         thisTrialData.TrialResult = Enum.trialResult.ERROR;
-                        thisTrialData.ErrorMessage = string(err.message);
+                        thisTrialData.ErrorMessage = string(lastError.message);
                         % display error
 
                         beep
@@ -282,7 +290,7 @@ while(1)
                         cprintf('red', '!!!!!!!!!!!!! ARUME ERROR: !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n')
                         cprintf('red', '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n')
                         % disp(err.getReport);
-                        disp(err.message);
+                        disp(lastError.message);
                         cprintf('red', '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n')
                         cprintf('red', '!!!!!!!!!!!!! END ARUME ERROR: !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n')
                         cprintf('red', '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n')
@@ -463,7 +471,7 @@ while(1)
         cprintf('*red', '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n')
         cprintf('*red', '!!!!!!!!!!!!! ARUME ERROR: !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n')
         cprintf('*red', '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n')
-        % disp(lastError.getReport);
+        disp(lastError.getReport);
         disp(lastError.message);
         cprintf('*red', '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n')
         cprintf('*red', '!!!!!!!!!!!!! END ARUME ERROR: !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n')

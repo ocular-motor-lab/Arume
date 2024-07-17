@@ -69,7 +69,7 @@ classdef Project < handle
         %
         function addSession( this, session)
             if ( ~isempty(this.findSession(session.subjectCode, session.sessionCode) ) )
-                error( 'Arume: session already exists use a diferent name' );
+                error( ['Arume: session already exists use a diferent name ' session.subjectCode '__' session.sessionCode ] );
             end
             
             this.sessions = horzcat(this.sessions, session);
