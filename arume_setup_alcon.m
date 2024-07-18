@@ -37,7 +37,7 @@ disp(['ADDED TO THE PATH ' fullfile(new_arume_folder, 'ArumeUtil') ])
 % Now do the same for the two additional paths we need: FilterConfigFiles
 % and Shaders
 rootdir = fileparts(new_arume_folder);
-filelist = dir(fullfile(rootdir, '**\*.*'));  % get list of files and folders in any subfolder
+filelist = dir(fullfile(rootdir, ['**',filesep,'*']));  % get list of files and folders in any subfolder
 filelist = filelist([filelist.isdir]);  % remove folders from list
 
 % add shaders dir
