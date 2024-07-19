@@ -10,12 +10,18 @@ classdef ShaderOperator  < handle
 
         shaderHandleConv1
         shaderHandleConv2
-        shaderHandle3
+        shaderHandleSpecFilt
+        shaderHandleDeblurFilt
+
         shaderUniforms
         defaultParams
 
         texhandle1
         texhandle2
+
+        initialized
+
+        origtexhandle
     end
     
     methods
@@ -33,12 +39,11 @@ classdef ShaderOperator  < handle
 
         end
 
-        function checkOPENGLShaderInit(this)
+        function initGLOperator(this,w)
 
             global GL;
-            persistent initialized;
 
-            if isempty(initialized)
+            if isempty(this.initialized)
 
                 % Make sure GLSL and fragmentshaders are supported on first call:
                 AssertGLSL;
@@ -57,9 +62,11 @@ classdef ShaderOperator  < handle
                 maxuniforms = glGetIntegerv(GL.MAX_FRAGMENT_UNIFORM_COMPONENTS);
                 
                 % We are initialized:
-                initialized = 1;
+                this.initialized = 1;
             end 
 
+            this.myOperator = CreateGLOperator(w, kPsychNeed32BPCFloat);
+            Screen('GetWindowInfo', this.myOperator);
 
         end
 
@@ -136,7 +143,12 @@ classdef ShaderOperator  < handle
 
         end
 
-        function init2dConvGaussShader(this,w)
+        function init2dConvGaussShader(this,defaults, blurmethod)
+
+            % the only defaults that are relevant here are: 
+            % gaze position and foveal radius
+            this.defaultParams.gazePosition = [defaults(1),defaults(2)];
+            this.defaultParams.blurradpx = defaults(16);
 
             global GL;
 
@@ -144,27 +156,39 @@ classdef ShaderOperator  < handle
             kernelh = 1;
             hwx = (kernelw - 1) / 2;
             hwy = (kernelh - 1) / 2;
-
-            this.myOperator = CreateGLOperator(w, kPsychNeed32BPCFloat);
-            Screen('GetWindowInfo', this.myOperator);
-
-            this.shaderHandleConv1 = LoadGLSLProgramFromFiles(which('Conv2dMatt.frag.txt'), 1);
+            
+            if blurmethod == 1
+                this.shaderHandleConv1 = LoadGLSLProgramFromFiles(which('Conv2dMattCircle.frag.txt'), 1);
+            else
+                this.shaderHandleConv1 = LoadGLSLProgramFromFiles(which('Conv2dMatt.frag.txt'), 1);
+            end
             
             % Assign proper texture units for input image and clut:
             glUseProgram(this.shaderHandleConv1);
             
-            this.shaderUniforms.shaderImage1 = glGetUniformLocation(this.shaderHandleConv1, 'Image');
-            glUniform1i(this.shaderUniforms.shaderImage1, 0);
+            % can we use this image further down the road?
+            this.shaderUniforms.Conv1ShaderImage = glGetUniformLocation(this.shaderHandleConv1, 'Image');
+            glUniform1i(this.shaderUniforms.Conv1ShaderImage, 0);
             
-            this.shaderUniforms.shaderClut1  = glGetUniformLocation(this.shaderHandleConv1, 'Kernel');
-            glUniform1i(this.shaderUniforms.shaderClut1, 1);
+            this.shaderUniforms.Conv1ShaderClut  = glGetUniformLocation(this.shaderHandleConv1, 'Kernel');
+            glUniform1i(this.shaderUniforms.Conv1ShaderClut, 1);
             
-            this.shaderUniforms.shaderKernelsizeX1  = glGetUniformLocation(this.shaderHandleConv1, 'KernelHalfWidthX');
-            glUniform1f(this.shaderUniforms.shaderKernelsizeX1, hwx);
+            this.shaderUniforms.Conv1ShaderKernelsizeX  = glGetUniformLocation(this.shaderHandleConv1, 'KernelHalfWidthX');
+            glUniform1f(this.shaderUniforms.Conv1ShaderKernelsizeX, hwx);
             
-            this.shaderUniforms.shaderKernelsizeY1  = glGetUniformLocation(this.shaderHandleConv1, 'KernelHalfWidthY');
-            glUniform1f(this.shaderUniforms.shaderKernelsizeY1, hwy);
-            
+            this.shaderUniforms.Conv1ShaderKernelsizeY  = glGetUniformLocation(this.shaderHandleConv1, 'KernelHalfWidthY');
+            glUniform1f(this.shaderUniforms.Conv1ShaderKernelsizeY, hwy);
+
+            % come up with some arbitrary starting value for gaze position
+            % and gaze radius for initialization
+            if blurmethod == 1
+                this.shaderUniforms.Conv1GazeRadius  = glGetUniformLocation(this.shaderHandleConv1, 'gazeRadius');
+                glUniform1f(this.shaderUniforms.Conv1GazeRadius, this.defaultParams.blurradpx);
+    
+                this.shaderUniforms.Conv1GazePosition  = glGetUniformLocation(this.shaderHandleConv1, 'gazePosition');
+                glUniform2f(this.shaderUniforms.Conv1GazePosition, this.defaultParams.gazePosition(1), this.defaultParams.gazePosition(2)); 
+            end
+
             glUseProgram(0);
             
             glActiveTexture(GL.TEXTURE1);
@@ -209,23 +233,37 @@ classdef ShaderOperator  < handle
             kernelh = length(this.kernel1d);
             hwx = (kernelw - 1) / 2;
             hwy = (kernelh - 1) / 2;
-            
-            this.shaderHandleConv2 = LoadGLSLProgramFromFiles(which('Conv2dMatt.frag.txt'), 1);
+
+            if blurmethod == 1
+                this.shaderHandleConv2 = LoadGLSLProgramFromFiles(which('Conv2dMattCircle.frag.txt'), 1);
+            else
+                this.shaderHandleConv2 = LoadGLSLProgramFromFiles(which('Conv2dMatt.frag.txt'), 1);
+            end
             
             % Assign proper texture units for input image and clut:
             glUseProgram(this.shaderHandleConv2);
             
-            this.shaderUniforms.shaderImage2 = glGetUniformLocation(this.shaderHandleConv2, 'Image');
-            glUniform1i(this.shaderUniforms.shaderImage1, 0);
+            this.shaderUniforms.Conv2ShaderImage = glGetUniformLocation(this.shaderHandleConv2, 'Image');
+            glUniform1i(this.shaderUniforms.Conv2ShaderImage, 0);
             
-            this.shaderUniforms.shaderClut2  = glGetUniformLocation(this.shaderHandleConv2, 'Kernel');
-            glUniform1i(this.shaderUniforms.shaderClut2, 1);
+            this.shaderUniforms.Conv2ShaderClut  = glGetUniformLocation(this.shaderHandleConv2, 'Kernel');
+            glUniform1i(this.shaderUniforms.Conv2ShaderClut, 1);
             
-            this.shaderUniforms.shaderKernelsizeX2  = glGetUniformLocation(this.shaderHandleConv2, 'KernelHalfWidthX');
-            glUniform1f(this.shaderUniforms.shaderKernelsizeX2, hwx);
+            this.shaderUniforms.Conv2ShaderKernelsizeX  = glGetUniformLocation(this.shaderHandleConv2, 'KernelHalfWidthX');
+            glUniform1f(this.shaderUniforms.Conv2ShaderKernelsizeX, hwx);
             
-            this.shaderUniforms.shaderKernelsizeY2  = glGetUniformLocation(this.shaderHandleConv2, 'KernelHalfWidthY');
-            glUniform1f(this.shaderUniforms.shaderKernelsizeY2, hwy);
+            this.shaderUniforms.Conv2ShaderKernelsizeY  = glGetUniformLocation(this.shaderHandleConv2, 'KernelHalfWidthY');
+            glUniform1f(this.shaderUniforms.Conv2ShaderKernelsizeY, hwy);
+
+            % come up with some arbitrary starting value for gaze position
+            % and gaze radius for initialization
+            if blurmethod == 1
+                this.shaderUniforms.Conv2GazeRadius  = glGetUniformLocation(this.shaderHandleConv2, 'gazeRadius');
+                glUniform1f(this.shaderUniforms.Conv2GazeRadius, this.defaultParams.blurradpx);
+    
+                this.shaderUniforms.Conv2GazePosition  = glGetUniformLocation(this.shaderHandleConv2, 'gazePosition');
+                glUniform2f(this.shaderUniforms.Conv2GazePosition, this.defaultParams.gazePosition(1), this.defaultParams.gazePosition(2)); 
+            end
             
             glUseProgram(0);
             
@@ -260,7 +298,43 @@ classdef ShaderOperator  < handle
 
         end
 
-        function addShader(this, shaderfname, defaults)
+        function addDeblurShader(this, shaderfname, defaults)
+
+            this.defaultParams.gazePosition = [defaults(1),defaults(2)];
+            this.defaultParams.radpx = defaults(16);
+
+            this.shaderHandleDeblurFilt = LoadGLSLProgramFromFiles(which(shaderfname), 1);
+
+            glUseProgram(this.shaderHandleDeblurFilt);
+
+            this.shaderUniforms.DeblurShaderBlurredImage = glGetUniformLocation(this.shaderHandleDeblurFilt, 'BlurredImage');
+            glUniform1i(this.shaderUniforms.DeblurShaderBlurredImage, 0);            
+
+            this.shaderUniforms.DeblurShaderOrigImage = glGetUniformLocation(this.shaderHandleDeblurFilt, 'OrigImage');
+            glUniform1i(this.shaderUniforms.DeblurShaderOrigImage, 1);
+
+            this.shaderUniforms.DeblurGazePosition = glGetUniformLocation(this.shaderHandleDeblurFilt, 'gazePosition');
+            glUniform2f(this.shaderUniforms.DeblurGazePosition, ...
+                this.defaultParams.gazePosition(1), this.defaultParams.gazePosition(2));
+
+            this.shaderUniforms.DeblurGazeRadius = glGetUniformLocation(this.shaderHandleDeblurFilt, 'gazeRadius');
+            glUniform1f(this.shaderUniforms.DeblurGazeRadius, this.defaultParams.radpx);
+
+            glUseProgram(0);  
+
+            Screen('HookFunction', this.myOperator, 'AppendShader', 'UserDefinedBlit', 'MyShader4', this.shaderHandleDeblurFilt, []);
+            
+            if bitand(Screen('HookFunction', this.myOperator, 'ImagingMode'), mor(kPsychNeed16BPCFloat, kPsychNeed32BPCFloat)) == 0
+                % Not yet set. Choose highest precision:
+                Screen('HookFunction', this.myOperator, 'ImagingMode', mor(kPsychNeed32BPCFloat, Screen('HookFunction', this.myOperator, 'ImagingMode')));
+                if debug > 3
+                    fprintf('Add2DSeparableConvolutionToGLOperator: Increasing precision of operator to 32bpc float.\n');
+                end
+            end
+
+        end
+
+        function addSpecFiltShader(this, shaderfname, defaults, blurmethod)
 
             this.defaultParams.gazePosition = [defaults(1),defaults(2)];
             this.defaultParams.radpx = defaults(3);
@@ -279,50 +353,54 @@ classdef ShaderOperator  < handle
 
             this.defaultParams.invgamma = defaults(14);
 
-            Screen('HookFunction', this.myOperator, 'AppendBuiltin', 'UserDefinedBlit', 'Builtin:FlipFBOs', '');
+            % only need pingponging when we are doing multiple passes in
+            % the same GLoperator
+            if blurmethod == 1
+                Screen('HookFunction', this.myOperator, 'AppendBuiltin', 'UserDefinedBlit', 'Builtin:FlipFBOs', '');
+            end
 
-            this.shaderHandle3 = LoadGLSLProgramFromFiles(which(shaderfname), 1);
+            this.shaderHandleSpecFilt = LoadGLSLProgramFromFiles(which(shaderfname), 1);
 
             % Bind texture unit 0 to shader as input source for the image:
-            glUseProgram(this.shaderHandle3);
+            glUseProgram(this.shaderHandleSpecFilt);
 
-            this.shaderUniforms.shaderImage3 = glGetUniformLocation(this.shaderHandle3, 'Image');
-            glUniform1i(this.shaderUniforms.shaderImage3, 0);
+            this.shaderUniforms.SpecFiltShaderImage = glGetUniformLocation(this.shaderHandleSpecFilt, 'Image');
+            glUniform1i(this.shaderUniforms.SpecFiltShaderImage, 0);
 
-            this.shaderUniforms.gazePosition = glGetUniformLocation(this.shaderHandle3, 'gazePosition');
-            glUniform2f(this.shaderUniforms.gazePosition, ...
+            this.shaderUniforms.SpecFiltGazePosition = glGetUniformLocation(this.shaderHandleSpecFilt, 'gazePosition');
+            glUniform2f(this.shaderUniforms.SpecFiltGazePosition, ...
                 this.defaultParams.gazePosition(1), this.defaultParams.gazePosition(2));
 
-            this.shaderUniforms.gazeRadius = glGetUniformLocation(this.shaderHandle3, 'gazeRadius');
-            glUniform1f(this.shaderUniforms.gazeRadius, this.defaultParams.radpx);
+            this.shaderUniforms.SpecFiltGazeRadius = glGetUniformLocation(this.shaderHandleSpecFilt, 'gazeRadius');
+            glUniform1f(this.shaderUniforms.SpecFiltGazeRadius, this.defaultParams.radpx);
 
-            this.shaderUniforms.colorScalePeriph = glGetUniformLocation(this.shaderHandle3, 'colorScalePeriph');
-            glUniform3f(this.shaderUniforms.colorScalePeriph, this.defaultParams.rPeriph,...
+            this.shaderUniforms.SpecFiltColorScalePeriph = glGetUniformLocation(this.shaderHandleSpecFilt, 'colorScalePeriph');
+            glUniform3f(this.shaderUniforms.SpecFiltColorScalePeriph, this.defaultParams.rPeriph,...
                 this.defaultParams.gPeriph, this.defaultParams.bPeriph);
 
-            this.shaderUniforms.colorScaleFov = glGetUniformLocation(this.shaderHandle3, 'colorScaleFov');
-            glUniform3f(this.shaderUniforms.colorScaleFov, this.defaultParams.rFov,...
+            this.shaderUniforms.SpecFiltColorScaleFov = glGetUniformLocation(this.shaderHandleSpecFilt, 'colorScaleFov');
+            glUniform3f(this.shaderUniforms.SpecFiltColorScaleFov, this.defaultParams.rFov,...
                 this.defaultParams.gFov, this.defaultParams.bFov);
 
-            this.shaderUniforms.slope = glGetUniformLocation(this.shaderHandle3, 'slope');
-            glUniform1f(this.shaderUniforms.slope, this.defaultParams.slope);
+            this.shaderUniforms.SpecFiltSlope = glGetUniformLocation(this.shaderHandleSpecFilt, 'slope');
+            glUniform1f(this.shaderUniforms.SpecFiltSlope, this.defaultParams.slope);
 
-            this.shaderUniforms.nxtoslope = glGetUniformLocation(this.shaderHandle3, 'nxtoslope');
-            glUniform1f(this.shaderUniforms.nxtoslope, this.defaultParams.nxtoslope);
+            this.shaderUniforms.SpecFiltNxtoslope = glGetUniformLocation(this.shaderHandleSpecFilt, 'nxtoslope');
+            glUniform1f(this.shaderUniforms.SpecFiltNxtoslope, this.defaultParams.nxtoslope);
 
-            this.shaderUniforms.flatwidth = glGetUniformLocation(this.shaderHandle3, 'flatwidth');
-            glUniform1f(this.shaderUniforms.flatwidth, this.defaultParams.flatwidth);
+            this.shaderUniforms.SpecFiltFlatwidth = glGetUniformLocation(this.shaderHandleSpecFilt, 'flatwidth');
+            glUniform1f(this.shaderUniforms.SpecFiltFlatwidth, this.defaultParams.flatwidth);
 
-            this.shaderUniforms.coeff = glGetUniformLocation(this.shaderHandle3, 'coeff');
-            glUniform1f(this.shaderUniforms.coeff, this.defaultParams.coeff);
+            this.shaderUniforms.SpecFiltCoeff = glGetUniformLocation(this.shaderHandleSpecFilt, 'coeff');
+            glUniform1f(this.shaderUniforms.SpecFiltCoeff, this.defaultParams.coeff);
 
-            this.shaderUniforms.invgamma = glGetUniformLocation(this.shaderHandle3, 'invgamma');
-            glUniform1f(this.shaderUniforms.invgamma, this.defaultParams.invgamma);
+            this.shaderUniforms.SpecFiltInvgamma = glGetUniformLocation(this.shaderHandleSpecFilt, 'invgamma');
+            glUniform1f(this.shaderUniforms.SpecFiltInvgamma, this.defaultParams.invgamma);
 
 
             glUseProgram(0);           
 
-            Screen('HookFunction', this.myOperator, 'AppendShader', 'UserDefinedBlit', 'MyShader3', this.shaderHandle3, []);
+            Screen('HookFunction', this.myOperator, 'AppendShader', 'UserDefinedBlit', 'MyShader3', this.shaderHandleSpecFilt, []);
             
             if bitand(Screen('HookFunction', this.myOperator, 'ImagingMode'), mor(kPsychNeed16BPCFloat, kPsychNeed32BPCFloat)) == 0
                 % Not yet set. Choose highest precision:
@@ -331,6 +409,7 @@ classdef ShaderOperator  < handle
                     fprintf('Add2DSeparableConvolutionToGLOperator: Increasing precision of operator to 32bpc float.\n');
                 end
             end
+            
 
 
         end
