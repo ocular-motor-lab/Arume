@@ -1,6 +1,4 @@
 classdef ShaderOperator  < handle
-    % Shader constructor Summary of this class goes here
-    %   Detailed explanation goes here
     
     properties
         imagingMode
@@ -410,8 +408,6 @@ classdef ShaderOperator  < handle
                 end
             end
             
-
-
         end
 
         function updateGLUniform(this,shaderHandle,uniformHandle,newUniformVal,dtype)
