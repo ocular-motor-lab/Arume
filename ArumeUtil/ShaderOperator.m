@@ -413,24 +413,31 @@ classdef ShaderOperator  < handle
         function updateGLUniform(this,shaderHandle,uniformHandle,newUniformVal,dtype)
 
             glUseProgram(shaderHandle);
-
-            switch dtype
-                case "float"
-
-                    switch length(newUniformVal)
-                        case 1
-                            glUniform1f(uniformHandle, newUniformVal);
-                        case 2
-                            glUniform2f(uniformHandle, newUniformVal(1),newUniformVal(2));
-                        case 3
-                            glUniform3f(uniformHandle, newUniformVal(1),newUniformVal(2),newUniformVal(3));
-                        case 4
-                            glUniform4f(uniformHandle, newUniformVal(1),newUniformVal(2),newUniformVal(3),newUniformVal(4));
-                    end
-
-                case "int"
-                    glUniform1i(uniformHandle, newUniformVal);
-
+            
+            try
+                switch dtype
+                    case "float"
+    
+                        switch length(newUniformVal)
+                            case 1
+                                glUniform1f(uniformHandle, newUniformVal);
+                            case 2
+                                glUniform2f(uniformHandle, newUniformVal(1),newUniformVal(2));
+                            case 3
+                                glUniform3f(uniformHandle, newUniformVal(1),newUniformVal(2),newUniformVal(3));
+                            case 4
+                                glUniform4f(uniformHandle, newUniformVal(1),newUniformVal(2),newUniformVal(3),newUniformVal(4));
+                        end
+    
+                    case "int"
+                        glUniform1i(uniformHandle, newUniformVal);
+    
+                end
+            catch
+                % Sometimes gluniform aborts and I have no idea why. Not
+                % really a predictable pattern. 
+                fprintf('Something Went Wrong with: shader = %i, uniform = %i, newvalue = %.2f, dtype = %s\nUsing Last Setting...\n',...
+                    shaderHandle,uniformHandle,newUniformVal, dtype)
             end
             
             glUseProgram(0);
