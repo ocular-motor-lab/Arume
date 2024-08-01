@@ -89,10 +89,10 @@ classdef ShaderOperator  < handle
             if newsigma == 0
                 % impulse response
                 this.kernel = zeros(npx,npx);
-                this.kernel((npx-1)/2,(npx-1)/2) = 1;
+                this.kernel((npx+1)/2,(npx+1)/2) = 1;
                 
                 this.kernel1d = zeros(npx,1);
-                this.kernel1d((npx-1)/2) = 1;
+                this.kernel1d((npx+1)/2) = 1;
             else
                 this.kernel = fspecial("gaussian",npx,newsigma);
                 this.kernel = (this.kernel./sum(this.kernel,'all'));
