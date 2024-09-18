@@ -123,9 +123,9 @@ classdef PTB < handle
             %-- window
             Screen('Preference', 'ConserveVRAM', 64);
             if (~debugMode)
-                [graph.window, graph.wRect] = Screen('OpenWindow', graph.selectedScreen, 0, [], [], [], stereoMode, 10);%SR changed stereomode to 4 from 0
+                [graph.window, graph.wRect] = Screen('OpenWindow', graph.selectedScreen, backgroundColor, [], [], [], stereoMode, 10);%SR changed stereomode to 4 from 0
             else
-                [graph.window, graph.wRect] = Screen('OpenWindow', graph.selectedScreen, 0, [10 10 900 600], [], [], stereoMode, 10); %SR changed stereomode to 4 from 0
+                [graph.window, graph.wRect] = Screen('OpenWindow', graph.selectedScreen, backgroundColor, [10 10 900 600], [], [], stereoMode, 10); %SR changed stereomode to 4 from 0
             end
             
             %-- color

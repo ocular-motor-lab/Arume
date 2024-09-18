@@ -1001,26 +1001,55 @@ classdef VOGAnalysis < handle
             vdist_cm = 130;
             screenw_cm = 170;
             w_px = 3840;
+            pxwidthcm = screenw_cm/w_px;
             h_px = 2160;
-            widthdeg = rad2deg(atan((screenw_cm/2)/vdist_cm))*2;
-            pxperdeg = w_px/widthdeg;
+            % widthdeg = rad2deg(atan((screenw_cm/2)/vdist_cm))*2;
+            % pxperdeg = w_px/widthdeg;
 
             %% save pixel coords
             if ( edf0.RawEdf.RECORDINGS(1).eye == edf0.EYES.RIGHT || edf0.RawEdf.RECORDINGS(1).eye == edf0.EYES.BINOCULAR  )
-                data.RightPixX = s.gx(:,2);
-                data.RightPixY = s.gy(:,2);
 
-                data.RightX = (s.gx(:,2)-w_px/2)/pxperdeg;
-                data.RightY = -(s.gy(:,2)-h_px/2)/pxperdeg; % invert so 0-0 is bottom left
+                % no small angle approximation, because heading directions
+                % must be pretty precise
+                data.RightPixX = s.gx(:,2);
+                rx = s.gx(:,2)-(w_px/2);
+                rxcm = rx.*pxwidthcm;
+                rxdeg = rad2deg(atan(rxcm./vdist_cm));
+                data.RightX = rxdeg;
+
+                data.RightPixY = s.gy(:,2);
+                ry = s.gy(:,2)-(h_px/2);
+                rycm = ry.*pxwidthcm;
+                rydeg = rad2deg(atan(rycm./vdist_cm));
+                data.RightY = -rydeg; % reversed!
+
+                % data.RightPixX = s.gx(:,2);
+                % data.RightPixY = s.gy(:,2);
+                % data.RightX = (s.gx(:,2)-w_px/2)/pxperdeg;
+                % data.RightY = -(s.gy(:,2)-h_px/2)/pxperdeg; % invert so 0-0 is bottom left
                 data.RightT = nan(size(s.gx(:,2)));
             end
             if ( edf0.RawEdf.RECORDINGS(1).eye == edf0.EYES.LEFT || edf0.RawEdf.RECORDINGS(1).eye == edf0.EYES.BINOCULAR  )
-                data.LeftPixX =  s.gx(:,1);
-                data.LeftPixY = s.gy(:,1);
 
-                data.LeftX =  (s.gx(:,1)-w_px/2)/pxperdeg;
-                data.LeftY = -(s.gy(:,1)-h_px/2)/pxperdeg;
+                data.LeftPixX = s.gx(:,1);
+                lx = s.gx(:,1)-(w_px/2);
+                lxcm = lx.*pxwidthcm;
+                lxdeg = rad2deg(atan(lxcm./vdist_cm));
+                data.LeftX = lxdeg;
+
+                data.LeftPixY = s.gy(:,1);
+                ly = s.gy(:,1)-(h_px/2);
+                lycm = ly.*pxwidthcm;
+                lydeg = rad2deg(atan(lycm./vdist_cm));
+                data.LeftY = -lydeg; % reversed!
+
                 data.LeftT = nan(size(s.gx(:,1)));
+
+                % data.LeftPixX =  s.gx(:,1);
+                % data.LeftPixY = s.gy(:,1);
+                % data.LeftX =  (s.gx(:,1)-w_px/2)/pxperdeg;
+                % data.LeftY = -(s.gy(:,1)-h_px/2)/pxperdeg;
+                % data.LeftT = nan(size(s.gx(:,1)));
             end
 
             % for now, let's assume that the pupil is a perfect circle. 
