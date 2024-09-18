@@ -359,9 +359,9 @@ classdef Edf2Mat < handle
                 if ismac
                     [~, version] = unix('sw_vers -productVersion');
                     version = regexp(version, '(?<major>\d+)\.(?<minor>\d+).(?<patch>\d+)', 'names');
-                    if (str2double(version.major) < 11) 
-                       importer = @(varargin)edfimporter_pre11(varargin{:});
-                    end                
+                    % if (str2double(version.major) < 11) 
+                    %    importer = @(varargin)edfimporter_pre11(varargin{:});
+                    % end                
                 end
                 obj.RawEdf      = importer(obj.filename);
                 obj.Header.raw  = obj.RawEdf.HEADER;

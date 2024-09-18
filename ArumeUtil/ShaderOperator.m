@@ -68,72 +68,82 @@ classdef ShaderOperator  < handle
 
         end
 
-        function buildGaussKernel(this,npx,mu,sigma)
+        function buildGaussKernel(this,npx,mu,rSigma, gSigma, bSigma)
 
             % build 2d kernel, which will be used as a texture
-            this.kernel = fspecial("gaussian",npx,sigma);
-            this.kernel = (this.kernel./sum(this.kernel,'all'));
+            rkernel = fspecial("gaussian",npx,rSigma);
+            rkernel = (rkernel./sum(rkernel,'all'));
+
+            gkernel = fspecial("gaussian",npx,gSigma);
+            gkernel = (gkernel./sum(gkernel,'all'));
+
+            bkernel = fspecial("gaussian",npx,bSigma);
+            bkernel = (bkernel./sum(bkernel,'all'));
+
+            this.kernel = cat(3,rkernel,gkernel,bkernel);
             
             % build 1d slice (also normalized to 1), for separable 2d
             % Convolution
-            this.kernel1d = normpdf(1:npx,mu,sigma);
-            this.kernel1d = (this.kernel1d./sum(this.kernel1d,'all'));
+            rkernel1d = normpdf(1:npx,mu,rSigma);
+            rkernel1d = (rkernel1d./sum(rkernel1d,'all'));
+
+            gkernel1d = normpdf(1:npx,mu,gSigma);
+            gkernel1d = (gkernel1d./sum(gkernel1d,'all'));
+
+            bkernel1d = normpdf(1:npx,mu,bSigma);
+            bkernel1d = (bkernel1d./sum(bkernel1d,'all'));
+
+            this.kernel1d = reshape(cat(1,rkernel1d,gkernel1d,bkernel1d),[],1);
 
         end
 
-        function replaceGaussKernel(this,npx,mu,newsigma)
+        function replaceGaussKernel(this,npx,mu,rSigma, gSigma, bSigma)
 
+            % build 2d kernel, which will be used as a texture
+            rkernel = fspecial("gaussian",npx,rSigma);
+            rkernel = (rkernel./sum(rkernel,'all'));
+
+            gkernel = fspecial("gaussian",npx,gSigma);
+            gkernel = (gkernel./sum(gkernel,'all'));
+
+            bkernel = fspecial("gaussian",npx,bSigma);
+            bkernel = (bkernel./sum(bkernel,'all'));
+
+            this.kernel = cat(3,rkernel,gkernel,bkernel);
+            
+            % build 1d slice (also normalized to 1), for separable 2d
+            % Convolution
+            rkernel1d = normpdf(1:npx,mu,rSigma);
+            rkernel1d = (rkernel1d./sum(rkernel1d,'all'));
+
+            gkernel1d = normpdf(1:npx,mu,gSigma);
+            gkernel1d = (gkernel1d./sum(gkernel1d,'all'));
+
+            bkernel1d = normpdf(1:npx,mu,bSigma);
+            bkernel1d = (bkernel1d./sum(bkernel1d,'all'));
+
+            this.kernel1d = reshape(cat(1,rkernel1d,gkernel1d,bkernel1d),[],1);
+
+            
             global GL;
 
-            % clamp to reasonable value of SD
-            if newsigma == 0
-                % impulse response
-                this.kernel = zeros(npx,npx);
-                this.kernel((npx+1)/2,(npx+1)/2) = 1;
-                
-                this.kernel1d = zeros(npx,1);
-                this.kernel1d((npx+1)/2) = 1;
-            else
-                this.kernel = fspecial("gaussian",npx,newsigma);
-                this.kernel = (this.kernel./sum(this.kernel,'all'));
-    
-                this.kernel1d = normpdf(1:npx,mu,newsigma);
-                this.kernel1d = (this.kernel1d./sum(this.kernel1d,'all'));
-            end
-
-            kernelw = length(this.kernel1d);
+            kernelw = length(this.kernel1d)/3;
             kernelh = 1;
 
             glActiveTexture(GL.TEXTURE1);
             glBindTexture(GL.TEXTURE_RECTANGLE_EXT, this.texhandle1);
-            glTexImage2D(GL.TEXTURE_RECTANGLE_EXT, 0, GL.LUMINANCE_FLOAT32_APPLE, kernelw, kernelh, 0, GL.LUMINANCE, GL.FLOAT, moglsingle(this.kernel1d));
-
-            % Make sure we use nearest neighbour sampling:
-            % glTexParameteri(GL.TEXTURE_RECTANGLE_EXT, GL.TEXTURE_MIN_FILTER, GL.NEAREST);
-            % glTexParameteri(GL.TEXTURE_RECTANGLE_EXT, GL.TEXTURE_MAG_FILTER, GL.NEAREST);
-
-            % And that we clamp to edge:
-            % glTexParameteri(GL.TEXTURE_RECTANGLE_EXT, GL.TEXTURE_WRAP_S, GL.CLAMP);
-            % glTexParameteri(GL.TEXTURE_RECTANGLE_EXT, GL.TEXTURE_WRAP_T, GL.CLAMP);
+            glTexImage2D(GL.TEXTURE_RECTANGLE_EXT, 0, GL.RGB32F, kernelw, kernelh, 0, GL.RGB, GL.FLOAT, moglsingle(this.kernel1d));
 
             % Default CLUT setup done: Switch back to texture unit 0:
             glBindTexture(GL.TEXTURE_RECTANGLE_EXT, 0);
             glActiveTexture(GL.TEXTURE0);
 
             kernelw = 1;
-            kernelh = length(this.kernel1d);
+            kernelh = length(this.kernel1d)/3;
 
             glActiveTexture(GL.TEXTURE1);
             glBindTexture(GL.TEXTURE_RECTANGLE_EXT, this.texhandle2);
-            glTexImage2D(GL.TEXTURE_RECTANGLE_EXT, 0, GL.LUMINANCE_FLOAT32_APPLE, kernelw, kernelh, 0, GL.LUMINANCE, GL.FLOAT, moglsingle(this.kernel1d));
-
-            % Make sure we use nearest neighbour sampling:
-            % glTexParameteri(GL.TEXTURE_RECTANGLE_EXT, GL.TEXTURE_MIN_FILTER, GL.NEAREST);
-            % glTexParameteri(GL.TEXTURE_RECTANGLE_EXT, GL.TEXTURE_MAG_FILTER, GL.NEAREST);
-
-            % And that we clamp to edge:
-            % glTexParameteri(GL.TEXTURE_RECTANGLE_EXT, GL.TEXTURE_WRAP_S, GL.CLAMP);
-            % glTexParameteri(GL.TEXTURE_RECTANGLE_EXT, GL.TEXTURE_WRAP_T, GL.CLAMP);
+            glTexImage2D(GL.TEXTURE_RECTANGLE_EXT, 0, GL.RGB32F, kernelw, kernelh, 0, GL.RGB, GL.FLOAT, moglsingle(this.kernel1d));
 
             % Default CLUT setup done: Switch back to texture unit 0:
             glBindTexture(GL.TEXTURE_RECTANGLE_EXT, 0);
@@ -146,11 +156,11 @@ classdef ShaderOperator  < handle
             % the only defaults that are relevant here are: 
             % gaze position and foveal radius
             this.defaultParams.gazePosition = [defaults(1),defaults(2)];
-            this.defaultParams.blurradpx = defaults(16);
+            this.defaultParams.blurradpx = defaults(15);
 
             global GL;
 
-            kernelw = length(this.kernel1d);
+            kernelw = length(this.kernel1d)/3;
             kernelh = 1;
             hwx = (kernelw - 1) / 2;
             hwy = (kernelh - 1) / 2;
@@ -192,8 +202,9 @@ classdef ShaderOperator  < handle
             glActiveTexture(GL.TEXTURE1);
             this.texhandle1 = glGenTextures(1);
             glBindTexture(GL.TEXTURE_RECTANGLE_EXT, this.texhandle1);
-            glTexImage2D(GL.TEXTURE_RECTANGLE_EXT, 0, GL.LUMINANCE_FLOAT32_APPLE, kernelw, kernelh, 0, GL.LUMINANCE, GL.FLOAT, moglsingle(this.kernel1d));
-            
+            % glTexImage2D(GL.TEXTURE_RECTANGLE_EXT, 0, GL.LUMINANCE_FLOAT32_APPLE, kernelw, kernelh, 0, GL.LUMINANCE, GL.FLOAT, moglsingle(this.kernel1d));
+            glTexImage2D(GL.TEXTURE_RECTANGLE_EXT, 0, GL.RGB32F, kernelw, kernelh, 0, GL.RGB, GL.FLOAT, moglsingle(this.kernel1d));
+
             % Make sure we use nearest neighbour sampling:
             glTexParameteri(GL.TEXTURE_RECTANGLE_EXT, GL.TEXTURE_MIN_FILTER, GL.NEAREST);
             glTexParameteri(GL.TEXTURE_RECTANGLE_EXT, GL.TEXTURE_MAG_FILTER, GL.NEAREST);
@@ -228,7 +239,7 @@ classdef ShaderOperator  < handle
             
             
             kernelw = 1;
-            kernelh = length(this.kernel1d);
+            kernelh = length(this.kernel1d)/3;
             hwx = (kernelw - 1) / 2;
             hwy = (kernelh - 1) / 2;
 
@@ -268,8 +279,9 @@ classdef ShaderOperator  < handle
             glActiveTexture(GL.TEXTURE1);
             this.texhandle2 = glGenTextures(1);
             glBindTexture(GL.TEXTURE_RECTANGLE_EXT, this.texhandle2);
-            glTexImage2D(GL.TEXTURE_RECTANGLE_EXT, 0, GL.LUMINANCE_FLOAT32_APPLE, kernelw, kernelh, 0, GL.LUMINANCE, GL.FLOAT, moglsingle(this.kernel1d));
-            
+            % glTexImage2D(GL.TEXTURE_RECTANGLE_EXT, 0, GL.LUMINANCE_FLOAT32_APPLE, kernelw, kernelh, 0, GL.LUMINANCE, GL.FLOAT, moglsingle(this.kernel1d));
+            glTexImage2D(GL.TEXTURE_RECTANGLE_EXT, 0, GL.RGB32F, kernelw, kernelh, 0, GL.RGB, GL.FLOAT, moglsingle(this.kernel1d));
+
             % Make sure we use nearest neighbour sampling:
             glTexParameteri(GL.TEXTURE_RECTANGLE_EXT, GL.TEXTURE_MIN_FILTER, GL.NEAREST);
             glTexParameteri(GL.TEXTURE_RECTANGLE_EXT, GL.TEXTURE_MAG_FILTER, GL.NEAREST);
@@ -296,167 +308,167 @@ classdef ShaderOperator  < handle
 
         end
 
-        function init2dConvGaussShaderWVerts(this,defaults, blurmethod)
-
-            % the only defaults that are relevant here are: 
-            % gaze position and foveal radius
-            this.defaultParams.gazePosition = [defaults(1),defaults(2)];
-            this.defaultParams.blurradpx = defaults(16);
-
-            % global GL;
-
-            % kernelw = length(this.kernel1d);
-            % kernelh = 1;
-            % hwx = (kernelw - 1) / 2;
-            % hwy = (kernelh - 1) / 2;
-            
-            % if blurmethod == 1
-            %     this.shaderHandleConv1 = LoadGLSLProgramFromFiles(which('Conv2dMattCircle.frag.txt'), 1);
-            % else
-            fpath = which('Conv2dMattOnePass.frag.txt');
-            this.shaderHandleConv1 = LoadGLSLProgramFromFiles(fpath(1:end-9), 1);
-            % end
-            
-            % Assign proper texture units for input image and clut:
-            glUseProgram(this.shaderHandleConv1);
-            
-            % can we use this image further down the road?
-            this.shaderUniforms.Conv1ShaderImage = glGetUniformLocation(this.shaderHandleConv1, 'Image');
-            glUniform1i(this.shaderUniforms.Conv1ShaderImage, 0);
-            
-            % this.shaderUniforms.Conv1ShaderClut  = glGetUniformLocation(this.shaderHandleConv1, 'Kernel');
-            % glUniform1i(this.shaderUniforms.Conv1ShaderClut, 1);
-            % % 
-            % this.shaderUniforms.Conv1ShaderKernelsizeX  = glGetUniformLocation(this.shaderHandleConv1, 'KernelHalfWidthX');
-            % glUniform1f(this.shaderUniforms.Conv1ShaderKernelsizeX, hwx);
-            % 
-            % this.shaderUniforms.Conv1ShaderKernelsizeY  = glGetUniformLocation(this.shaderHandleConv1, 'KernelHalfWidthY');
-            % glUniform1f(this.shaderUniforms.Conv1ShaderKernelsizeY, hwy);
-
-            % come up with some arbitrary starting value for gaze position
-            % and gaze radius for initialization
-            % if blurmethod == 1
-            %     this.shaderUniforms.Conv1GazeRadius  = glGetUniformLocation(this.shaderHandleConv1, 'gazeRadius');
-            %     glUniform1f(this.shaderUniforms.Conv1GazeRadius, this.defaultParams.blurradpx);
-            % 
-            %     this.shaderUniforms.Conv1GazePosition  = glGetUniformLocation(this.shaderHandleConv1, 'gazePosition');
-            %     glUniform2f(this.shaderUniforms.Conv1GazePosition, this.defaultParams.gazePosition(1), this.defaultParams.gazePosition(2)); 
-            % end
-
-            glUseProgram(0);
-            
-            % glActiveTexture(GL.TEXTURE1);
-            % this.texhandle1 = glGenTextures(1);
-            % glBindTexture(GL.TEXTURE_RECTANGLE_EXT, this.texhandle1);
-            % glTexImage2D(GL.TEXTURE_RECTANGLE_EXT, 0, GL.LUMINANCE_FLOAT32_APPLE, kernelw, kernelh, 0, GL.LUMINANCE, GL.FLOAT, moglsingle(this.kernel1d));
-            % 
-            % % Make sure we use nearest neighbour sampling:
-            % glTexParameteri(GL.TEXTURE_RECTANGLE_EXT, GL.TEXTURE_MIN_FILTER, GL.NEAREST);
-            % glTexParameteri(GL.TEXTURE_RECTANGLE_EXT, GL.TEXTURE_MAG_FILTER, GL.NEAREST);
-            % 
-            % % And that we clamp to edge:
-            % glTexParameteri(GL.TEXTURE_RECTANGLE_EXT, GL.TEXTURE_WRAP_S, GL.CLAMP);
-            % glTexParameteri(GL.TEXTURE_RECTANGLE_EXT, GL.TEXTURE_WRAP_T, GL.CLAMP);
-            % 
-            % % Default CLUT setup done: Switch back to texture unit 0:
-            % glBindTexture(GL.TEXTURE_RECTANGLE_EXT, 0);
-            % glActiveTexture(GL.TEXTURE0);
-            % configstring = sprintf('TEXTURERECT2D(%i)=%i', 1, this.texhandle1);
-            % 
-            count = CountSlotsInGLOperator(this.myOperator);
-            if count > 0
-                Screen('HookFunction', this.myOperator, 'AppendBuiltin', 'UserDefinedBlit', 'Builtin:FlipFBOs', '');
-            end
-            
-            if count == 0
-                % Count was 0, so its now two: Change operator to be at least dual-pass capable:
-                Screen('HookFunction', this.myOperator, 'ImagingMode', mor(kPsychNeedDualPass, Screen('HookFunction', this.myOperator, 'ImagingMode')));
-            else
-                % Change operator to be multi-pass capable:
-                Screen('HookFunction', this.myOperator, 'ImagingMode', mor(kPsychNeedMultiPass, Screen('HookFunction', this.myOperator, 'ImagingMode')));
-            end
-            
-            % Add shader to user defined blit chain of the proxy:
-            Screen('HookFunction', this.myOperator, 'AppendShader', 'UserDefinedBlit', 'MyShader1', this.shaderHandleConv1, []);
-            
-            % Need a ping-pong op for second convolution pass:
-            Screen('HookFunction', this.myOperator, 'AppendBuiltin', 'UserDefinedBlit', 'Builtin:FlipFBOs', '');
-            
-            
-            % kernelh = 1;
-            % kernelw = length(this.kernel1d);
-            % hwx = (kernelw - 1) / 2;
-            % hwy = (kernelh - 1) / 2;
-
-            % if blurmethod == 1
-            %     this.shaderHandleConv2 = LoadGLSLProgramFromFiles(which('Conv2dMattCircle.frag.txt'), 1);
-            % else
-            fpath = which('Conv2dMattTwoPass.frag.txt');
-            this.shaderHandleConv2 = LoadGLSLProgramFromFiles(fpath(1:end-9), 1);
-            % end
-            
-            % Assign proper texture units for input image and clut:
-            glUseProgram(this.shaderHandleConv2);
-            
-            this.shaderUniforms.Conv2ShaderImage = glGetUniformLocation(this.shaderHandleConv2, 'Image');
-            glUniform1i(this.shaderUniforms.Conv2ShaderImage, 0);
-            
-            % this.shaderUniforms.Conv2ShaderClut  = glGetUniformLocation(this.shaderHandleConv2, 'Kernel');
-            % glUniform1i(this.shaderUniforms.Conv2ShaderClut, 1);
-            % 
-            % this.shaderUniforms.Conv2ShaderKernelsizeX  = glGetUniformLocation(this.shaderHandleConv2, 'KernelHalfWidthX');
-            % glUniform1f(this.shaderUniforms.Conv2ShaderKernelsizeX, hwx);
-            % 
-            % this.shaderUniforms.Conv2ShaderKernelsizeY  = glGetUniformLocation(this.shaderHandleConv2, 'KernelHalfWidthY');
-            % glUniform1f(this.shaderUniforms.Conv2ShaderKernelsizeY, hwy);
-
-            % come up with some arbitrary starting value for gaze position
-            % and gaze radius for initialization
-            % if blurmethod == 1
-            %     this.shaderUniforms.Conv2GazeRadius  = glGetUniformLocation(this.shaderHandleConv2, 'gazeRadius');
-            %     glUniform1f(this.shaderUniforms.Conv2GazeRadius, this.defaultParams.blurradpx);
-            % 
-            %     this.shaderUniforms.Conv2GazePosition  = glGetUniformLocation(this.shaderHandleConv2, 'gazePosition');
-            %     glUniform2f(this.shaderUniforms.Conv2GazePosition, this.defaultParams.gazePosition(1), this.defaultParams.gazePosition(2)); 
-            % end
-            % 
-            glUseProgram(0);
-            
-            % glActiveTexture(GL.TEXTURE1);
-            % this.texhandle2 = glGenTextures(1);
-            % glBindTexture(GL.TEXTURE_RECTANGLE_EXT, this.texhandle2);
-            % glTexImage2D(GL.TEXTURE_RECTANGLE_EXT, 0, GL.LUMINANCE_FLOAT32_APPLE, kernelw, kernelh, 0, GL.LUMINANCE, GL.FLOAT, moglsingle(this.kernel1d));
-            % 
-            % % Make sure we use nearest neighbour sampling:
-            % glTexParameteri(GL.TEXTURE_RECTANGLE_EXT, GL.TEXTURE_MIN_FILTER, GL.NEAREST);
-            % glTexParameteri(GL.TEXTURE_RECTANGLE_EXT, GL.TEXTURE_MAG_FILTER, GL.NEAREST);
-            % 
-            % % And that we clamp to edge:
-            % glTexParameteri(GL.TEXTURE_RECTANGLE_EXT, GL.TEXTURE_WRAP_S, GL.CLAMP);
-            % glTexParameteri(GL.TEXTURE_RECTANGLE_EXT, GL.TEXTURE_WRAP_T, GL.CLAMP);
-            % 
-            % % Default CLUT setup done: Switch back to texture unit 0:
-            % glBindTexture(GL.TEXTURE_RECTANGLE_EXT, 0);
-            % glActiveTexture(GL.TEXTURE0);
-            % configstring = sprintf('TEXTURERECT2D(%i)=%i', 1, this.texhandle2);
-            
-            Screen('HookFunction', this.myOperator, 'AppendShader', 'UserDefinedBlit', 'MyShader2', this.shaderHandleConv2, []);
-            
-            if bitand(Screen('HookFunction', this.myOperator, 'ImagingMode'), mor(kPsychNeed16BPCFloat, kPsychNeed32BPCFloat)) == 0
-                % Not yet set. Choose highest precision:
-                disp('!')
-                Screen('HookFunction', this.myOperator, 'ImagingMode', mor(kPsychNeed32BPCFloat, Screen('HookFunction', this.myOperator, 'ImagingMode')));
-                if debug > 3
-                    fprintf('Add2DSeparableConvolutionToGLOperator: Increasing precision of operator to 32bpc float.\n');
-                end
-            end
-
-        end
+        % function init2dConvGaussShaderWVerts(this,defaults, blurmethod)
+        % 
+        %     % the only defaults that are relevant here are: 
+        %     % gaze position and foveal radius
+        %     this.defaultParams.gazePosition = [defaults(1),defaults(2)];
+        %     this.defaultParams.blurradpx = defaults(15);
+        % 
+        %     % global GL;
+        % 
+        %     % kernelw = length(this.kernel1d);
+        %     % kernelh = 1;
+        %     % hwx = (kernelw - 1) / 2;
+        %     % hwy = (kernelh - 1) / 2;
+        % 
+        %     % if blurmethod == 1
+        %     %     this.shaderHandleConv1 = LoadGLSLProgramFromFiles(which('Conv2dMattCircle.frag.txt'), 1);
+        %     % else
+        %     fpath = which('Conv2dMattOnePass.frag.txt');
+        %     this.shaderHandleConv1 = LoadGLSLProgramFromFiles(fpath(1:end-9), 1);
+        %     % end
+        % 
+        %     % Assign proper texture units for input image and clut:
+        %     glUseProgram(this.shaderHandleConv1);
+        % 
+        %     % can we use this image further down the road?
+        %     this.shaderUniforms.Conv1ShaderImage = glGetUniformLocation(this.shaderHandleConv1, 'Image');
+        %     glUniform1i(this.shaderUniforms.Conv1ShaderImage, 0);
+        % 
+        %     % this.shaderUniforms.Conv1ShaderClut  = glGetUniformLocation(this.shaderHandleConv1, 'Kernel');
+        %     % glUniform1i(this.shaderUniforms.Conv1ShaderClut, 1);
+        %     % % 
+        %     % this.shaderUniforms.Conv1ShaderKernelsizeX  = glGetUniformLocation(this.shaderHandleConv1, 'KernelHalfWidthX');
+        %     % glUniform1f(this.shaderUniforms.Conv1ShaderKernelsizeX, hwx);
+        %     % 
+        %     % this.shaderUniforms.Conv1ShaderKernelsizeY  = glGetUniformLocation(this.shaderHandleConv1, 'KernelHalfWidthY');
+        %     % glUniform1f(this.shaderUniforms.Conv1ShaderKernelsizeY, hwy);
+        % 
+        %     % come up with some arbitrary starting value for gaze position
+        %     % and gaze radius for initialization
+        %     % if blurmethod == 1
+        %     %     this.shaderUniforms.Conv1GazeRadius  = glGetUniformLocation(this.shaderHandleConv1, 'gazeRadius');
+        %     %     glUniform1f(this.shaderUniforms.Conv1GazeRadius, this.defaultParams.blurradpx);
+        %     % 
+        %     %     this.shaderUniforms.Conv1GazePosition  = glGetUniformLocation(this.shaderHandleConv1, 'gazePosition');
+        %     %     glUniform2f(this.shaderUniforms.Conv1GazePosition, this.defaultParams.gazePosition(1), this.defaultParams.gazePosition(2)); 
+        %     % end
+        % 
+        %     glUseProgram(0);
+        % 
+        %     % glActiveTexture(GL.TEXTURE1);
+        %     % this.texhandle1 = glGenTextures(1);
+        %     % glBindTexture(GL.TEXTURE_RECTANGLE_EXT, this.texhandle1);
+        %     % glTexImage2D(GL.TEXTURE_RECTANGLE_EXT, 0, GL.LUMINANCE_FLOAT32_APPLE, kernelw, kernelh, 0, GL.LUMINANCE, GL.FLOAT, moglsingle(this.kernel1d));
+        %     % 
+        %     % % Make sure we use nearest neighbour sampling:
+        %     % glTexParameteri(GL.TEXTURE_RECTANGLE_EXT, GL.TEXTURE_MIN_FILTER, GL.NEAREST);
+        %     % glTexParameteri(GL.TEXTURE_RECTANGLE_EXT, GL.TEXTURE_MAG_FILTER, GL.NEAREST);
+        %     % 
+        %     % % And that we clamp to edge:
+        %     % glTexParameteri(GL.TEXTURE_RECTANGLE_EXT, GL.TEXTURE_WRAP_S, GL.CLAMP);
+        %     % glTexParameteri(GL.TEXTURE_RECTANGLE_EXT, GL.TEXTURE_WRAP_T, GL.CLAMP);
+        %     % 
+        %     % % Default CLUT setup done: Switch back to texture unit 0:
+        %     % glBindTexture(GL.TEXTURE_RECTANGLE_EXT, 0);
+        %     % glActiveTexture(GL.TEXTURE0);
+        %     % configstring = sprintf('TEXTURERECT2D(%i)=%i', 1, this.texhandle1);
+        %     % 
+        %     count = CountSlotsInGLOperator(this.myOperator);
+        %     if count > 0
+        %         Screen('HookFunction', this.myOperator, 'AppendBuiltin', 'UserDefinedBlit', 'Builtin:FlipFBOs', '');
+        %     end
+        % 
+        %     if count == 0
+        %         % Count was 0, so its now two: Change operator to be at least dual-pass capable:
+        %         Screen('HookFunction', this.myOperator, 'ImagingMode', mor(kPsychNeedDualPass, Screen('HookFunction', this.myOperator, 'ImagingMode')));
+        %     else
+        %         % Change operator to be multi-pass capable:
+        %         Screen('HookFunction', this.myOperator, 'ImagingMode', mor(kPsychNeedMultiPass, Screen('HookFunction', this.myOperator, 'ImagingMode')));
+        %     end
+        % 
+        %     % Add shader to user defined blit chain of the proxy:
+        %     Screen('HookFunction', this.myOperator, 'AppendShader', 'UserDefinedBlit', 'MyShader1', this.shaderHandleConv1, []);
+        % 
+        %     % Need a ping-pong op for second convolution pass:
+        %     Screen('HookFunction', this.myOperator, 'AppendBuiltin', 'UserDefinedBlit', 'Builtin:FlipFBOs', '');
+        % 
+        % 
+        %     % kernelh = 1;
+        %     % kernelw = length(this.kernel1d);
+        %     % hwx = (kernelw - 1) / 2;
+        %     % hwy = (kernelh - 1) / 2;
+        % 
+        %     % if blurmethod == 1
+        %     %     this.shaderHandleConv2 = LoadGLSLProgramFromFiles(which('Conv2dMattCircle.frag.txt'), 1);
+        %     % else
+        %     fpath = which('Conv2dMattTwoPass.frag.txt');
+        %     this.shaderHandleConv2 = LoadGLSLProgramFromFiles(fpath(1:end-9), 1);
+        %     % end
+        % 
+        %     % Assign proper texture units for input image and clut:
+        %     glUseProgram(this.shaderHandleConv2);
+        % 
+        %     this.shaderUniforms.Conv2ShaderImage = glGetUniformLocation(this.shaderHandleConv2, 'Image');
+        %     glUniform1i(this.shaderUniforms.Conv2ShaderImage, 0);
+        % 
+        %     % this.shaderUniforms.Conv2ShaderClut  = glGetUniformLocation(this.shaderHandleConv2, 'Kernel');
+        %     % glUniform1i(this.shaderUniforms.Conv2ShaderClut, 1);
+        %     % 
+        %     % this.shaderUniforms.Conv2ShaderKernelsizeX  = glGetUniformLocation(this.shaderHandleConv2, 'KernelHalfWidthX');
+        %     % glUniform1f(this.shaderUniforms.Conv2ShaderKernelsizeX, hwx);
+        %     % 
+        %     % this.shaderUniforms.Conv2ShaderKernelsizeY  = glGetUniformLocation(this.shaderHandleConv2, 'KernelHalfWidthY');
+        %     % glUniform1f(this.shaderUniforms.Conv2ShaderKernelsizeY, hwy);
+        % 
+        %     % come up with some arbitrary starting value for gaze position
+        %     % and gaze radius for initialization
+        %     % if blurmethod == 1
+        %     %     this.shaderUniforms.Conv2GazeRadius  = glGetUniformLocation(this.shaderHandleConv2, 'gazeRadius');
+        %     %     glUniform1f(this.shaderUniforms.Conv2GazeRadius, this.defaultParams.blurradpx);
+        %     % 
+        %     %     this.shaderUniforms.Conv2GazePosition  = glGetUniformLocation(this.shaderHandleConv2, 'gazePosition');
+        %     %     glUniform2f(this.shaderUniforms.Conv2GazePosition, this.defaultParams.gazePosition(1), this.defaultParams.gazePosition(2)); 
+        %     % end
+        %     % 
+        %     glUseProgram(0);
+        % 
+        %     % glActiveTexture(GL.TEXTURE1);
+        %     % this.texhandle2 = glGenTextures(1);
+        %     % glBindTexture(GL.TEXTURE_RECTANGLE_EXT, this.texhandle2);
+        %     % glTexImage2D(GL.TEXTURE_RECTANGLE_EXT, 0, GL.LUMINANCE_FLOAT32_APPLE, kernelw, kernelh, 0, GL.LUMINANCE, GL.FLOAT, moglsingle(this.kernel1d));
+        %     % 
+        %     % % Make sure we use nearest neighbour sampling:
+        %     % glTexParameteri(GL.TEXTURE_RECTANGLE_EXT, GL.TEXTURE_MIN_FILTER, GL.NEAREST);
+        %     % glTexParameteri(GL.TEXTURE_RECTANGLE_EXT, GL.TEXTURE_MAG_FILTER, GL.NEAREST);
+        %     % 
+        %     % % And that we clamp to edge:
+        %     % glTexParameteri(GL.TEXTURE_RECTANGLE_EXT, GL.TEXTURE_WRAP_S, GL.CLAMP);
+        %     % glTexParameteri(GL.TEXTURE_RECTANGLE_EXT, GL.TEXTURE_WRAP_T, GL.CLAMP);
+        %     % 
+        %     % % Default CLUT setup done: Switch back to texture unit 0:
+        %     % glBindTexture(GL.TEXTURE_RECTANGLE_EXT, 0);
+        %     % glActiveTexture(GL.TEXTURE0);
+        %     % configstring = sprintf('TEXTURERECT2D(%i)=%i', 1, this.texhandle2);
+        % 
+        %     Screen('HookFunction', this.myOperator, 'AppendShader', 'UserDefinedBlit', 'MyShader2', this.shaderHandleConv2, []);
+        % 
+        %     if bitand(Screen('HookFunction', this.myOperator, 'ImagingMode'), mor(kPsychNeed16BPCFloat, kPsychNeed32BPCFloat)) == 0
+        %         % Not yet set. Choose highest precision:
+        %         disp('!')
+        %         Screen('HookFunction', this.myOperator, 'ImagingMode', mor(kPsychNeed32BPCFloat, Screen('HookFunction', this.myOperator, 'ImagingMode')));
+        %         if debug > 3
+        %             fprintf('Add2DSeparableConvolutionToGLOperator: Increasing precision of operator to 32bpc float.\n');
+        %         end
+        %     end
+        % 
+        % end
 
         function addDeblurShader(this, shaderfname, defaults)
 
             this.defaultParams.gazePosition = [defaults(1),defaults(2)];
-            this.defaultParams.radpx = defaults(16);
+            this.defaultParams.radpx = defaults(15);
 
             this.shaderHandleDeblurFilt = LoadGLSLProgramFromFiles(which(shaderfname), 1);
 
