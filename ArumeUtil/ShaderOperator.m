@@ -206,7 +206,7 @@ classdef ShaderOperator  < handle
             glTexImage2D(GL.TEXTURE_RECTANGLE_EXT, 0, GL.RGB32F, kernelw, kernelh, 0, GL.RGB, GL.FLOAT, moglsingle(this.kernel1d));
 
             % Make sure we use nearest neighbour sampling:
-            glTexParameteri(GL.TEXTURE_RECTANGLE_EXT, GL.TEXTURE_MIN_FILTER, GL.NEAREST);
+            glTexParameteri(GL.TEXTURE_RECTANGLE_EXT, GL.TEXTURE_MIN_FILTER, GL.NEAREST); % Enabling bilinear interp (GL.LINEAR), along with a reduces kernel filter sz, and half-texel strides, actually makes things far slower (by about 10-15 FPS). 
             glTexParameteri(GL.TEXTURE_RECTANGLE_EXT, GL.TEXTURE_MAG_FILTER, GL.NEAREST);
             
             % And that we clamp to edge:

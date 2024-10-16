@@ -154,6 +154,42 @@ classdef EyeTrackerEyelink  < handle
             end
         end
 
+        function evt = GetCurrentDataRaw(this, message)
+            % data =[];
+            % evt = struct([]);
+            if ( ~isempty( this.el) )
+
+                eye_used = Eyelink('EyeAvailable'); % get eye that's tracked
+                if eye_used == this.el.BINOCULAR % if both eyes are tracked
+                    eye_used = this.el.LEFT_EYE; % use left eye?
+                end
+                
+                % get all gaze pos and pupil data 
+                % if Eyelink('NewFloatSampleAvailable') > 0
+
+                    % get the sample in the form of an event structure
+                    evt = Eyelink('NewestFloatSampleRaw');
+
+                    if eye_used ~= -1 % do we know which eye to use yet?
+
+                        % if we do, get current gaze position from sample
+                        x = evt.gx(eye_used+1); % +1 as we're accessing MATLAB array
+                        y = evt.gy(eye_used+1);
+                        % do we have valid data and is the pupil visible?
+                        if x~=this.el.MISSING_DATA && y~=this.el.MISSING_DATA && evt.pa(eye_used+1) > 0
+                            evt.mx=x;
+                            evt.my=y;
+                        end
+                    end
+                % end
+
+                if exist('message','var')
+                    Eyelink('Message',message);
+                end
+                % data = this.el.GetCurrentData();
+            end
+        end
+
         function calibrationSuccessful = Calibrate(this)
             result = EyelinkDoTrackerSetup(this.el);
 
@@ -208,6 +244,13 @@ classdef EyeTrackerEyelink  < handle
                 cprintf('red', sprintf('++ EYELINK :: Problem receiving data file ''%s''\n', this.el.edfFile));
                 files = {};
             end
+        end
+        
+        function enablePupilOnly(this)
+            Eyelink('command', 'link_sample_data = LEFT,RIGHT,GAZE,AREA');
+            Eyelink('command', 'force_corneal_reflection = FALSE')
+            Eyelink('command', 'corneal_mode = FALSE')
+            Eyelink('command', 'allow_pupil_without_cr = TRUE')
         end
     end
     
