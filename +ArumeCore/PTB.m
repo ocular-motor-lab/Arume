@@ -61,7 +61,7 @@ classdef PTB < handle
         % Gets the options for 
         function displayOptions = GetDisplayOptions()
             displayOptions.ForegroundColor      = 0;
-            displayOptions.BackgroundColor      = 128;
+            displayOptions.BackgroundColor      = 127;
             displayOptions.ScreenWidth          = { 142.8 '* (cm)' [1 3000] };
             displayOptions.ScreenHeight         = { 80 '* (cm)' [1 3000] };
             displayOptions.ScreenDistance       = { 85 '* (cm)' [1 3000] };
@@ -118,14 +118,24 @@ classdef PTB < handle
             else
                 graph.selectedScreen= selectedScreenFromOptions; %max(graph.screens);
             end
-            %graph.selectedScreen=1;
             
-            %-- window
-            Screen('Preference', 'ConserveVRAM', 64);
-            if (~debugMode)
-                [graph.window, graph.wRect] = Screen('OpenWindow', graph.selectedScreen, backgroundColor, [], [], [], stereoMode, 10);%SR changed stereomode to 4 from 0
+            % graph.selectedScreen=1;
+
+            % fix issue with mac multisampling, especially with custom shaders?
+            if ismac 
+                multisample = [];
             else
-                [graph.window, graph.wRect] = Screen('OpenWindow', graph.selectedScreen, backgroundColor, [10 10 900 600], [], [], stereoMode, 10); %SR changed stereomode to 4 from 0
+                multisample = 10;
+                Screen('Preference', 'ConserveVRAM', 64);
+            end
+
+            %-- window
+            % Screen('Preference', 'ConserveVRAM', 64);
+            if (~debugMode)
+                [graph.window, graph.wRect] = Screen('OpenWindow', graph.selectedScreen, backgroundColor, [], [], [], stereoMode, multisample);%SR changed stereomode to 4 from 0
+            else
+                [graph.window, graph.wRect] = Screen('OpenWindow', graph.selectedScreen, backgroundColor, [10 10 900 600], [], [], stereoMode, multisample); %SR changed stereomode to 4 from 0
+
             end
             
             %-- color
