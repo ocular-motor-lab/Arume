@@ -118,6 +118,7 @@ classdef PTB < handle
             else
                 graph.selectedScreen= selectedScreenFromOptions; %max(graph.screens);
             end
+            
             % graph.selectedScreen=1;
 
             % fix issue with mac multisampling, especially with custom shaders?
@@ -134,6 +135,7 @@ classdef PTB < handle
                 [graph.window, graph.wRect] = Screen('OpenWindow', graph.selectedScreen, backgroundColor, [], [], [], stereoMode, multisample);%SR changed stereomode to 4 from 0
             else
                 [graph.window, graph.wRect] = Screen('OpenWindow', graph.selectedScreen, backgroundColor, [10 10 900 600], [], [], stereoMode, multisample); %SR changed stereomode to 4 from 0
+
             end
             
             %-- color
