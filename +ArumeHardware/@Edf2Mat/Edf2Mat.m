@@ -210,7 +210,7 @@ classdef Edf2Mat < handle
     end
     
     % PRIVATE WRITABLE VARIABLES
-    properties(SetAccess = private, GetAccess = public)
+    properties(SetAccess = public, GetAccess = public)
         
         filename; % The name of the EDF File converted
         
@@ -471,10 +471,11 @@ classdef Edf2Mat < handle
                     disp('Trying to convert!')
                     disp(['Processing ' kind '. Please wait ...']);
                 end
-                [path, ~, ~] = fileparts(which(mfilename));
+                [path, ~, ~] = fileparts(which(mfilename('fullpath')));
              
                 if ispc
-                    command = ['"' path '\private\edf2asc.exe" -miss nan -y '];
+                    % command = ['"' path '\private\edf2asc.exe" -ntime_check '];
+                    command = ['"' path '\private\edf2asc.exe" -miss nan -y -ntime_check '];
                 else
                     command = ['wine', ' ', path, '/private/edf2asc.exe', ' ', '-miss nan -y '];
                 end
@@ -489,7 +490,7 @@ classdef Edf2Mat < handle
                 end
                 
                 
-                [~, obj.output] = system([command obj.filename]);
+                [~, obj.output] = system([command '"' obj.filename '"']);
                 
                 if isempty(strfind(obj.output, 'Converted successfully:'))
                     throw(MException('EdfConverter:Edf2Asc',['Something went wrong, check log:\n' obj.output]));
@@ -549,9 +550,16 @@ classdef Edf2Mat < handle
             if obj.oldProcedure
                 fID = fopen(obj.samplesFilename, 'r');
                 % Read ASCII-Samples File
-                samples = textscan(fID, '%f %f %f %f %*s', 'delimiter', '\t', ...
+                samples = textscan(fID, '%f %f %f %f %f %f %f', 'delimiter', '\t', ...
                     'EmptyValue', nan);
-                obj.Samples =  cell2struct(samples', fieldnames(obj.Samples));
+                samplesordered = [samples(1),{cell2mat(samples([2,5]))}...
+                    {cell2mat(samples([3,6]))},{cell2mat(samples([4,7]))}];
+                obj.Samples =  cell2struct(samplesordered', fieldnames(obj.Samples));
+
+                obj.Samples.gx = obj.Samples.posX;
+                obj.Samples.gy = obj.Samples.posY;
+                obj.Samples.pa = obj.Samples.pupilSize;
+
                 % Close ASCII-Samples File
                 fclose(fID);
             else % create old header elements for backward compatibility

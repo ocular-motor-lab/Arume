@@ -47,8 +47,8 @@ classdef EyeTrackerEyelink  < handle
                 this.experimentOptions.EyeTrackerCalibProportion(2))); 
 
             % make sure that we get gaze data from the Eyelink
-            Eyelink('command', 'link_sample_data = LEFT,RIGHT,GAZE,AREA,INPUT');
-            Eyelink('command', 'file_sample_data = LEFT,RIGHT,GAZE,AREA,INPUT');
+            Eyelink('command', 'link_sample_data = LEFT,RIGHT,GAZE,AREA,GAZERES,HREF,PUPIL,STATUS,INPUT,HMARKER');
+            Eyelink('command', 'file_sample_data = LEFT,RIGHT,GAZE,AREA,GAZERES,HREF,PUPIL,STATUS,INPUT,HMARKER');
 
             % we can also extract event data if we like
             Eyelink('command', 'link_event_filter = LEFT,RIGHT,FIXATION,SACCADE,BLINK,MESSAGE,BUTTON,FIXUPDATE,INPUT');
@@ -168,8 +168,8 @@ classdef EyeTrackerEyelink  < handle
                 % if Eyelink('NewFloatSampleAvailable') > 0
 
                     % get the sample in the form of an event structure
-                    evt = Eyelink('NewestFloatSampleRaw');
-
+                    evt = Eyelink('NewestFloatSampleRaw',eye_used);
+                    
                     if eye_used ~= -1 % do we know which eye to use yet?
 
                         % if we do, get current gaze position from sample
@@ -247,10 +247,12 @@ classdef EyeTrackerEyelink  < handle
         end
         
         function enablePupilOnly(this)
-            Eyelink('command', 'link_sample_data = LEFT,RIGHT,GAZE,AREA');
+            Eyelink('command','link_sample_data = LEFT,RIGHT,GAZE,AREA,GAZERES,HREF,PUPIL,STATUS,INPUT,HMARKER');
+            % Eyelink('command', 'link_sample_data = LEFT,RIGHT,GAZE,AREA');
             Eyelink('command', 'force_corneal_reflection = FALSE')
             Eyelink('command', 'corneal_mode = FALSE')
             Eyelink('command', 'allow_pupil_without_cr = TRUE')
+            Eyelink('command','inputword_is_window = ON');
         end
     end
     

@@ -111,7 +111,7 @@ classdef DataDB < handle
                     fullname = [variableName '.mat'];
                     eval([variableName ' =  variable ;']);
                     
-                    save(fullfile(this.folder , fullname), variableName);
+                    save(fullfile(this.folder , fullname), variableName);%'-v7.3'
                 catch me
                     rethrow(me);
                 end

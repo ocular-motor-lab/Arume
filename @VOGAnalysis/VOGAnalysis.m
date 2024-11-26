@@ -979,9 +979,33 @@ classdef VOGAnalysis < handle
             [path,fname, ext] = fileparts(dataFile);
             tmpfile = fullfile(path, 'temp.edf');
             copyfile(dataFile, tmpfile);
-            edf0 = ArumeHardware.Edf2Mat(char(tmpfile));
-            delete(tmpfile);
 
+            % this is a fix to the old method, for when the eyelink machine
+            % timestamps reset to zero.
+            preserveorigtimestamps = false;
+
+            if preserveorigtimestamps
+
+                edf0 = ArumeHardware.Edf2Mat(char(tmpfile), true, true);
+
+                if isempty(struct2array(edf0.RawEdf))
+
+                    % check if we actually did binocular recording
+                    nansamps = sum(~isnan(edf0.Samples.gx),1);
+                    if nansamps(1) > 0 && nansamps(2) > 0
+                        edf0.RawEdf.RECORDINGS(1).eye = edf0.EYES.BINOCULAR;
+                    elseif nansamps(1) > 0 && nansamps(2) == 0
+                        edf0.RawEdf.RECORDINGS(1).eye = edf0.EYES.LEFT;
+                    elseif nansamps(1) == 0 && nansamps(2) > 0
+                        edf0.RawEdf.RECORDINGS(1).eye = edf0.EYES.RIGHT;
+                    end
+                end
+
+            else
+                edf0 = ArumeHardware.Edf2Mat(char(tmpfile));
+            end
+
+            delete(tmpfile);
             
             s = edf0.Samples;
 
@@ -1494,11 +1518,14 @@ classdef VOGAnalysis < handle
                     if ( ismember('Pupil', eyeSignals) && length( cleanedData.([eyes{i} 'Pupil'])) > 200)
                         pupil = cleanedData.([eyes{i} 'Pupil']);
                         pupilDecimated = pupil(1:25:end); %decimate the pupil signal
-                        if ( exist('smooth','file') )
-                            pupilSmooth = smooth(pupilDecimated,params.CleanUp.smoothRloessSpan*rawSampleRate/25/length(pupilDecimated),'rloess');
-                        else
+                        % if ( exist('smooth','file') )
+                            % pupilSmooth = smooth(pupilDecimated,params.CleanUp.smoothRloessSpan*rawSampleRate/25/length(pupilDecimated),'rloess');
+                            % if all(pupilSmooth == 0)
+                                pupilSmooth = nanmedfilt(pupilDecimated,round(params.CleanUp.smoothRloessSpan*rawSampleRate/25));
+                            % end
+                        % else
                             pupilSmooth = nanmedfilt(pupilDecimated,round(params.CleanUp.smoothRloessSpan*rawSampleRate/25));
-                        end
+                        % end
                         pupilSmooth = interp1((1:25:length(pupil))',pupilSmooth,(1:length(pupil))');
                         
 %                         cleanedData.([eyes{i} 'Pupil']) = pupilSmooth;
