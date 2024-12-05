@@ -243,6 +243,12 @@ classdef Session < ArumeCore.DataDB
             % re initialize the experiment with the new options 
             this.experimentDesign = ArumeCore.ExperimentDesign.Create( this.experimentDesign.Name );
             this.experimentDesign.init(this, newExperimentOptions);
+
+            this.initialRun         = ArumeCore.ExperimentRun();
+            this.initialRun.pastTrialTable           = table();
+            this.initialRun.originalFutureTrialTable = this.experimentDesign.TrialTable;
+            this.initialRun.futureTrialTable         = this.initialRun.originalFutureTrialTable;
+            
         end
                 
         function addFile(this, fileTag, filePath)
