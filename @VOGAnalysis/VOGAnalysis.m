@@ -2459,7 +2459,7 @@ classdef VOGAnalysis < handle
                 quickPhaseTable.Displacement   = props.Right.XY.Displacement;
                 quickPhaseTable.PeakSpeed      = props.Right.XY.PeakSpeed;
                 quickPhaseTable.MeanSpeed      = props.Right.XY.MeanSpeed;
-                quickPhaseTable.Direction      = props.Right.XY.Direction;
+                quickPhaseTable.Direction      = propfs.Right.XY.Direction;
             end
             
 
@@ -2526,7 +2526,8 @@ classdef VOGAnalysis < handle
             [eyes, eyeSignals] = VOGAnalysis.GetEyesAndSignals(data);
             %% get SP properties
             rows = eyeSignals;
-            SAMPLERATE = 500;
+            %SAMPLERATE = 500; % NOT TRUE FOR ALL DATASETS! SR 3/21/2025
+            SAMPLERATE = data.Properties.UserData.sampleRate;
             sp = data.SlowPhase;
             sp = [find(diff([0;sp])>0) find(diff([sp;0])<0)];
             
