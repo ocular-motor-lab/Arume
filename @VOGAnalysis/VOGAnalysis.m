@@ -2516,13 +2516,31 @@ classdef VOGAnalysis < handle
             end
 
             quickPhaseTable = struct2table(quickPhaseTable);
+            quickPhaseTable.TrialNumber =  data.TrialNumber(quickPhaseTable.StartIndex);
             
             
             timeElapsed = toc;
             textprogressbar(sprintf('Done in %0.2f seconds.', timeElapsed));
         end
         
-        function [slowPhaseTable] = GetSlowPhaseTable(data)
+        function [slowPhaseTable] = GetSlowPhaseTable(data, begMs, endMs)
+            % begMs and endMs will limit the portion of time that is used
+            % to calculate the properties of the slow phase. 
+            % Both relative to the time that was originally detected and is
+            % labeld in the samples table as slow phase
+            %
+            % endMS can be 0 or negative to indicate that we use the entire
+            % slow phase
+            
+            if ( ~exist('begMs','var') )
+                begMs = 0;
+            end
+            if ( ~exist('endMs','var') )
+                endMs = 0;
+            end
+            
+        
+            
             [eyes, eyeSignals] = VOGAnalysis.GetEyesAndSignals(data);
             %% get SP properties
             rows = eyeSignals;
@@ -2533,9 +2551,19 @@ classdef VOGAnalysis < handle
             
             % properties common for all eyes and components
             slowPhaseTable = [];
+            if ( begMs > 0 )
+                sp(:,1) = sp(:,1) + round(begMs*SAMPLERATE/1000);
+            end
+            if ( endMs > 0 )
+                sp(:,2) = min(sp(:,2), sp(:,1) + round(endMs*SAMPLERATE/1000));
+            end
+            
+            sp(sp(:,1) >= sp(:,2),:)=[];
+            
             slowPhaseTable.StartIndex = sp(:,1);
             slowPhaseTable.EndIndex = sp(:,2);
             slowPhaseTable.DurationMs = (sp(:,2) - sp(:,1)) * 1000 / SAMPLERATE;
+            
             
             textprogressbar('++ VOGAnalysis :: Calculating slow phases properties: ');
             Nprogsteps = length(eyes)*length(rows)*size(sp,1)/100;
@@ -2675,6 +2703,7 @@ classdef VOGAnalysis < handle
             end
             
             slowPhaseTable = struct2table(slowPhaseTable);
+            slowPhaseTable.TrialNumber =  data.TrialNumber(slowPhaseTable.StartIndex);
             
             timeElapsed = toc;
             textprogressbar(sprintf('Done in %0.2f seconds.', timeElapsed));

@@ -670,8 +670,6 @@ classdef ExperimentDesign < handle
                 spDataVars = sp.Properties.VariableNames;
                 
                 warning('off','MATLAB:table:RowsAddedNewVars');
-                qp.TrialNumber = samplesDataTable.TrialNumber(qp.StartIndex);
-                sp.TrialNumber = samplesDataTable.TrialNumber(sp.StartIndex);
                 for i=1:numel(ConditionVarsNames)
                     if ( iscategorical(trialDataTable{qp.TrialNumber(~isnan(qp.TrialNumber)),ConditionVarsNames{i}}))
                         qp{~isnan(qp.TrialNumber),ConditionVarsNames{i}} =  categorical(trialDataTable{qp.TrialNumber(~isnan(qp.TrialNumber)),ConditionVarsNames{i}});
