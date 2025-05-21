@@ -2584,12 +2584,13 @@ classdef VOGAnalysis < handle
                     sp1_props.StartPosition = pos(sp(:,1));
                     sp1_props.EndPosition = pos(sp(:,2));
                     sp1_props.MeanPosition = nan(size(sp(:,1)));
+                    sp1_props.MedianPosition = nan(size(sp(:,1)));
                     sp1_props.Displacement = pos(sp(:,2)) - pos(sp(:,1));
                     
                     sp1_props.PeakVelocity = nan(size(sp(:,1)));
                     sp1_props.PeakVelocityIdx = nan(size(sp(:,1)));
                     sp1_props.MeanVelocity = nan(size(sp(:,1)));
-                    
+                    sp1_props.MedianVelocity = nan(size(sp(:,1)));
                     
                     sp1_props.Slope = nan(size(sp(:,1)));
                     sp1_props.TimeConstant = nan(size(sp(:,1)));
@@ -2607,11 +2608,13 @@ classdef VOGAnalysis < handle
                         
                         sp1_props.Amplitude(i)      = max(pos(spidx)) - min(pos(spidx));
                         sp1_props.MeanPosition(i)   = mean(pos(spidx),'omitnan');
+                        sp1_props.MedianPosition(i) = median(pos(spidx),'omitnan');
                         
                         [m,mi] = max(vel(spidx));
                         sp1_props.PeakVelocity(i)   = m;
                         sp1_props.PeakVelocityIdx(i)= spidx(1) -1 + mi;
                         sp1_props.MeanVelocity(i)   = mean(vel(spidx),'omitnan');
+                        sp1_props.MedianVelocity(i) = median(vel(spidx),'omitnan');
                         
                         %                         if ( sp1_props.GoodTrhought(i) )
                         %                             fun = @(x,xdata)(-x(1) + x(1)*exp(-1/x(2)*xdata)+xdata*x(3));
@@ -2650,16 +2653,19 @@ classdef VOGAnalysis < handle
                 slowPhaseTable.Displacement   = mean([ props.Left.XY.Displacement props.Right.XY.Displacement],2,'omitnan');
                 slowPhaseTable.PeakSpeed      = mean([ props.Left.XY.PeakSpeed props.Right.XY.PeakSpeed],2,'omitnan');
                 slowPhaseTable.MeanSpeed      = mean([ props.Left.XY.MeanSpeed props.Right.XY.MeanSpeed],2,'omitnan');
+                slowPhaseTable.MedianSpeed    = median([ props.Left.XY.MeanSpeed props.Right.XY.MeanSpeed],2,'omitnan');
             elseif(any(contains(eyes,'Left')))
                 slowPhaseTable.Amplitude      = props.Left.XY.Amplitude;
                 slowPhaseTable.Displacement   = props.Left.XY.Displacement;
                 slowPhaseTable.PeakSpeed      = props.Left.XY.PeakSpeed;
                 slowPhaseTable.MeanSpeed      = props.Left.XY.MeanSpeed;
+                slowPhaseTable.MedianSpeed    = props.Left.XY.MedianSpeed;
             elseif(any(contains(eyes,'Right')))
                 slowPhaseTable.Amplitude      = props.Right.XY.Amplitude;
                 slowPhaseTable.Displacement   = props.Right.XY.Displacement;
                 slowPhaseTable.PeakSpeed      = props.Right.XY.PeakSpeed;
                 slowPhaseTable.MeanSpeed      = props.Right.XY.MeanSpeed;
+                slowPhaseTable.MedianSpeed    = props.Right.XY.MedianSpeed;
             end
             
             fieldsToAverageAcrossEyes = {...
@@ -2667,9 +2673,11 @@ classdef VOGAnalysis < handle
                 'StartPosition'...
                 'EndPosition'...
                 'MeanPosition'...
+                'MedianPosition'...
                 'Displacement'...
                 'PeakVelocity'...
                 'MeanVelocity'...
+                'MedianVelocity'...
                 'Slope'...
                 'TimeConstant'...
                 'ExponentialBaseline'};
