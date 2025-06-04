@@ -236,7 +236,7 @@ classdef PTB < handle
             this.lastfliptime = fliptime;
             
             %-- Check for keyboard press
-            [keyIsDown,secs,keyCode] = KbCheck;
+            [keyIsDown,secs,keyCode] = KbCheck; %TODO: maybe move this line to before the flip depending on performance
             if keyCode(Enum.keys.ESCAPE)
 
                 % in the special case where a movie is playing, close the

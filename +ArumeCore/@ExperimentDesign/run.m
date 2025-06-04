@@ -274,10 +274,16 @@ while(1)
                         thisTrialData.TimePostTrialStop = GetSecs;
                     end
 
-
                 catch lastError
                     if ( streq(lastError.identifier, 'PSYCORTEX:USERQUIT' ) )
                         thisTrialData.TrialResult = Enum.trialResult.QUIT;
+                        lastError = [];
+                    elseif ( streq(lastError.identifier, 'PSYCORTEX:ABORTTRIALBUTCONTINUE' ) )
+                        % This is useful for things like checking fixation
+                        % when a trial will be cancelled (aborted) but we
+                        % just want to move on to the next trial instead of
+                        % going to the idle menu
+                        thisTrialData.TrialResult = Enum.trialResult.SOFTABORT;
                         lastError = [];
                     else
                         thisTrialData.TrialResult = Enum.trialResult.ERROR;

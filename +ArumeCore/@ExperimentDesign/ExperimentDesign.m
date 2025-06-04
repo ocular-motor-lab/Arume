@@ -16,6 +16,9 @@ classdef ExperimentDesign < handle
 
         Graph               = [];   % Display handle (usually psychtoolbox).
         eyeTracker          = [];   % Eye tracker handle
+        
+        goodFixationStatus  = 'INIT';
+        badFixationTimeStart= 0;
     end
         
     % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -90,6 +93,52 @@ classdef ExperimentDesign < handle
         function cleanAfterRunning(this)
         end
         
+        function checkFixation(this, fixationPositionPix, winsizePix, timeoutSecs, eyeData)
+
+            if ( isempty(this.eyeTracker) )
+                return;
+            end
+
+            % Get the eye tracking data to know where the eye is looking at
+            if ( ~exist("eyeData","var"))
+                eyeData = this.eyeTracker.GetCurrentData();
+                if isfield(eyeData,'mx') && isfield(eyeData,'my')
+                    gazeX = eyeData.mx;
+                    gazeY = eyeData.my;
+                else
+                    gazeX = nan;
+                    gazeY = nan;
+                end
+            end
+
+            % check if the eye is within a window around the given fixation
+            % spot
+            isInside =   (abs(gazeX - fixationPositionPix(1)) < winsizePix) && (abs(gazeY - fixationPositionPix(2)) < winsizePix) ;
+            tnow = GetSecs();
+
+            switch(this.goodFixationStatus)
+                case 'INIT'
+                    this.badFixationTimeStart = nan;
+                    if ( isInside )
+                        this.goodFixationStatus = 'IN_WINDOW';
+                    else
+                        this.goodFixationStatus = 'OUT_WINDOW';
+                    end
+                case 'IN_WINDOW'
+                    if ( ~isInside )
+                        this.goodFixationStatus = 'OUT_WINDOW';
+                        this.badFixationTimeStart = tnow;
+                    end
+                case 'OUT_WINDOW'
+                    if ( isInside )
+                        this.goodFixationStatus = 'IN_WINDOW';
+                    else
+                        if ( tnow - this.badFixationTimeStart > timeoutSecs)
+                            this.abortTrialButContinue();
+                        end
+                    end
+            end
+        end
     end
         
     % --------------------------------------------------------------------
@@ -1131,6 +1180,9 @@ classdef ExperimentDesign < handle
 
         function abortExperiment(this)
             throw(MException('PSYCORTEX:USERQUIT', ''));
+        end
+        function abortTrialButContinue(this)
+            throw(MException('PSYCORTEX:ABORTTRIALBUTCONTINUE', ''));
         end
     end
         
