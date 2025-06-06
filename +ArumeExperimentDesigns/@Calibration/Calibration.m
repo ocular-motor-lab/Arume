@@ -171,6 +171,16 @@ classdef Calibration < ArumeExperimentDesigns.EyeTracking
 
              calibrationPointsX = targetPositions_(trialDataTable.TargetPosition,1);
              calibrationPointsY = targetPositions_(trialDataTable.TargetPosition,2);
+
+             %%%%%%%%%%% SR 3/13/25 THIS IS TO PROCESS OLDER EXPTS WITH A
+             %%%%%%%%%%% CALIBRATION THAT HAD THE YS FLIPPED. THIS WILL
+             %%%%%%%%%%% ULTIMATELY BE FIXED IN THE CALIBRATION DISPLAY
+             %%%%%%%%%%% PART TO AVOID PROBLEMS IN THE FUTURE (will
+             %%%%%%%%%%% implement that fix once OST Vergence Free Viewing
+             %%%%%%%%%%% is done collecting data)
+             if this.ExperimentOptions.Calibration_Type == "Stereo"
+                calibrationPointsY=-calibrationPointsY;
+             end
              
              % Get the indices from the start of the trial+0.5 seconds to
              % the end of the trial 
