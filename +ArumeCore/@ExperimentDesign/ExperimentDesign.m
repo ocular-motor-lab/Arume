@@ -102,13 +102,15 @@ classdef ExperimentDesign < handle
             % Get the eye tracking data to know where the eye is looking at
             if ( ~exist("eyeData","var"))
                 eyeData = this.eyeTracker.GetCurrentData();
-                if isfield(eyeData,'mx') && isfield(eyeData,'my')
-                    gazeX = eyeData.mx;
-                    gazeY = eyeData.my;
-                else
-                    gazeX = nan;
-                    gazeY = nan;
-                end
+            end
+
+            if isfield(eyeData,'mx') && isfield(eyeData,'my')
+                gazeX = eyeData.mx;
+                gazeY = eyeData.my;
+            else
+                % assume eyes are closed and out of bounds?
+                gazeX = inf;
+                gazeY = inf;
             end
 
             % check if the eye is within a window around the given fixation
@@ -118,7 +120,7 @@ classdef ExperimentDesign < handle
 
             switch(this.goodFixationStatus)
                 case 'INIT'
-                    this.badFixationTimeStart = nan;
+                    this.badFixationTimeStart = tnow;
                     if ( isInside )
                         this.goodFixationStatus = 'IN_WINDOW';
                     else
@@ -134,6 +136,7 @@ classdef ExperimentDesign < handle
                         this.goodFixationStatus = 'IN_WINDOW';
                     else
                         if ( tnow - this.badFixationTimeStart > timeoutSecs)
+                            Beeper(200,1); Beeper(200,1)
                             this.abortTrialButContinue();
                         end
                     end
