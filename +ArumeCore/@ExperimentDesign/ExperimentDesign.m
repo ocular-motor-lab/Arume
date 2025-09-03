@@ -690,14 +690,26 @@ classdef ExperimentDesign < handle
                 if ( width(this.TrialTable) > 5 ) % TODO: a bit ugly! 
                     % experiments that are imported behave a bit different
                     % than experiments that are run original with arume. 
-                    ConditionVarsNames = this.TrialTable.Properties.VariableNames(6:end);
+                    %
+                    % another reason to be ugly. We sometimes have columns
+                    % that are all NaN or missing and that caused problems.
+                    % this will remove those columns. 
+                    T = this.TrialTable;
+                    T(:, all(ismissing(T))) = [];
+                    ConditionVarsNames = T.Properties.VariableNames(6:end);
                 else
                     ConditionVarsNames = this.Session.currentRun.pastTrialTable.Properties.VariableNames(6:end); 
                 end
                 condition = [];
                 for i=1:length(ConditionVarsNames)
                     try
-                        conditionVarLevels = categories(categorical(this.Session.currentRun.pastTrialTable{:,ConditionVarsNames{i}}));
+                        columnDataType = class(this.Session.currentRun.pastTrialTable.(ConditionVarsNames{i}));
+                        switch(columnDataType)
+                            case 'cell'
+                                conditionVarLevels = [];
+                            otherwise
+                                conditionVarLevels = categories(categorical(this.Session.currentRun.pastTrialTable{:,ConditionVarsNames{i}}));  
+                        end
                     catch
                         % when we have a random variable, and two values
                         % are very close, the categorical function errors
@@ -721,23 +733,42 @@ classdef ExperimentDesign < handle
                 qpDataVars = qp.Properties.VariableNames;
                 spDataVars = sp.Properties.VariableNames;
                 
-                warning('off','MATLAB:table:RowsAddedNewVars');
-                for i=1:numel(ConditionVarsNames)
-                    if ( iscategorical(trialDataTable{qp.TrialNumber(~isnan(qp.TrialNumber)),ConditionVarsNames{i}}))
-                        qp{~isnan(qp.TrialNumber),ConditionVarsNames{i}} =  categorical(trialDataTable{qp.TrialNumber(~isnan(qp.TrialNumber)),ConditionVarsNames{i}});
-                    elseif iscellstr(trialDataTable{qp.TrialNumber(~isnan(qp.TrialNumber)),ConditionVarsNames{i}})
-                        qp{~isnan(qp.TrialNumber),ConditionVarsNames{i}} =  categorical(trialDataTable{qp.TrialNumber(~isnan(qp.TrialNumber)),ConditionVarsNames{i}});
-                    else
-                        qp{:,ConditionVarsNames{i}} = nan(height(qp),1);
-                        qp{~isnan(qp.TrialNumber),ConditionVarsNames{i}} =  trialDataTable{qp.TrialNumber(~isnan(qp.TrialNumber)),ConditionVarsNames{i}};
-                    end
-                    try
-                        sp{~isnan(sp.TrialNumber),ConditionVarsNames{i}} =  categorical(trialDataTable{sp.TrialNumber(~isnan(sp.TrialNumber)),ConditionVarsNames{i}});
-                    catch
-                        sp{~isnan(sp.TrialNumber),ConditionVarsNames{i}} =  (trialDataTable{sp.TrialNumber(~isnan(sp.TrialNumber)),ConditionVarsNames{i}});
+                qp = outerjoin(qp, trialDataTable(:,  [{'TrialNumber'} ConditionVarsNames]), 'Keys', 'TrialNumber',   'MergeKeys', true, 'Type', 'left');
+                sp = outerjoin(sp, trialDataTable(:,  [{'TrialNumber'} ConditionVarsNames]), 'Keys', 'TrialNumber',   'MergeKeys', true, 'Type', 'left');
+                % make categorical whatever can be categorical.
+                for i = 1:width(qp)
+                    varName = qp.Properties.VariableNames{i};
+                    col = qp.(varName);
+
+                    if iscellstr(col) || isstring(col) || islogical(col) || iscategorical(col)
+                        qp.(varName) = categorical(col);
                     end
                 end
-                warning('on','MATLAB:table:RowsAddedNewVars');
+                for i = 1:width(sp)
+                    varName = sp.Properties.VariableNames{i};
+                    col = sp.(varName);
+
+                    if iscellstr(col) || isstring(col) || islogical(col) || iscategorical(col)
+                        sp.(varName) = categorical(col);
+                    end
+                end
+                % warning('off','MATLAB:table:RowsAddedNewVars');
+                % for i=1:numel(ConditionVarsNames)
+                %     if ( iscategorical(trialDataTable{qp.TrialNumber(~isnan(qp.TrialNumber)),ConditionVarsNames{i}}))
+                %         qp{~isnan(qp.TrialNumber),ConditionVarsNames{i}} =  categorical(trialDataTable{qp.TrialNumber(~isnan(qp.TrialNumber)),ConditionVarsNames{i}});
+                %     elseif iscellstr(trialDataTable{qp.TrialNumber(~isnan(qp.TrialNumber)),ConditionVarsNames{i}})
+                %         qp{~isnan(qp.TrialNumber),ConditionVarsNames{i}} =  categorical(trialDataTable{qp.TrialNumber(~isnan(qp.TrialNumber)),ConditionVarsNames{i}});
+                %     else
+                %         qp{:,ConditionVarsNames{i}} = nan(height(qp),1);
+                %         qp{~isnan(qp.TrialNumber),ConditionVarsNames{i}} =  trialDataTable{qp.TrialNumber(~isnan(qp.TrialNumber)),ConditionVarsNames{i}};
+                %     end
+                %     try
+                %         sp{~isnan(sp.TrialNumber),ConditionVarsNames{i}} =  categorical(trialDataTable{sp.TrialNumber(~isnan(sp.TrialNumber)),ConditionVarsNames{i}});
+                %     catch
+                %         sp{~isnan(sp.TrialNumber),ConditionVarsNames{i}} =  (trialDataTable{sp.TrialNumber(~isnan(sp.TrialNumber)),ConditionVarsNames{i}});
+                %     end
+                % end
+                % warning('on','MATLAB:table:RowsAddedNewVars');
                 
                 analysisResults.QuickPhases = qp;
                 analysisResults.SlowPhases = sp;
@@ -985,9 +1016,13 @@ classdef ExperimentDesign < handle
             % TODO: not great right now. But get all the columns from the
             % trial table that have condition variables. 
             if(size(this.Session.experimentDesign.TrialTable,2)>6) % if not imported
-                ConditionVars = this.Session.experimentDesign.TrialTable.Properties.VariableNames(6:end);
+                T = this.Session.experimentDesign.TrialTable;
+                T(:, all(ismissing(T))) = [];
+                ConditionVars = T.Properties.VariableNames(6:end);
             else % if imported (TODO: not very good)
-                ConditionVars = this.Session.currentRun.pastTrialTable.Properties.VariableNames(6:end);
+                T = this.Session.currentRun.pastTrialTable;
+                T(:, all(ismissing(T))) = [];
+                ConditionVars = T.Properties.VariableNames(6:end);
             end
 
             % get all the possible values of the condition variables. But
@@ -1000,15 +1035,21 @@ classdef ExperimentDesign < handle
                         Select_Conditions.All = { {'0', '{1}'}};
                         for i=1:length(ConditionVars)
                             name = ConditionVars{i};
-                            if ( isnumeric(this.Session.currentRun.pastTrialTable{:,ConditionVars{i}}))
-                                values = unique(this.Session.currentRun.pastTrialTable{:,ConditionVars{i}});
-                            else
-                                values = categories(categorical(this.Session.currentRun.pastTrialTable{:,ConditionVars{i}}));
-                            end
-                            if ( numel(values) < 10 )
-                                for j=1:numel(values)
-                                    if (~ismissing(values(j)))
-                                        Select_Conditions.(strcat(name, '_', genvarname(string(values(j))))) = { {'{0}', '1'}};
+
+                            col = this.Session.currentRun.pastTrialTable.(ConditionVars{i}); 
+
+                            if iscellstr(col) || isstring(col) || islogical(col) || iscategorical(col) || isnumeric(col)
+
+                                if ( isnumeric(this.Session.currentRun.pastTrialTable{:,ConditionVars{i}}))
+                                    values = unique(this.Session.currentRun.pastTrialTable{:,ConditionVars{i}});
+                                else
+                                    values = categories(categorical(this.Session.currentRun.pastTrialTable{:,ConditionVars{i}}));
+                                end
+                                if ( numel(values) < 10 )
+                                    for j=1:numel(values)
+                                        if (~ismissing(values(j)))
+                                            Select_Conditions.(strcat(name, '_', genvarname(string(values(j))))) = { {'{0}', '1'}};
+                                        end
                                     end
                                 end
                             end
@@ -1017,7 +1058,7 @@ classdef ExperimentDesign < handle
                         return;
                 end
             end
-            
+
             % Add the All condition variable column to allow that filter to
             % work like all others and not need special code later
             dataTable.All = ones(height(dataTable),1);
@@ -1029,16 +1070,23 @@ classdef ExperimentDesign < handle
             Select_ConditionsFilters.All.VarValue = 1;
             for i=1:length(ConditionVars)
                 name = ConditionVars{i};
-                if ( isnumeric(this.Session.currentRun.pastTrialTable{:,ConditionVars{i}}))
-                    values = unique(this.Session.currentRun.pastTrialTable{:,ConditionVars{i}});
-                else
-                    values = categories(categorical(this.Session.currentRun.pastTrialTable{:,ConditionVars{i}}));
-                end
-                if ( numel(values) < 10 )
-                    for j=1:numel(values)
-                        if (~ismissing(values(j)))
-                            Select_ConditionsFilters.(strcat(name, '_', genvarname(string(values(j))))).VarName = name;
-                            Select_ConditionsFilters.(strcat(name, '_', genvarname(string(values(j))))).VarValue = values(j);
+
+                col = this.Session.currentRun.pastTrialTable.(name);
+
+                if iscellstr(col) || isstring(col) || islogical(col) || iscategorical(col) || isnumeric(col)
+
+
+                    if ( isnumeric(this.Session.currentRun.pastTrialTable{:,ConditionVars{i}}))
+                        values = unique(this.Session.currentRun.pastTrialTable{:,ConditionVars{i}});
+                    else
+                        values = categories(categorical(this.Session.currentRun.pastTrialTable{:,ConditionVars{i}}));
+                    end
+                    if ( numel(values) < 10 )
+                        for j=1:numel(values)
+                            if (~ismissing(values(j)))
+                                Select_ConditionsFilters.(strcat(name, '_', genvarname(string(values(j))))).VarName = name;
+                                Select_ConditionsFilters.(strcat(name, '_', genvarname(string(values(j))))).VarValue = values(j);
+                            end
                         end
                     end
                 end
