@@ -199,9 +199,10 @@ if ( (LEFT && ~isempty(lrsac.Left)) || (RIGHT && ~isempty(lrsac.Right)) ) % some
 
     textprogressbar(5/Nprogsteps);
 
-    timeElapsed = toc;
 
 end
+
+timeElapsed = toc;
 
 textprogressbar(sprintf('Done in %0.2f seconds.', timeElapsed));
 

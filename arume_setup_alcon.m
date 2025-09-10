@@ -84,4 +84,10 @@ disp(['ADDED TO THE PATH ' [shadersdir.folder, filesep, 'FilterConfigFiles']])
 addpath([shadersdir.folder, filesep, 'VisualStimuli']);
 disp(['ADDED TO THE PATH ' [shadersdir.folder, filesep, 'VisualStimuli']])
 
+addpath([shadersdir.folder, filesep, 'SpectralMeasurements']);
+disp(['ADDED TO THE PATH ' [shadersdir.folder, filesep, 'SpectralMeasurements']])
+
+addpath([shadersdir.folder, filesep, 'BrainardLabToolbox']);
+disp(['ADDED TO THE PATH ' [shadersdir.folder, filesep, 'BrainardLabToolbox']])
+
 savepath;

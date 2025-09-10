@@ -2517,13 +2517,31 @@ classdef VOGAnalysis < handle
             end
 
             quickPhaseTable = struct2table(quickPhaseTable);
+            quickPhaseTable.TrialNumber =  data.TrialNumber(quickPhaseTable.StartIndex);
             
             
             timeElapsed = toc;
             textprogressbar(sprintf('Done in %0.2f seconds.', timeElapsed));
         end
         
-        function [slowPhaseTable] = GetSlowPhaseTable(data)
+        function [slowPhaseTable] = GetSlowPhaseTable(data, begMs, endMs)
+            % begMs and endMs will limit the portion of time that is used
+            % to calculate the properties of the slow phase. 
+            % Both relative to the time that was originally detected and is
+            % labeld in the samples table as slow phase
+            %
+            % endMS can be 0 or negative to indicate that we use the entire
+            % slow phase
+            
+            if ( ~exist('begMs','var') )
+                begMs = 0;
+            end
+            if ( ~exist('endMs','var') )
+                endMs = 0;
+            end
+            
+        
+            
             [eyes, eyeSignals] = VOGAnalysis.GetEyesAndSignals(data);
             %% get SP properties
             rows = eyeSignals;
@@ -2534,13 +2552,22 @@ classdef VOGAnalysis < handle
             
             % properties common for all eyes and components
             slowPhaseTable = [];
+            if ( begMs > 0 )
+                sp(:,1) = sp(:,1) + round(begMs*SAMPLERATE/1000);
+            end
+            if ( endMs > 0 )
+                sp(:,2) = min(sp(:,2), sp(:,1) + round(endMs*SAMPLERATE/1000));
+            end
+            
+            sp(sp(:,1) >= sp(:,2),:)=[];
+            
             slowPhaseTable.StartIndex = sp(:,1);
             slowPhaseTable.EndIndex = sp(:,2);
             slowPhaseTable.DurationMs = (sp(:,2) - sp(:,1)) * 1000 / SAMPLERATE;
-            
+          
             % beginMs = 0;
             % EndMs = 100;
-
+            
             textprogressbar('++ VOGAnalysis :: Calculating slow phases properties: ');
             Nprogsteps = length(eyes)*length(rows)*size(sp,1)/100;
             
@@ -2560,12 +2587,13 @@ classdef VOGAnalysis < handle
                     sp1_props.StartPosition = pos(sp(:,1));
                     sp1_props.EndPosition = pos(sp(:,2));
                     sp1_props.MeanPosition = nan(size(sp(:,1)));
+                    sp1_props.MedianPosition = nan(size(sp(:,1)));
                     sp1_props.Displacement = pos(sp(:,2)) - pos(sp(:,1));
                     
                     sp1_props.PeakVelocity = nan(size(sp(:,1)));
                     sp1_props.PeakVelocityIdx = nan(size(sp(:,1)));
                     sp1_props.MeanVelocity = nan(size(sp(:,1)));
-                    
+                    sp1_props.MedianVelocity = nan(size(sp(:,1)));
                     
                     sp1_props.Slope = nan(size(sp(:,1)));
                     sp1_props.TimeConstant = nan(size(sp(:,1)));
@@ -2583,11 +2611,13 @@ classdef VOGAnalysis < handle
                         
                         sp1_props.Amplitude(i)      = max(pos(spidx)) - min(pos(spidx));
                         sp1_props.MeanPosition(i)   = mean(pos(spidx),'omitnan');
+                        sp1_props.MedianPosition(i) = median(pos(spidx),'omitnan');
                         
                         [m,mi] = max(vel(spidx));
                         sp1_props.PeakVelocity(i)   = m;
                         sp1_props.PeakVelocityIdx(i)= spidx(1) -1 + mi;
                         sp1_props.MeanVelocity(i)   = mean(vel(spidx),'omitnan');
+                        sp1_props.MedianVelocity(i) = median(vel(spidx),'omitnan');
                         
                         %                         if ( sp1_props.GoodTrhought(i) )
                         %                             fun = @(x,xdata)(-x(1) + x(1)*exp(-1/x(2)*xdata)+xdata*x(3));
@@ -2626,16 +2656,19 @@ classdef VOGAnalysis < handle
                 slowPhaseTable.Displacement   = mean([ props.Left.XY.Displacement props.Right.XY.Displacement],2,'omitnan');
                 slowPhaseTable.PeakSpeed      = mean([ props.Left.XY.PeakSpeed props.Right.XY.PeakSpeed],2,'omitnan');
                 slowPhaseTable.MeanSpeed      = mean([ props.Left.XY.MeanSpeed props.Right.XY.MeanSpeed],2,'omitnan');
+                slowPhaseTable.MedianSpeed    = median([ props.Left.XY.MeanSpeed props.Right.XY.MeanSpeed],2,'omitnan');
             elseif(any(contains(eyes,'Left')))
                 slowPhaseTable.Amplitude      = props.Left.XY.Amplitude;
                 slowPhaseTable.Displacement   = props.Left.XY.Displacement;
                 slowPhaseTable.PeakSpeed      = props.Left.XY.PeakSpeed;
                 slowPhaseTable.MeanSpeed      = props.Left.XY.MeanSpeed;
+                slowPhaseTable.MedianSpeed    = props.Left.XY.MedianSpeed;
             elseif(any(contains(eyes,'Right')))
                 slowPhaseTable.Amplitude      = props.Right.XY.Amplitude;
                 slowPhaseTable.Displacement   = props.Right.XY.Displacement;
                 slowPhaseTable.PeakSpeed      = props.Right.XY.PeakSpeed;
                 slowPhaseTable.MeanSpeed      = props.Right.XY.MeanSpeed;
+                slowPhaseTable.MedianSpeed    = props.Right.XY.MedianSpeed;
             end
             
             fieldsToAverageAcrossEyes = {...
@@ -2643,9 +2676,11 @@ classdef VOGAnalysis < handle
                 'StartPosition'...
                 'EndPosition'...
                 'MeanPosition'...
+                'MedianPosition'...
                 'Displacement'...
                 'PeakVelocity'...
                 'MeanVelocity'...
+                'MedianVelocity'...
                 'Slope'...
                 'TimeConstant'...
                 'ExponentialBaseline'};
@@ -2679,6 +2714,7 @@ classdef VOGAnalysis < handle
             end
             
             slowPhaseTable = struct2table(slowPhaseTable);
+            slowPhaseTable.TrialNumber =  data.TrialNumber(slowPhaseTable.StartIndex);
             
             timeElapsed = toc;
             textprogressbar(sprintf('Done in %0.2f seconds.', timeElapsed));
