@@ -578,15 +578,15 @@ classdef ExperimentDesign < handle
                 
                 samplerate = samplesDataTable.Properties.UserData.sampleRate;
                 varsBeforeJoin = trialDataTable.Properties.VariableNames;
-                trialDataTable = outerjoin(trialDataTable, stats,'Keys','TrialNumber','MergeKeys',true, 'LeftVariables', setdiff(trialDataTable.Properties.VariableNames, stats.Properties.VariableNames) );
-                trialDataTable = outerjoin(trialDataTable, stats2,'Keys','TrialNumber','MergeKeys',true, 'LeftVariables', setdiff(trialDataTable.Properties.VariableNames, stats2.Properties.VariableNames) );
+                trialDataTable = outerjoin(trialDataTable, stats,'Keys','TrialNumber','MergeKeys',true, 'LeftVariables', setdiff(trialDataTable.Properties.VariableNames, setdiff(stats.Properties.VariableNames,{'TrialNumber'},'stable'),'stable') );
+                trialDataTable = outerjoin(trialDataTable, stats2,'Keys','TrialNumber','MergeKeys',true, 'LeftVariables', setdiff(trialDataTable.Properties.VariableNames, setdiff(stats2.Properties.VariableNames,{'TrialNumber'},'stable'),'stable') );
                 
                 trialDataTable.TotalGoodSec = trialDataTable.sum_GoodData/samplerate;
                 trialDataTable.TotalSec = trialDataTable.count_GoodSamples/samplerate;
                 
                 % keep a list of the variables added so it is easier to do
                 % states across trials
-                trialDataTable.Properties.UserData.EyeTrackingPrepareTrialDataTableVariables = setdiff(trialDataTable.Properties.VariableNames, varsBeforeJoin);
+                trialDataTable.Properties.UserData.EyeTrackingPrepareTrialDataTableVariables = setdiff(trialDataTable.Properties.VariableNames, varsBeforeJoin,'stable');
             end
         end
         
@@ -635,7 +635,14 @@ classdef ExperimentDesign < handle
         end
 
         function [analysisResults, samplesDataTable, trialDataTable, sessionDataTable]  = RunDataAnalysesEyeTracking(this, analysisResults, samplesDataTable, trialDataTable, sessionDataTable, options)
-            
+            %
+            % this function contains the basic eye movement analysis
+            % performed by Arume
+            %
+            %   - Quick-phase (Saccade) detection
+            %   - Slow-phase (fixation) detection
+            %
+
             updateTrialsAndSessionTables = false;
             
             if ( isfield(options,'Detect_Quik_and_Slow_Phases') && options.Detect_Quik_and_Slow_Phases )
@@ -677,13 +684,13 @@ classdef ExperimentDesign < handle
                 dataVars = { 'SPVX' 'SPVY' 'SPVT'};
                 isInTrial = ~isnan(samplesDataTable.TrialNumber);
                 
-                stats = grpstats(...
+                QP_stats = grpstats(...
                     samplesDataTable(isInTrial,:), ...     % Selected rows of data
                     'TrialNumber', ...                  % GROUP VARIABLE
                     {'median' 'mean' 'std'}, ...        % Stats to calculate
                     'DataVars', dataVars );             % Vars to do stats on
                 
-                trialDataTable = outerjoin(trialDataTable, stats,'Keys','TrialNumber','MergeKeys',true, 'LeftVariables', setdiff(trialDataTable.Properties.VariableNames, stats.Properties.VariableNames) );
+                trialDataTable = outerjoin(trialDataTable, QP_stats,'Keys','TrialNumber','MergeKeys',true, 'LeftVariables', setdiff(trialDataTable.Properties.VariableNames, QP_stats.Properties.VariableNames) );
             end
             
             if (updateTrialsAndSessionTables)
@@ -787,22 +794,26 @@ classdef ExperimentDesign < handle
                 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                 % Add average properties of QP and SP to the trial table
                 goodQP = qp(~isnan(qp.TrialNumber),:);
-                stats = grpstats(goodQP, ...     % Selected rows of data
+                QP_stats = grpstats(goodQP, ...     % Selected rows of data
                     'TrialNumber', ...                  % GROUP VARIABLE
                     {'median' 'mean' 'std'}, ...        % Stats to calculate
                     'DataVars', qpDataVars);             % Vars to do stats on
-                stats.Properties.VariableNames(2:end) = strcat('QP_', stats.Properties.VariableNames(2:end));
-                trialDataTable = outerjoin(trialDataTable, stats,'Keys','TrialNumber','MergeKeys',true, 'LeftVariables', setdiff(trialDataTable.Properties.VariableNames, stats.Properties.VariableNames) );
+                QP_stats.Properties.VariableNames(2:end) = strcat('QP_', QP_stats.Properties.VariableNames(2:end));
+                trialDataTable.QP_Rate = QP_stats.QP_GroupCount ./ trialDataTable.TotalGoodSec;
+
+                trialDataTable(:,intersect(QP_stats.Properties.VariableNames, setdiff(trialDataTable.Properties.VariableNames,{'TrialNumber'}))) = []; % to make sure we override the QP related variables
+                trialDataTable = outerjoin(trialDataTable, QP_stats,'Keys','TrialNumber','MergeKeys',true);
                 
                 goodSP = sp(~isnan(sp.TrialNumber),:);
-                stats = grpstats(goodSP, ...     % Selected rows of data
+                SP_stats = grpstats(goodSP, ...     % Selected rows of data
                     'TrialNumber', ...                  % GROUP VARIABLE
                     {'median' 'mean' 'std'}, ...        % Stats to calculate
                     'DataVars', spDataVars);             % Vars to do stats on
-                stats.Properties.VariableNames(2:end) = strcat('SP_', stats.Properties.VariableNames(2:end));
-                trialDataTable = outerjoin(trialDataTable, stats,'Keys','TrialNumber','MergeKeys',true, 'LeftVariables', setdiff(trialDataTable.Properties.VariableNames, stats.Properties.VariableNames) );
+                SP_stats.Properties.VariableNames(2:end) = strcat('SP_', SP_stats.Properties.VariableNames(2:end));
+
+                trialDataTable(:,intersect(SP_stats.Properties.VariableNames, setdiff(trialDataTable.Properties.VariableNames,{'TrialNumber'}))) = []; % to make sure we override the SP related variables
+                trialDataTable = outerjoin(trialDataTable, SP_stats,'Keys','TrialNumber','MergeKeys',true);
                 
-                trialDataTable.QP_Rate = trialDataTable.QP_GroupCount ./ trialDataTable.TotalGoodSec;
                 
                 
                 
@@ -823,11 +834,11 @@ classdef ExperimentDesign < handle
                     trialDataTable.Condition = condition; % combination of condition variables
                     ConditionVarsNames = horzcat({'Condition'}, ConditionVarsNames);
                     for i=1:length(ConditionVarsNames)
-                        stats = grpstats(trialDataTable, ...     % Selected rows of data
+                        QP_stats = grpstats(trialDataTable, ...     % Selected rows of data
                             ConditionVarsNames{i}, ...                  % GROUP VARIABLE
                             {'mean' 'std'}, ...        % Stats to calculate
                             'DataVars', varsToGroup);             % Vars to do stats on
-                        conditionStats = unstack(stats,setdiff(stats.Properties.VariableNames, ConditionVarsNames{i}),ConditionVarsNames{i});
+                        conditionStats = unstack(QP_stats,setdiff(QP_stats.Properties.VariableNames, ConditionVarsNames{i}),ConditionVarsNames{i});
                         conditionStats.Properties.RowNames = {};
                         sessionDataTable(:,intersect(conditionStats.Properties.VariableNames, sessionDataTable.Properties.VariableNames)) = [];
                         sessionDataTable = horzcat(sessionDataTable, conditionStats);
@@ -1805,7 +1816,7 @@ classdef ExperimentDesign < handle
                 experiment = AlconExperimentDesigns.(experimentName)();
             else
                 % Create the experiment design object
-                experiment = ArumeCore.ExperimentDesign();
+                experiment = [];
             end
         end
         

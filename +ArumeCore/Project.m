@@ -21,14 +21,19 @@ classdef Project < handle
         % Save project
         %
         function save( this )
-            
-            for i =1:length(this.sessions)
-                session = this.sessions(i);
-                if ( ~isempty(session) )
-                    session.save();
+
+            try
+                for i =1:length(this.sessions)
+                    session = this.sessions(i);
+                    if ( ~isempty(session) )
+                        session.save();
+                    end
                 end
+            catch err
+                disp('ERROR saving session data');
+                disp(err.getReport);
             end
-            
+
             try
                 % sort the sessions and update the sessions table.
                 this.sortSessions();
