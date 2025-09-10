@@ -720,8 +720,17 @@ classdef ExperimentDesign < handle
                     if ( numel(conditionVarLevels)>1)
                         if (isempty(condition) )
                             condition = string(trialDataTable{:,ConditionVarsNames(i)});
+                            if size(condition,2)>1
+                                condition = join(condition,"-");
+                            end
                         else
-                            condition = strcat(condition,'_', string(trialDataTable{:,ConditionVarsNames(i)}));
+                            newcondition = string(trialDataTable{:,ConditionVarsNames(i)});
+
+                            if size(newcondition,2)>1
+                                newcondition = join(newcondition,"-");
+                            end
+
+                            condition = strcat(condition,'_', newcondition);
                         end
                     end
                 end
