@@ -2249,7 +2249,8 @@ classdef VOGAnalysis < handle
                     spYesNo = (~qp & ~isnan(xx));
                     sp = [find(diff([0;spYesNo])>0) find(diff([spYesNo;0])<0)];
                     spdur = sp(:,2) - sp(:,1);
-                    sp(spdur<20,:) = [];
+                    sp(spdur<20,:) = []; % TODO: account for different sampling rates
+                    % Remove first X ms from the slow phases
                     
                     l = length(xx);
                     starts = sp(:,1);
@@ -2537,6 +2538,9 @@ classdef VOGAnalysis < handle
             slowPhaseTable.EndIndex = sp(:,2);
             slowPhaseTable.DurationMs = (sp(:,2) - sp(:,1)) * 1000 / SAMPLERATE;
             
+            % beginMs = 0;
+            % EndMs = 100;
+
             textprogressbar('++ VOGAnalysis :: Calculating slow phases properties: ');
             Nprogsteps = length(eyes)*length(rows)*size(sp,1)/100;
             

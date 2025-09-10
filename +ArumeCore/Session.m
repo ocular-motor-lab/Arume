@@ -248,7 +248,6 @@ classdef Session < ArumeCore.DataDB
             this.initialRun.pastTrialTable           = table();
             this.initialRun.originalFutureTrialTable = this.experimentDesign.TrialTable;
             this.initialRun.futureTrialTable         = this.initialRun.originalFutureTrialTable;
-            
         end
                 
         function addFile(this, fileTag, filePath)
