@@ -8,6 +8,16 @@ classdef EyeTrackerEyelink  < handle
         experimentOptions
     end
     
+    methods(Static=true)
+        function conf = GetEyelinkPhysicalDisplayConfiguration()
+            conf.vdist_cm = 130;
+            conf.screenw_cm = 170;
+            conf.w_px = 3840;
+            conf.pxwidthcm = screenw_cm/w_px;
+            conf.h_px = 2160;
+        end
+    end
+
     methods
         function result = Connect(this, graph, ip, port, openirispath)
 

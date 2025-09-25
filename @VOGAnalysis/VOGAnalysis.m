@@ -1022,11 +1022,12 @@ classdef VOGAnalysis < handle
 
             %% Do the transformation from raw data to degs
             %% TO CHANGE -- ONLY APPLIES TO EYELINK-OLED SETUP (03/07/24)
-            vdist_cm = 130;
-            screenw_cm = 170;
-            w_px = 3840;
-            pxwidthcm = screenw_cm/w_px;
-            h_px = 2160;
+
+            conf = ArumeHardware.EyeTrackerEyelink.GetEyelinkPhysicalDisplayConfiguration();
+            vdist_cm = conf.vdist_cm;
+            w_px = conf.w_px;
+            pxwidthcm = conf.pxwidthcm;
+            h_px = conf.h_px;
             % widthdeg = rad2deg(atan((screenw_cm/2)/vdist_cm))*2;
             % pxperdeg = w_px/widthdeg;
 
