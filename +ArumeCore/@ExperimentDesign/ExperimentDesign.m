@@ -799,10 +799,11 @@ classdef ExperimentDesign < handle
                     {'median' 'mean' 'std'}, ...        % Stats to calculate
                     'DataVars', qpDataVars);             % Vars to do stats on
                 QP_stats.Properties.VariableNames(2:end) = strcat('QP_', QP_stats.Properties.VariableNames(2:end));
-                trialDataTable.QP_Rate = QP_stats.QP_GroupCount ./ trialDataTable.TotalGoodSec;
 
                 trialDataTable(:,intersect(QP_stats.Properties.VariableNames, setdiff(trialDataTable.Properties.VariableNames,{'TrialNumber'}))) = []; % to make sure we override the QP related variables
                 trialDataTable = outerjoin(trialDataTable, QP_stats,'Keys','TrialNumber','MergeKeys',true);
+
+                trialDataTable.QP_Rate = trialDataTable.QP_GroupCount ./ trialDataTable.TotalGoodSec;
                 
                 goodSP = sp(~isnan(sp.TrialNumber),:);
                 SP_stats = grpstats(goodSP, ...     % Selected rows of data
