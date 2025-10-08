@@ -19,27 +19,32 @@ classdef FixationTargets < ArumeExperimentDesigns.EyeTracking
             dlg = GetOptionsDialog@ArumeExperimentDesigns.EyeTracking(this, importing);
             dlg.Debug.DisplayVariableSelection = 'TrialNumber TrialResult TargetPosition'; % which variables to display every trial in the command line separated by spaces
 
-            dlg.DisplayOptions.ScreenWidth = { 142.8 '* (cm)' [1 3000] };
-            dlg.DisplayOptions.ScreenHeight = { 80 '* (cm)' [1 3000] };
-            dlg.DisplayOptions.ScreenDistance = { 85 '* (cm)' [1 3000] };
+            dlg.DisplayOptions.ScreenWidth = { 55 '* (cm)' [1 3000] };
+            dlg.DisplayOptions.ScreenHeight = { 31 '* (cm)' [1 3000] };
+            dlg.DisplayOptions.ScreenDistance = { 67 '* (cm)' [1 3000] };
 
-            dlg.TrialDuration =  { 20 '* (s)' [1 100] };
+            dlg.TrialDuration =  { 10 '* (s)' [1 100] };
             dlg.NumberRepetitions = 10;
 
             dlg.TargetSize = 1;
             dlg.Calibration_Type = { {'Center dot' '5 dots' '{9 dots}' '13 dots' '17 dots'} };
-            dlg.Calibration_Distance_H = { 20 '* (deg)' [1 3000] };
-            dlg.Calibration_Distance_V = { 15 '* (deg)' [1 3000] };
+            dlg.Calibration_Distance_H = { 10 '* (deg)' [1 3000] };
+            dlg.Calibration_Distance_V = { 10 '* (deg)' [1 3000] };
 
             dlg.BackgroundBrightness = 0;
         end
 
 
         function trialTable = SetUpTrialTable(this)
+            Screen('Preference', 'SkipSyncTests', 0);                  % DO NOT skip sync tests (set to 1 or 2 for debugging only)
+            Screen('Preference', 'VisualDebugLevel', 1);               % Minimize startup splash
+            Screen('Preference', 'SuppressAllWarnings', 0);            % Show all warnings
+            Screen('Preference', 'ConserveVRAM', 4096);
+
             h = this.ExperimentOptions.Calibration_Distance_H;
             v = this.ExperimentOptions.Calibration_Distance_V;
-
             temp = 1.5;
+
             switch(this.ExperimentOptions.Calibration_Type)
                 case 'Center dot'
                     this.targetPositions = {[0,0]};
@@ -54,110 +59,110 @@ classdef FixationTargets < ArumeExperimentDesigns.EyeTracking
                     this.targetPositions = {[0,0],[h,0],[-h,0],[0,v],[0,-v],[h,v],[h,-v],[-h,v],[-h,-v],...
                         [h/temp,0],[-h/temp,0],[0,v/temp],[0,-v/temp],[h/temp,v/temp],[h/temp,-v/temp],[-h/temp,v/temp],[-h/temp,-v/temp]};
             end
+            t = ArumeCore.TrialTableBuilder();
 
+            t.AddConditionVariable("TargetPosition", { ...
+                [0 0], [0 10], [10 0], [10 10], [-10 10], [-10 -10], [10 -10], ...
+                [0 2], [0 4], [0 6], [0 8], [0 -2], [0 -4], [0 -6], [0 -8], ...
+                [2 0], [4 0], [6 0], [8 0], [-2 0], [-4 0], [-6 0], [-8 0], ...
+                [2 2], [4 4], [6 6], [8 8], [-2 2], [-4 4], [-6 6], [-8 8], ...
+                [2 -2], [4 -4], [6 -6], [8 -8], [-2 -2], [-4 -4], [-6 -6], [-8 -8] ...
+                });
 
-            targets = 1:length(this.targetPositions);
+            % Add all conditions to a single block with N repetitions
+            nReps = this.ExperimentOptions.NumberRepetitions;
+            t.AddBlock(1:height(t.ConditionTable), nReps);
 
-            %-- condition variables ---------------------------------------
-            i= 0;
+            trialSequence = 'Random';
+            blockSequence = 'Sequential';
+            blockSequenceRepeatitions = 1;
+            abortAction = 'Repeat';
+            trialsPerSession = 1000;  % You can use a large number if not splitting
 
-            i = i+1;
-            conditionVars(i).name   = 'TargetPosition';
-            conditionVars(i).values = targets;
-
-
-            trialTableOptions = this.GetDefaultTrialTableOptions();
-            trialTableOptions.trialSequence = 'Random';
-            trialTableOptions.trialAbortAction = 'Delay';
-            trialTableOptions.trialsPerSession = (length(targets)+1)*this.ExperimentOptions.NumberRepetitions;
-
-            trialTableOptions.blockSequence       = 'Sequential';	% Sequential, Random, Random with repetition, ...numberOfTimesRepeatBlockSequence = 1;
-            trialTableOptions.blocksToRun         = 3;
-            trialTableOptions.blocks                = struct( 'fromCondition', 1, 'toCondition', 1, 'trialsToRun', 1 );
-            trialTableOptions.blocks(2)             = struct( 'fromCondition', 2, 'toCondition', length(targets), 'trialsToRun', length(targets)-1 );
-            trialTableOptions.blocks(3)             = struct( 'fromCondition', 1, 'toCondition', 1, 'trialsToRun', 1 );
-            trialTableOptions.numberOfTimesRepeatBlockSequence = this.ExperimentOptions.NumberRepetitions;
-            trialTable = this.GetTrialTableFromConditions(conditionVars, trialTableOptions);
+            trialTable = t.GenerateTrialTable(trialSequence, blockSequence, blockSequenceRepeatitions, abortAction, trialsPerSession);
         end
 
-        function [trialResult, thisTrialData] = runTrial( this, thisTrialData )
 
+        function [trialResult, thisTrialData] = runTrial(this, thisTrialData)
             try
-
                 Enum = ArumeCore.ExperimentDesign.getEnum();
                 graph = this.Graph;
                 trialResult = Enum.trialResult.CORRECT;
-
 
                 lastFlipTime        = GetSecs;
                 secondsRemaining    = this.ExperimentOptions.TrialDuration;
                 thisTrialData.TimeStartLoop = lastFlipTime;
 
-                if ( ~isempty(this.eyeTracker) )
-                    thisTrialData.EyeTrackerFrameStartLoop = this.eyeTracker.RecordEvent(sprintf('TRIAL_START_LOOP %d %d %d', thisTrialData.TrialNumber, thisTrialData.Condition, thisTrialData.TargetPosition) );
+                if (~isempty(this.eyeTracker))
+                    thisTrialData.EyeTrackerFrameStartLoop = this.eyeTracker.RecordEvent( ...
+                        sprintf('TRIAL_START_LOOP %d %d [%d %d]', ...
+                        thisTrialData.TrialNumber, ...
+                        thisTrialData.Condition, ...
+                        thisTrialData.TargetPosition(1), ...
+                        thisTrialData.TargetPosition(2)) );
                 end
 
                 while secondsRemaining > -5
-
                     secondsElapsed      = GetSecs - thisTrialData.TimeStartLoop;
                     secondsRemaining    = this.ExperimentOptions.TrialDuration - secondsElapsed;
 
                     if secondsRemaining > 0
-                        % -----------------------------------------------------------------
-                        % --- Drawing of stimulus -----------------------------------------
-                        % -----------------------------------------------------------------
+                        %-- Draw fixation spot as a white cross (+)
                         Screen('FillRect', graph.window, this.ExperimentOptions.BackgroundBrightness);
 
-                        %-- Draw fixation spot
                         [mx, my] = RectCenter(this.Graph.wRect);
-                        % this.Graph.pxWidth
-                        % targetHPix
-                        targetPix = this.Graph.pxWidth/this.ExperimentOptions.DisplayOptions.ScreenWidth * this.ExperimentOptions.DisplayOptions.ScreenDistance * tand(this.ExperimentOptions.TargetSize);
-                        targetHPix = this.Graph.pxWidth/this.ExperimentOptions.DisplayOptions.ScreenWidth * this.ExperimentOptions.DisplayOptions.ScreenDistance * tand(this.targetPositions{thisTrialData.TargetPosition}(1));
-                        targetYPix = this.Graph.pxWidth/this.ExperimentOptions.DisplayOptions.ScreenWidth * this.ExperimentOptions.DisplayOptions.ScreenDistance * tand(this.targetPositions{thisTrialData.TargetPosition}(2));
-                        fixRect = [0 0 targetPix/2 targetPix/2];
-                        fixRect = CenterRectOnPointd( fixRect, mx+targetHPix/2, my+targetYPix/2 );
-                        Screen('FillOval', graph.window, this.fixColor, fixRect);
 
-                        fixRect2 = CenterRectOnPointd( fixRect./2, mx+targetHPix/2, my+targetYPix/2 );
-                        Screen('FillOval', graph.window, [250,250,250], fixRect2);
+                        % Get the stimulus position in degrees from the trial table
+                        targetDeg = thisTrialData.TargetPosition{1};
+                        dx = targetDeg(1);
+                        dy = targetDeg(2);
 
-                        Screen('DrawingFinished', graph.window); % Tell PTB that no further drawing commands will follow before Screen('Flip')
+                        % === LOG POSITION INTO TRIAL DATA ===
+                        thisTrialData.StimulusPosition_X = targetDeg(1);
+                        thisTrialData.StimulusPosition_Y = targetDeg(2);
 
+                        % Convert visual degrees to pixels
+                        pixelsPerDegree = this.Graph.pxWidth / this.ExperimentOptions.DisplayOptions.ScreenWidth * ...
+                            this.ExperimentOptions.DisplayOptions.ScreenDistance;
+
+                        targetHPix = pixelsPerDegree * tand(dx);
+                        targetYPix = pixelsPerDegree * tand(dy);
+
+                        % Fixation location
+                        fixX = mx + targetHPix / 2;
+                        fixY = my + targetYPix / 2;
+
+                        % Fixation cross parameters
+                        targetSizeDeg = this.ExperimentOptions.TargetSize;
+                        crossLength = pixelsPerDegree * tand(targetSizeDeg); % in pixels
+                        crossThickness = 2;
+                        crossColor = [255, 255, 255];
+
+                        % Define cross lines centered on fixX, fixY
+                        crossCoords = [ ...
+                            -crossLength/2, 0; ...
+                            crossLength/2, 0; ...
+                            0, -crossLength/2; ...
+                            0,  crossLength/2 ...
+                            ]';
+
+                        Screen('DrawLines', graph.window, crossCoords, crossThickness, crossColor, [fixX, fixY], 2);
+
+                        Screen('DrawingFinished', graph.window);
                     else
                         Screen('FillRect', graph.window, this.ExperimentOptions.BackgroundBrightness);
                         Screen('DrawingFinished', graph.window);
                     end
 
-
-                    % -----------------------------------------------------------------
-                    % --- END Drawing of stimulus -------------------------------------
-                    % -----------------------------------------------------------------
-
-                    % -----------------------------------------------------------------
-                    % -- Flip buffers to refresh screen -------------------------------
-                    % -----------------------------------------------------------------
+                    % Flip screen buffer
                     this.Graph.Flip();
-                    % -----------------------------------------------------------------
-
-
-                    % -----------------------------------------------------------------
-                    % --- Collecting responses  ---------------------------------------
-                    % -----------------------------------------------------------------
-
-                    % -----------------------------------------------------------------
-                    % --- END Collecting responses  -----------------------------------
-                    % -----------------------------------------------------------------
-
                 end
-
-
 
             catch ex
                 rethrow(ex)
             end
-
         end
+
     end
 
     methods ( Access = public )
@@ -289,7 +294,7 @@ classdef FixationTargets < ArumeExperimentDesigns.EyeTracking
                     c = c + 1;
                     h(i,j) = subplot(6,6,c);
                     if i <= j, continue; end
-                    
+
                     %indx = (dataAll_(:,j) < 1 & dataAll_(:,j) > -1) & (dataAll_(:,i) < 1 & dataAll_(:,i) > -1);
 
                     fitlm_{i,j} = fitlm(dataAll_VV(:,j),dataAll_VV(:,i),'RobustOpts','on');
@@ -352,72 +357,72 @@ classdef FixationTargets < ArumeExperimentDesigns.EyeTracking
             ylabel('Amplitude (degree)')
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%% LEFT RIGHT %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% [R,P] = corr(dataAll_LR,'rows','complete');
-% 
-%             x = [-1:0.5:1];
-%             c = 0;
-%             figure,
-%             for i = 1:6
-%                 for j = 1:6
-%                     c = c + 1;
-%                     h2(i,j) = subplot(6,6,c);
-%                     if i >= j, continue; end
-%                     
-%                     %indx = (dataAll_(:,j) < 1 & dataAll_(:,j) > -1) & (dataAll_(:,i) < 1 & dataAll_(:,i) > -1);
-% 
-%                     fitlm_{i,j} = fitlm(dataAll_LR(:,j),dataAll_LR(:,i));
-% 
-%                     plot(x,x*fitlm_{i,j}.Coefficients{2,1} + fitlm_{i,j}.Coefficients{1,1},'r--','LineWidth',2),
-%                     %plot(fitlm_{i,j}),legend off
-%                     hold on
-%                     plot(dataAll_LR(:,j),dataAll_LR(:,i),'b.');
-%                     xlim([-1,1])
-%                     ylim([-1,1])
-%                     title(strcat("R = ",num2str(round(R(c),2)), ", P = ",num2str(P(c)) ,", Slope = ",num2str( fitlm_{i,j}.Coefficients{2,1} ) ))
-% 
-% 
-%                 end
-%             end
-% 
-%             linkaxes(h2(:))
-% 
-%             n = [...
-%                 "Left X",...
-%                 "Left Y",...
-%                 "Left T",...
-%                 "Right X",...
-%                 "Right Y",...
-%                 "Right T"...
-%                 ];
-% 
-%             c=1;
-%             for i = 1:6:36
-%                 subplot(6,6,i)
-%                 ylabel(n(c))
-%                 c=c+1;
-%             end
-% 
-% 
-%             for i = 31:36
-%                 subplot(6,6,i)
-%                 xlabel(n(i-30))
-%             end
-% 
-%             sgtitle("Center Fixational Micro Saccades Positional Displacement (degree)")
-% 
-% 
-%             figure,
-%             subplot(1,2,1)
-%             heatmap(R)
-%             title("R")
-% 
-%             subplot(1,2,2)
-%             heatmap(P)
-%             title("P")
-%             sgtitle("Center Fixational Micro Saccades Correlation parameters for Left and Right")
-% 
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            %%%%% LEFT RIGHT %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            % [R,P] = corr(dataAll_LR,'rows','complete');
+            %
+            %             x = [-1:0.5:1];
+            %             c = 0;
+            %             figure,
+            %             for i = 1:6
+            %                 for j = 1:6
+            %                     c = c + 1;
+            %                     h2(i,j) = subplot(6,6,c);
+            %                     if i >= j, continue; end
+            %
+            %                     %indx = (dataAll_(:,j) < 1 & dataAll_(:,j) > -1) & (dataAll_(:,i) < 1 & dataAll_(:,i) > -1);
+            %
+            %                     fitlm_{i,j} = fitlm(dataAll_LR(:,j),dataAll_LR(:,i));
+            %
+            %                     plot(x,x*fitlm_{i,j}.Coefficients{2,1} + fitlm_{i,j}.Coefficients{1,1},'r--','LineWidth',2),
+            %                     %plot(fitlm_{i,j}),legend off
+            %                     hold on
+            %                     plot(dataAll_LR(:,j),dataAll_LR(:,i),'b.');
+            %                     xlim([-1,1])
+            %                     ylim([-1,1])
+            %                     title(strcat("R = ",num2str(round(R(c),2)), ", P = ",num2str(P(c)) ,", Slope = ",num2str( fitlm_{i,j}.Coefficients{2,1} ) ))
+            %
+            %
+            %                 end
+            %             end
+            %
+            %             linkaxes(h2(:))
+            %
+            %             n = [...
+            %                 "Left X",...
+            %                 "Left Y",...
+            %                 "Left T",...
+            %                 "Right X",...
+            %                 "Right Y",...
+            %                 "Right T"...
+            %                 ];
+            %
+            %             c=1;
+            %             for i = 1:6:36
+            %                 subplot(6,6,i)
+            %                 ylabel(n(c))
+            %                 c=c+1;
+            %             end
+            %
+            %
+            %             for i = 31:36
+            %                 subplot(6,6,i)
+            %                 xlabel(n(i-30))
+            %             end
+            %
+            %             sgtitle("Center Fixational Micro Saccades Positional Displacement (degree)")
+            %
+            %
+            %             figure,
+            %             subplot(1,2,1)
+            %             heatmap(R)
+            %             title("R")
+            %
+            %             subplot(1,2,2)
+            %             heatmap(P)
+            %             title("P")
+            %             sgtitle("Center Fixational Micro Saccades Correlation parameters for Left and Right")
+            %
 
 
 
@@ -435,6 +440,17 @@ classdef FixationTargets < ArumeExperimentDesigns.EyeTracking
             ylabel('Torsion')
         end
 
+         function [out, options] = Plot_XY(this)
+
+            s = this.Session.samplesDataTable;
+
+            figure
+            plot(s.LeftX, s.LeftY);
+            hold
+            plot(s.RightX, s.RightY);
+
+            set(gca,'xlim',[-40 40], 'ylim', [-30 30])
+         end
     end
 end
 

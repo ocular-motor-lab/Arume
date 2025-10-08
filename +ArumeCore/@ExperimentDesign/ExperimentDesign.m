@@ -204,9 +204,36 @@ classdef ExperimentDesign < handle
     end
 
     methods (Access = private)
-        
+
+        %% EyeTrackingLoadSamplesData
+        % Loads and processes eye-tracking sample data from different
+        % possible sources.
+        %
+        % This method loads raw eye-tracking data, performs optional cleaning,
+        % calibration, and formatting steps, and returns the results in both
+        % structured and table formats.
+        %
+        % Syntax:
+        %   [samplesDataTable, cleanedData, calibratedData, rawData] = ...
+        %       EyeTrackingLoadSamplesData(this, options)
+        %
+        % Inputs:
+        %
+        %   options - RunExperimentAnalysis options from ArumeCore.ExperimentDesign.RunDataAnalyses
+        %
+        % Outputs:
+        %   samplesDataTable - table containing the final processed and
+        %                      formatted eye-tracking data samples.
+        %
+        %   cleanedData      - The data after cleaning (e.g., filtering out
+        %                      artifacts or blinks), but before calibration.
+        %
+        %   calibratedData   - Eye-tracking data after calibration has been
+        %                      applied (if enabled in options).
+        %
+        %   rawData          - The unprocessed raw data loaded from source files.
         function [samplesDataTable, cleanedData, calibratedData, rawData] = EyeTrackingLoadSamplesData(this, options)
-            
+
             samplesDataTable = [];
             calibratedData = [];
             cleanedData = [];
@@ -312,6 +339,7 @@ classdef ExperimentDesign < handle
             calibrationSessions = arume.currentProject.findSessionBySubjectAndExperiment(this.Session.subjectCode, 'Calibration');
             calibrationTables = {};
             calibrationCRTables = {};
+            calibrationDPITables = {};
             calibrationTimes = NaT(0);
             calibrationNames = {};
             rownumber = 0;
@@ -330,16 +358,24 @@ classdef ExperimentDesign < handle
 
                 if ( isfield( calibrationSessions(i).analysisResults, 'calibrationTable') )
                     calibrationTables{rownumber} = calibrationSessions(i).analysisResults.calibrationTable;
-                    calibrationCRTables{rownumber} = calibrationSessions(i).analysisResults.calibrationTableCR;
                 else
                     calibrationTables{rownumber} = table();
+                end
+                if ( isfield( calibrationSessions(i).analysisResults, 'calibrationTableCR') )
+                    calibrationCRTables{rownumber} = calibrationSessions(i).analysisResults.calibrationTableCR;
+                else
                     calibrationCRTables{rownumber} = table();
+                end
+                if ( isfield( calibrationSessions(i).analysisResults, 'calibrationTableDPI') )
+                    calibrationDPITables{rownumber} = calibrationSessions(i).analysisResults.calibrationTableDPI;
+                else
+                    calibrationDPITables{rownumber} = table();
                 end
                 calibrationTimes(rownumber) = datetime(calibrationSessions(i).currentRun.pastTrialTable.DateTimeTrialStart{end});
                 calibrationNames{rownumber} =  calibrationSessions(i).name;
             end
 
-            calibrations = table(string(calibrationNames'), calibrationTables', calibrationCRTables', calibrationTimes','VariableNames',{'SessionName','CalibrationTable','CalibrationCRTable','DateTime'});
+            calibrations = table(string(calibrationNames'), calibrationTables', calibrationCRTables', calibrationDPITables', calibrationTimes','VariableNames',{'SessionName','CalibrationTable','CalibrationCRTable','CalibrationDPITable','DateTime'});
             calibrations = sortrows(calibrations,'DateTime');
 
             % loop through trials to find the relavant calibration
@@ -382,7 +418,7 @@ classdef ExperimentDesign < handle
             % if we did not find any calibration for the trials
             % we behave as if there were no calibrations
             if ( all(isnan(calibrationsForEachTrial)))
-                calibrationsForEachTrial = [];
+                calibrationsForEachTrial = nan((height(this.Session.currentRun.pastTrialTable)),1);
             end
 
             % Dealing with trials without a calibration. Add an
