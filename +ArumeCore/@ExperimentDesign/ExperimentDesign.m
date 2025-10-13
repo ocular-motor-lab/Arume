@@ -276,7 +276,7 @@ classdef ExperimentDesign < handle
                         calibrationFiles = {calibrationFiles};
                     end
                     
-                    if (length(calibrationFiles) == 1)
+                    if (isscalar(calibrationFiles))
                         calibrationFiles = repmat(calibrationFiles,size(dataFiles));
                     elseif length(calibrationFiles) ~= length(dataFiles)
                         error('ERROR preparing sample data set: The session should have the same number of calibration files as data files or 1 calibration file');
@@ -505,6 +505,8 @@ classdef ExperimentDesign < handle
                         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                         
                         % Find the samples that mark the begining and ends of trials
+                        validTrialMask = trialDataTable.EyeTrackerFrameNumberTrialStart <= max(samplesDataTable.RawFrameNumber);
+                        trialDataTable = trialDataTable(validTrialMask, :);
                         sampleStartTrial = nan(size(trialDataTable.TrialNumber));
                         sampleStopTrial = nan(size(trialDataTable.TrialNumber));
                         if ( ~any(strcmp(samplesDataTable.Properties.VariableNames, 'FileNumber')))

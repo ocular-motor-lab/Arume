@@ -31,7 +31,7 @@ classdef FixationTargets < ArumeExperimentDesigns.EyeTracking
             dlg.Calibration_Distance_H = { 10 '* (deg)' [1 3000] };
             dlg.Calibration_Distance_V = { 10 '* (deg)' [1 3000] };
 
-            dlg.BackgroundBrightness = 0;
+            dlg.BackgroundBrightness = 255/2;
         end
 
 
@@ -136,7 +136,7 @@ classdef FixationTargets < ArumeExperimentDesigns.EyeTracking
                         targetSizeDeg = this.ExperimentOptions.TargetSize;
                         crossLength = pixelsPerDegree * tand(targetSizeDeg); % in pixels
                         crossThickness = 2;
-                        crossColor = [255, 255, 255];
+                        crossColor = [0, 0, 0];
 
                         % Define cross lines centered on fixX, fixY
                         crossCoords = [ ...
