@@ -62,7 +62,7 @@ classdef FixationTargets < ArumeExperimentDesigns.EyeTracking
             t = ArumeCore.TrialTableBuilder();
 
             t.AddConditionVariable("TargetPosition", { ...
-                [0 0], [0 10], [10 0], [10 10], [-10 10], [-10 -10], [10 -10], ...
+                [0 0], [0 10], [10 0], [10 10], [-10 10], [-10 -10], [10 -10] [-10 0], [0 -10] ...
                 [0 2], [0 4], [0 6], [0 8], [0 -2], [0 -4], [0 -6], [0 -8], ...
                 [2 0], [4 0], [6 0], [8 0], [-2 0], [-4 0], [-6 0], [-8 0], ...
                 [2 2], [4 4], [6 6], [8 8], [-2 2], [-4 4], [-6 6], [-8 8], ...
@@ -445,12 +445,58 @@ classdef FixationTargets < ArumeExperimentDesigns.EyeTracking
             s = this.Session.samplesDataTable;
 
             figure
-            plot(s.LeftX, s.LeftY);
+            plot(s.LeftX, s.LeftY,'o','MarkerSize',3);
             hold
-            plot(s.RightX, s.RightY);
+            plot(s.RightX, s.RightY,'o','MarkerSize',3);
 
             set(gca,'xlim',[-40 40], 'ylim', [-30 30])
          end
+         
+         function [out, options] = Plot_PositionVelocity(this)
+
+             p = this.Session.analysisResults.SlowPhases.X_MeanPosition;
+             pp = round(p/2.5)*2.5;
+             [means,pred,grp] = grpstats(this.Session.analysisResults.SlowPhases.X_MeanVelocity,pp, ["mean","predci","gname"],"Alpha",0.1);
+             figure
+             subplot(2,2,1)
+             plot(str2double(grp), means,'o')
+             set(gca,'xlim',[-15 15], 'ylim', [-3 3])
+             xlabel('Horizontal position (deg)')
+             ylabel('Horizontal drift velocity (deg/s)')
+
+             p = this.Session.analysisResults.SlowPhases.Y_MeanPosition;
+             pp = round(p/2.5)*2.5;
+             [means,pred,grp] = grpstats(this.Session.analysisResults.SlowPhases.Y_MeanVelocity,pp, ["mean","predci","gname"],"Alpha",0.1);
+             
+             subplot(2,2,2)
+             plot(str2double(grp), means,'o')
+             xlabel('Vertical position (deg)')
+             ylabel('Vertical drift velocity (deg/s)')
+             set(gca,'xlim',[-15 15], 'ylim', [-3 3])
+
+
+
+             p = this.Session.analysisResults.SlowPhases.Left_X_MeanPosition - this.Session.analysisResults.SlowPhases.Right_X_MeanPosition;
+             v = this.Session.analysisResults.SlowPhases.Left_X_MeanVelocity - this.Session.analysisResults.SlowPhases.Right_X_MeanVelocity;
+             pp = round(p*2.5)/2.5;
+             [means,pred,grp] = grpstats(v,pp, ["mean","predci","gname"],"Alpha",0.1);
+             
+             subplot(2,2,3)
+             plot(str2double(grp), means,'o')
+             set(gca,'xlim',[-5 5], 'ylim', [-3 3])
+             xlabel('Vergence position (deg)')
+             ylabel('Vergence drift velocity (deg/s)')
+
+             % p = this.Session.analysisResults.SlowPhases.Y_MeanPosition;
+             % pp = round(p/2.5)*2.5;
+             % [means,pred,grp] = grpstats(this.Session.analysisResults.SlowPhases.Y_MeanVelocity,pp, ["mean","predci","gname"],"Alpha",0.1);
+             % 
+             % subplot(2,2,4)
+             % plot(str2double(grp), means,'o')
+
+             % set(gca,'xlim',[-15 15], 'ylim', [-3 3])
+         end
+         
     end
 end
 
