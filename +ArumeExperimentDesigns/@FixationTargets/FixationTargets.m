@@ -102,7 +102,7 @@ classdef FixationTargets < ArumeExperimentDesigns.EyeTracking
                         thisTrialData.TargetPosition(2)) );
                 end
 
-                while secondsRemaining > -5
+                while secondsRemaining > 0
                     secondsElapsed      = GetSecs - thisTrialData.TimeStartLoop;
                     secondsRemaining    = this.ExperimentOptions.TrialDuration - secondsElapsed;
 
