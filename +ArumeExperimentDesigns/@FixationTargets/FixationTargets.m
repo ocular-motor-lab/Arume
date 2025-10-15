@@ -456,36 +456,38 @@ classdef FixationTargets < ArumeExperimentDesigns.EyeTracking
 
              p = this.Session.analysisResults.SlowPhases.X_MeanPosition;
              pp = round(p/2.5)*2.5;
-             [means,pred,grp] = grpstats(this.Session.analysisResults.SlowPhases.X_MeanVelocity,pp, ["mean","predci","gname"],"Alpha",0.1);
+             [means,pred,grp,sem] = grpstats(this.Session.analysisResults.SlowPhases.X_MeanVelocity,pp, ["median","predci","gname", "sem"],"Alpha",0.1);
              figure
              subplot(2,2,1)
-             plot(str2double(grp), means,'o')
+             errorbar(str2double(grp), means, sem,'o')
              set(gca,'xlim',[-15 15], 'ylim', [-3 3])
              xlabel('Horizontal position (deg)')
              ylabel('Horizontal drift velocity (deg/s)')
+             title("fixation data")
 
              p = this.Session.analysisResults.SlowPhases.Y_MeanPosition;
              pp = round(p/2.5)*2.5;
-             [means,pred,grp] = grpstats(this.Session.analysisResults.SlowPhases.Y_MeanVelocity,pp, ["mean","predci","gname"],"Alpha",0.1);
+             [means,pred,grp,sem] = grpstats(this.Session.analysisResults.SlowPhases.Y_MeanVelocity,pp, ["median","predci","gname", "sem"],"Alpha",0.1);
              
              subplot(2,2,2)
-             plot(str2double(grp), means,'o')
+             errorbar(str2double(grp)*-1, means*-1, sem,'o')
              xlabel('Vertical position (deg)')
-             ylabel('Vertical drift velocity (deg/s)')
+             ylabel({'Vertical drift velocity (deg/s)' ; '*-(y) to correct for flipped sign in data collection'}) 
              set(gca,'xlim',[-15 15], 'ylim', [-3 3])
-
+             title("fixation data")
 
 
              p = this.Session.analysisResults.SlowPhases.Left_X_MeanPosition - this.Session.analysisResults.SlowPhases.Right_X_MeanPosition;
              v = this.Session.analysisResults.SlowPhases.Left_X_MeanVelocity - this.Session.analysisResults.SlowPhases.Right_X_MeanVelocity;
              pp = round(p*2.5)/2.5;
-             [means,pred,grp] = grpstats(v,pp, ["mean","predci","gname"],"Alpha",0.1);
+             [means,pred,grp,sem] = grpstats(v,pp, ["median","predci","gname", "sem"],"Alpha",0.1);
              
              subplot(2,2,3)
-             plot(str2double(grp), means,'o')
+             errorbar(str2double(grp), means, sem,'o')
              set(gca,'xlim',[-5 5], 'ylim', [-3 3])
              xlabel('Vergence position (deg)')
              ylabel('Vergence drift velocity (deg/s)')
+             title("fixation data")
 
              % p = this.Session.analysisResults.SlowPhases.Y_MeanPosition;
              % pp = round(p/2.5)*2.5;
