@@ -24,7 +24,9 @@ classdef FixationTargets < ArumeExperimentDesigns.EyeTracking
             dlg.DisplayOptions.ScreenDistance = { 67 '* (cm)' [1 3000] };
 
             dlg.TrialDuration =  { 10 '* (s)' [1 100] };
-            dlg.NumberRepetitions = 10;
+            dlg.NumberRepetitions = 10;            
+            dlg.DisplayOptions.SelectedScreen = { 1 '* (screen)' [0 5] };
+
 
             dlg.TargetSize = 1;
             dlg.Calibration_Type = { {'Center dot' '5 dots' '{9 dots}' '13 dots' '17 dots'} };
