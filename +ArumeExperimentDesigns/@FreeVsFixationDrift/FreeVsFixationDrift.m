@@ -147,7 +147,7 @@ classdef FreeVsFixationDrift < ArumeExperimentDesigns.EyeTracking
             
             
             lastFlipTime                        = Screen('Flip', graph.window);
-            secondsRemaining                    = trialDuration;
+            secondsRemaining                    = trialDuration + 2;
             thisTrialData.TimeStartLoop         = lastFlipTime;
             if ( ~isempty(this.eyeTracker) )
                 thisTrialData.EyeTrackerFrameStartLoop = this.eyeTracker.RecordEvent(sprintf('TRIAL_START_LOOP %d %d', thisTrialData.TrialNumber, thisTrialData.Condition) );
@@ -161,7 +161,28 @@ classdef FreeVsFixationDrift < ArumeExperimentDesigns.EyeTracking
                 % --- Drawing of stimulus -----------------------------------------
                 % -----------------------------------------------------------------
 
+                [mx, my] = RectCenter(this.Graph.wRect);
 
+                % Fixation cross parameters
+                crossLength = pixelsPerDegree * tand(1); % in pixels
+                crossThickness = 2;
+                crossColor = [0, 0, 0];
+
+                % Define cross lines centered on fixX, fixY
+                crossCoords = [ ...
+                    -crossLength/2, 0; ...
+                    crossLength/2, 0; ...
+                    0, -crossLength/2; ...
+                    0,  crossLength/2 ...
+                    ]';
+
+                thisTrialData.StartFixationStim = this.samplesDataTable.RawFrameNumber;
+
+                Screen('DrawLines', graph.window, crossCoords, crossThickness, crossColor, [mx, my], 2);
+            
+                this.Graph.Flip(this, thisTrialData, secondsRemaining);
+                thisTrialData.StartFixationStim = this.samplesDataTable.RawFrameNumber;
+                
                 %-- Find the center of the screen
                 [mx, my] = RectCenter(graph.wRect);
                 fixRect = [0 0 10 10];
