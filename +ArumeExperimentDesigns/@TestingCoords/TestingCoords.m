@@ -1,4 +1,4 @@
-classdef FreeVsFixationDrift < ArumeExperimentDesigns.EyeTracking
+classdef TestingCoords < ArumeExperimentDesigns.EyeTracking
     %OPTOKINETICTORSION Summary of this class goes here
     %   Detailed explanation goes here
 
@@ -6,7 +6,6 @@ classdef FreeVsFixationDrift < ArumeExperimentDesigns.EyeTracking
         fixRad = 20;
         fixColor = [255 0 0];
         targetPositions =[];
-        stimTexture = [];
     end
 
     % ---------------------------------------------------------------------
@@ -26,8 +25,6 @@ classdef FreeVsFixationDrift < ArumeExperimentDesigns.EyeTracking
 
             dlg.TrialDuration =  { 10 '* (s)' [1 100] };
             dlg.NumberRepetitions = 10;
-            dlg.StimulusContrast0to100 = {80 '* (%)' [0 100] };
-            dlg.StimSizeDeg = {15 '* (deg)' [1 100] };
 
             dlg.TargetSize = 1;
             dlg.Calibration_Type = { {'Center dot' '5 dots' '{9 dots}' '13 dots' '17 dots'} };
@@ -62,125 +59,105 @@ classdef FreeVsFixationDrift < ArumeExperimentDesigns.EyeTracking
                     this.targetPositions = {[0,0],[h,0],[-h,0],[0,v],[0,-v],[h,v],[h,-v],[-h,v],[-h,-v],...
                         [h/temp,0],[-h/temp,0],[0,v/temp],[0,-v/temp],[h/temp,v/temp],[h/temp,-v/temp],[-h/temp,v/temp],[-h/temp,-v/temp]};
             end
-
-            % %% trial table for fixation targets
-            % t = ArumeCore.TrialTableBuilder();
-            % 
-            % t.AddConditionVariable("TargetPosition", { ...
-            %     [0 0], [0 10], [10 0], [10 10], [-10 10], [-10 -10], [10 -10] [-10 0], [0 -10] ...
-            %     [0 2], [0 4], [0 6], [0 8], [0 -2], [0 -4], [0 -6], [0 -8], ...
-            %     [2 0], [4 0], [6 0], [8 0], [-2 0], [-4 0], [-6 0], [-8 0], ...
-            %     [2 2], [4 4], [6 6], [8 8], [-2 2], [-4 4], [-6 6], [-8 8], ...
-            %     [2 -2], [4 -4], [6 -6], [8 -8], [-2 -2], [-4 -4], [-6 -6], [-8 -8] ...
-            %     });
-            % 
-            % t.AddBlock(1:height(t.ConditionTable), nReps);
-            % 
-            % trialSequence = 'Random';
-            % blockSequence = 'Sequential';
-            % blockSequenceRepeatitions = 1;
-            % abortAction = 'Repeat';
-            % trialsPerSession = 1000;  % You can use a large number if not splitting
-            % 
-            % trialTable = t.GenerateTrialTable(trialSequence, blockSequence, blockSequenceRepeatitions, abortAction, trialsPerSession);
-            
-            %% trial table for freeviewing images
             t = ArumeCore.TrialTableBuilder();
+
+            t.AddConditionVariable("TargetPosition", { ...
+                [0 0], [10 0], [0 0], [0 10], [0 0], [-10 0], [0 0] [0 -10], [0 0]});
+
+            % Add all conditions to a single block with N repetitions
             nReps = this.ExperimentOptions.NumberRepetitions;
+            t.AddBlock(1:height(t.ConditionTable), nReps);
 
-            t.AddConditionVariable("Image", {'01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20' ,'21', '22', '23' ,'24', '25', '26', '27' ,'28' ,'29' ,'30', '31' ,'32' ,'33', '34', '35', '36', '37', '38', '39', '40'}); %% currently allows for 40 images, numbered 01-40. add more if needed
-
-            t.AddBlock(1:height(t.ConditionTable), 1); %% same number of repetitions for the fixation targets and the images
-
-            trialSequence = 'Random';
+            trialSequence = 'Sequential';
             blockSequence = 'Sequential';
-            blockSequenceRepeatitions = nReps;
+            blockSequenceRepeatitions = 1;
             abortAction = 'Repeat';
-            trialsPerSession = 1000;
+            trialsPerSession = 1000;  % You can use a large number if not splitting
+
             trialTable = t.GenerateTrialTable(trialSequence, blockSequence, blockSequenceRepeatitions, abortAction, trialsPerSession);
         end
 
-        function [trialResult, thisTrialData] = runPreTrial( this, thisTrialData )
-            Enum = ArumeCore.ExperimentDesign.getEnum();
-            trialResult = Enum.trialResult.CORRECT;
-            
-            % JORGE AT THE MEETING
-            %experimentFolder = fileparts(mfilename('fullpath'));
-            %imageFile = fullfile(experimentFolder,[thisTrialData.Image '.jpg']);
-            % END JORGE
-            test = string(thisTrialData.Image);
-            imageFile = fullfile(fileparts(mfilename('fullpath')),[test + ".jpeg"]);
-            
-            I = imread(imageFile);
-                
-            monitorWidthPix     = this.Graph.wRect(3);
-            monitorWidthCm      = this.ExperimentOptions.DisplayOptions.ScreenWidth;
-            monitorDistanceCm   = this.ExperimentOptions.DisplayOptions.ScreenDistance;
-            stimSizeDeg         = this.ExperimentOptions.StimSizeDeg;
 
-            % we will asume that pixels are square
-            monitorWidthDeg     = 2*atand(monitorWidthCm/monitorDistanceCm/2);
-            % asuming linearity (not completely true for very large displays
-            %             pixelsPerDeg        = monitorWidthPix/monitorWidthDeg;
-            %             stimSizePix         = pixelsPerDeg * stimSizeDeg;
+        function [trialResult, thisTrialData] = runTrial(this, thisTrialData)
+            try
+                Enum = ArumeCore.ExperimentDesign.getEnum();
+                graph = this.Graph;
+                trialResult = Enum.trialResult.CORRECT;
 
-            % non linear aproximation
-            stimSizeCm  = 2*tand(stimSizeDeg/2)*monitorDistanceCm
-            %stimSizePix = stimSizeCm/monitorWidthCm*monitorWidthPix;
-            stimSizePix = (monitorWidthPix/monitorWidthCm)*stimSizeCm
+                lastFlipTime        = GetSecs;
+                secondsRemaining    = this.ExperimentOptions.TrialDuration;
+                thisTrialData.TimeStartLoop = lastFlipTime;
 
-            Isquare = uint8(double(I(:,(size(I,2) - size(I,1))/2+(1:(size(I,1))),:,:))*this.ExperimentOptions.StimulusContrast0to100/100);
-            Isquare = imresize(Isquare, [stimSizePix stimSizePix], 'bilinear');
-            this.stimTexture = Screen('MakeTexture', this.Graph.window, Isquare);
-            
+                if (~isempty(this.eyeTracker))
+                    thisTrialData.EyeTrackerFrameStartLoop = this.eyeTracker.RecordEvent( ...
+                        sprintf('TRIAL_START_LOOP %d %d [%d %d]', ...
+                        thisTrialData.TrialNumber, ...
+                        thisTrialData.Condition, ...
+                        thisTrialData.TargetPosition(1), ...
+                        thisTrialData.TargetPosition(2)) );
+                end
+
+                while secondsRemaining > 0
+                    secondsElapsed      = GetSecs - thisTrialData.TimeStartLoop;
+                    secondsRemaining    = this.ExperimentOptions.TrialDuration - secondsElapsed;
+
+                    if secondsRemaining > 0
+                        %-- Draw fixation spot as a white cross (+)
+                        Screen('FillRect', graph.window, this.ExperimentOptions.BackgroundBrightness);
+
+                        [mx, my] = RectCenter(this.Graph.wRect);
+
+                        % Get the stimulus position in degrees from the trial table
+                        targetDeg = thisTrialData.TargetPosition{1};
+                        dx = targetDeg(1);
+                        dy = targetDeg(2);
+
+                        % === LOG POSITION INTO TRIAL DATA ===
+                        thisTrialData.StimulusPosition_X = targetDeg(1);
+                        thisTrialData.StimulusPosition_Y = targetDeg(2);
+
+                        % Convert visual degrees to pixels
+                        pixelsPerDegree = this.Graph.pxWidth / this.ExperimentOptions.DisplayOptions.ScreenWidth * ...
+                            this.ExperimentOptions.DisplayOptions.ScreenDistance;
+
+                        targetHPix = pixelsPerDegree * tand(dx);
+                        targetYPix = pixelsPerDegree * tand(dy);
+
+                        % Fixation location
+                        fixX = mx + targetHPix / 2;
+                        fixY = my + targetYPix / 2;
+
+                        % Fixation cross parameters
+                        targetSizeDeg = this.ExperimentOptions.TargetSize;
+                        crossLength = pixelsPerDegree * tand(targetSizeDeg); % in pixels
+                        crossThickness = 2;
+                        crossColor = [0, 0, 0];
+
+                        % Define cross lines centered on fixX, fixY
+                        crossCoords = [ ...
+                            -crossLength/2, 0; ...
+                            crossLength/2, 0; ...
+                            0, -crossLength/2; ...
+                            0,  crossLength/2 ...
+                            ]';
+
+                        Screen('DrawLines', graph.window, crossCoords, crossThickness, crossColor, [fixX, fixY], 2);
+
+                        Screen('DrawingFinished', graph.window);
+                    else
+                        Screen('FillRect', graph.window, this.ExperimentOptions.BackgroundBrightness);
+                        Screen('DrawingFinished', graph.window);
+                    end
+
+                    % Flip screen buffer
+                    this.Graph.Flip();
+                end
+
+            catch ex
+                rethrow(ex)
+            end
         end
 
-        function [trialResult, thisTrialData] = runTrial( this, thisTrialData )
-           
-            Enum = ArumeCore.ExperimentDesign.getEnum();
-            graph = this.Graph;
-            
-            trialDuration = this.ExperimentOptions.TrialDuration;
-            
-            %-- add here the trial code
-            Screen('FillRect', graph.window, 128);
-            
-            
-            lastFlipTime                        = Screen('Flip', graph.window);
-            secondsRemaining                    = trialDuration;
-            thisTrialData.TimeStartLoop         = lastFlipTime;
-            if ( ~isempty(this.eyeTracker) )
-                thisTrialData.EyeTrackerFrameStartLoop = this.eyeTracker.RecordEvent(sprintf('TRIAL_START_LOOP %d %d', thisTrialData.TrialNumber, thisTrialData.Condition) );
-            end
-            while secondsRemaining > 0
-                
-                secondsElapsed      = GetSecs - thisTrialData.TimeStartLoop;
-                secondsRemaining    = trialDuration - secondsElapsed;
-                
-                % -----------------------------------------------------------------
-                % --- Drawing of stimulus -----------------------------------------
-                % -----------------------------------------------------------------
-
-
-                %-- Find the center of the screen
-                [mx, my] = RectCenter(graph.wRect);
-                fixRect = [0 0 10 10];
-                fixRect = CenterRectOnPointd( fixRect, mx, my );
-
-                Screen('DrawTexture', this.Graph.window, this.stimTexture, [],[]);
-
-                this.Graph.Flip(this, thisTrialData, secondsRemaining);
-                % -----------------------------------------------------------------
-                % --- END Drawing of stimulus -------------------------------------
-                % -----------------------------------------------------------------
-                
-                
-            end
-            
-            trialResult = Enum.trialResult.CORRECT;
-
-        end
-            
     end
 
     methods ( Access = public )
@@ -474,39 +451,36 @@ classdef FreeVsFixationDrift < ArumeExperimentDesigns.EyeTracking
 
              p = this.Session.analysisResults.SlowPhases.X_MeanPosition;
              pp = round(p/2.5)*2.5;
-             [means,pred,grp,sem] = grpstats(this.Session.analysisResults.SlowPhases.X_MeanVelocity,pp, ["median","predci","gname", "sem"],"Alpha",0.1);
+             [means,pred,grp] = grpstats(this.Session.analysisResults.SlowPhases.X_MeanVelocity,pp, ["mean","predci","gname"],"Alpha",0.1);
              figure
              subplot(2,2,1)
-             errorbar(str2double(grp), means, sem,'o')
+             plot(str2double(grp), means,'o')
              set(gca,'xlim',[-15 15], 'ylim', [-3 3])
              xlabel('Horizontal position (deg)')
              ylabel('Horizontal drift velocity (deg/s)')
-             title("freeview data")
 
              p = this.Session.analysisResults.SlowPhases.Y_MeanPosition;
              pp = round(p/2.5)*2.5;
-             [means,pred,grp,sem] = grpstats(this.Session.analysisResults.SlowPhases.Y_MeanVelocity,pp, ["median","predci","gname", "sem"],"Alpha",0.1);
+             [means,pred,grp] = grpstats(this.Session.analysisResults.SlowPhases.Y_MeanVelocity,pp, ["mean","predci","gname"],"Alpha",0.1);
              
              subplot(2,2,2)
-             errorbar(str2double(grp)* -1, means* -1, sem,'o')
+             plot(str2double(grp), means,'o')
              xlabel('Vertical position (deg)')
-             ylabel({'Vertical drift velocity (deg/s)' ; '*-(y) to correct for flipped sign in data collection'}) 
+             ylabel('Vertical drift velocity (deg/s)')
              set(gca,'xlim',[-15 15], 'ylim', [-3 3])
-             title("freeview data")
 
 
 
              p = this.Session.analysisResults.SlowPhases.Left_X_MeanPosition - this.Session.analysisResults.SlowPhases.Right_X_MeanPosition;
              v = this.Session.analysisResults.SlowPhases.Left_X_MeanVelocity - this.Session.analysisResults.SlowPhases.Right_X_MeanVelocity;
              pp = round(p*2.5)/2.5;
-             [means,pred,grp,sem] = grpstats(v,pp, ["median","predci","gname", "sem"],"Alpha",0.1);
+             [means,pred,grp] = grpstats(v,pp, ["mean","predci","gname"],"Alpha",0.1);
              
              subplot(2,2,3)
-             errorbar(str2double(grp), means, sem,'o')
+             plot(str2double(grp), means,'o')
              set(gca,'xlim',[-5 5], 'ylim', [-3 3])
              xlabel('Vergence position (deg)')
              ylabel('Vergence drift velocity (deg/s)')
-             title("freeview data")
 
              % p = this.Session.analysisResults.SlowPhases.Y_MeanPosition;
              % pp = round(p/2.5)*2.5;
@@ -520,3 +494,7 @@ classdef FreeVsFixationDrift < ArumeExperimentDesigns.EyeTracking
          
     end
 end
+
+
+
+
