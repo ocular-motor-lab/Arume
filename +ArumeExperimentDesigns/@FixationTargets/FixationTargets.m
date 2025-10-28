@@ -71,11 +71,11 @@ classdef FixationTargets < ArumeExperimentDesigns.EyeTracking
 
             % Add all conditions to a single block with N repetitions
             nReps = this.ExperimentOptions.NumberRepetitions;
-            t.AddBlock(1:height(t.ConditionTable), nReps);
+            t.AddBlock(1:height(t.ConditionTable), 1);
 
             trialSequence = 'Random';
             blockSequence = 'Sequential';
-            blockSequenceRepeatitions = 1;
+            blockSequenceRepeatitions = nReps;
             abortAction = 'Repeat';
             trialsPerSession = 1000;  % You can use a large number if not splitting
 
