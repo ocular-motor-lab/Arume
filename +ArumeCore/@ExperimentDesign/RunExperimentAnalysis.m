@@ -89,16 +89,26 @@ if ( options.Prepare_For_Analysis_And_Plots )
     opts = fieldnames(optionsf);
     s = this.GetExperimentOptionsDialog(1);
     for i=1:length(opts)
-        if ( isempty(optionsf.(opts{i})))
-            newSessionDataTable.(['AnalysisOption_' opts{i}]) = {''};
-        elseif ( ~ischar( optionsf.(opts{i})) && numel(optionsf.(opts{i})) <= 1)
-            newSessionDataTable.(['AnalysisOption_' opts{i}]) = optionsf.(opts{i});
-        elseif (isfield( s, opts{i}) && iscell(s.(opts{i})) && iscell(s.(opts{i}){1}) && length(s.(opts{i}){1}) >1)
-            newSessionDataTable.(['AnalysisOption_' opts{i}]) = categorical(cellstr(optionsf.(opts{i})));
-        elseif (~ischar(optionsf.(opts{i})) && numel(optionsf.(opts{i})) > 1 )
-            newSessionDataTable.(['AnalysisOption_' opts{i}]) = {optionsf.(opts{i})};
+        varName = ['AnalysisOption_' opts{i}];
+
+        % If too long, keep the END of the name
+        if length(varName) > namelengthmax
+            warning('Variable name too long. Truncating end of: %s', varName);
+            % Keep the last part that fits within MATLAB's limit
+            varName = varName(end-namelengthmax+1:end);
+        end
+
+        % Assign to table
+        if isempty(optionsf.(opts{i}))
+            newSessionDataTable.(varName) = {''};
+        elseif ~ischar(optionsf.(opts{i})) && numel(optionsf.(opts{i})) <= 1
+            newSessionDataTable.(varName) = optionsf.(opts{i});
+        elseif isfield(s, opts{i}) && iscell(s.(opts{i})) && iscell(s.(opts{i}){1}) && length(s.(opts{i}){1}) > 1
+            newSessionDataTable.(varName) = categorical(cellstr(optionsf.(opts{i})));
+        elseif ~ischar(optionsf.(opts{i})) && numel(optionsf.(opts{i})) > 1
+            newSessionDataTable.(varName) = {optionsf.(opts{i})};
         else
-            newSessionDataTable.(['AnalysisOption_' opts{i}]) = string(optionsf.(opts{i}));
+            newSessionDataTable.(varName) = string(optionsf.(opts{i}));
         end
     end
 

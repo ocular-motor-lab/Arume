@@ -527,6 +527,282 @@ classdef FreeVsFixationDrift < ArumeExperimentDesigns.EyeTracking
 
              % set(gca,'xlim',[-15 15], 'ylim', [-3 3])
          end
-         
+         function [out, options] = Plot_DriftDiffusionAnalysis(this)
+            slowPhases = this.Session.analysisResults.SlowPhases;
+            data = this.Session.samplesDataTable;
+            time = data.Time;
+
+            eyes = ["right", "left"];
+
+            for jk = 1:length(eyes)
+
+                eye = eyes(jk);
+                figure;
+                hold on
+                %% Define Colors
+               
+                %% Initialize variables for analysis
+                D_est_all = [];
+                avg_taus = [];
+                all_meanDispY = [];
+                all_meanDispX = [];
+                all_dur = [];
+                num = 0;
+
+                samplerate = data.Properties.UserData.sampleRate;
+                dt = 1 / samplerate;          % Sampling interval
+
+                minsamplelag = round(50/1000*samplerate);
+                maxsamplelag = round(250/1000*samplerate);
+                lags = minsamplelag:maxsamplelag;          % Corresponding to 50 ms to 250 ms
+                all_msd_raw = [];
+                all_msd_det = [];
+                all_n_raw = [];
+                all_n_det = [];
+                trend_slopes_X = [];
+                trend_slopes_Y = [];
+                trend_intercepts_X = [];
+                trend_intercepts_Y = [];
+
+                slowPhases = slowPhases(slowPhases.DurationMs >= 200,:); % keep only long fixations (>100ms)
+
+                %% Main analysis loop over slow phases
+                for i = 1:size(slowPhases,1)
+                    % Extract data for current slow phase
+                    startInd = slowPhases.StartIndex(i) + 50;
+                    endInd = slowPhases.EndIndex(i);
+
+                    if strcmp(eye, 'right')
+                        meanDispX = slowPhases.Right_X_MeanVelocity(i)*(slowPhases.DurationMs(i)/1000);
+                        meanDispY = slowPhases.Right_Y_MeanVelocity(i)*(slowPhases.DurationMs(i)/1000);
+                        eyeX = data.RightX(startInd:endInd) * 60; % degrees to arcminutes
+                        eyeY = data.RightY(startInd:endInd) * -60;
+                    else
+                        meanDispX = slowPhases.Left_X_MeanVelocity(i)*(slowPhases.DurationMs(i)/1000);
+                        meanDispY = slowPhases.Left_Y_MeanVelocity(i)*(slowPhases.DurationMs(i)/1000);
+                        eyeX = data.LeftX(startInd:endInd) * 60; % degrees to arcminutes
+                        eyeY = data.LeftY(startInd:endInd) * -60;
+                    end
+
+                    % tic
+                    badSamples = eyeX/60 > 15 | eyeX/60 < -15 | eyeY/60 > 15 | eyeY/60 < -15;
+                    if ( sum(badSamples)>0)
+                        disp('baaaaaaaaaad');
+                        continue;
+                    end
+                    % eyeX(badSamples) = nan;
+                    % eyeY(badSamples) = nan;
+                    % toc
+
+                    % Skip if too many NaNs
+                    if mean(isnan(eyeX) | isnan(eyeY)) > 0.1
+                        disp('baaaaaaaaaad');
+                        continue
+                    end
+
+
+                    % Build time vector
+                    N = length(eyeX);
+                    t = (0:N-1)' * dt;
+
+                    %% --- Fit and remove linear trend ---
+                    p_x = polyfit(t, eyeX, 1);
+                    p_y = polyfit(t, eyeY, 1);
+
+                    trend_slopes_X(i,1) = p_x(1);
+                    trend_slopes_Y(i,1) = p_y(1);
+                    trend_intercepts_X(i,1) = p_x(2);
+                    trend_intercepts_Y(i,1) = p_y(2);
+
+                    eyeX_detrended = eyeX - polyval(p_x, t);
+                    eyeY_detrended = eyeY - polyval(p_y, t);
+
+                    %% --- Compute MSDs for raw and detrended traces ---
+                    [taus_raw, msd_raw, n_raw] = compute_msd(eyeX, eyeY, dt, lags);
+                    [taus_det, msd_det, n_det] = compute_msd(eyeX_detrended, eyeY_detrended, dt, lags);
+
+                    if isempty(avg_taus)
+                        avg_taus = taus_raw;
+                    end
+
+                    all_msd_raw(i,:) = msd_raw;
+                    all_msd_det(i,:) = msd_det;
+                    all_n_raw(i,:) = n_raw;
+                    all_n_det(i,:) = n_det;
+
+                    all_meanDispY = [all_meanDispY; meanDispY*-1];
+                    all_meanDispX = [all_meanDispX; meanDispX];
+                    all_dur = [all_dur; slowPhases.DurationMs(i)/1000];
+
+
+                    % Plot and label based on condition
+
+                    plot(taus_raw, msd_raw, '-', 'HandleVisibility', 'off');
+                    num = num + 1;
+                    xlabel(['Number of phases: ' num2str(num)]);
+                    title(['Eye: ' num2str(eye) ' Diffusion per Slow Phase (not detrended)']);
+
+                    % Estimate diffusion constant from linear fit slope
+                    validIdx = ~isnan(msd_raw);
+                    if sum(validIdx) < 2
+                        disp('baaaaaaaaaad');
+                        continue;  % Not enough points to fit a line
+                    end
+
+                    p = polyfit(taus_raw(validIdx), msd_raw(validIdx), 1);
+                    D_est = p(1) / 4; % arcmin^2/sec
+                    D_est_all = [D_est_all; D_est];
+
+                end
+                hold off
+
+                %% Plot average MSD across all slow phases
+                if ~isempty(all_msd_raw)
+                    figure;
+                    subplot(2,1,1);
+                    msd_raw_avg = mean(all_msd_raw, 'omitnan', Weights=all_n_raw);
+                    msd_det_avg = mean(all_msd_det, 'omitnan', Weights=all_n_det);
+
+                    %% --- Plot comparison ---
+                    
+                    plot(avg_taus, msd_raw_avg, 'b', 'LineWidth', 1.5); hold on;
+                    plot(avg_taus, msd_det_avg, 'k--', 'LineWidth', 1.5);
+
+                    xlabel('Time lag (s)');
+                    ylabel('Average MSD (arcmin^2)');
+                    title(['Eye: ' num2str(eye) ' Weighted average MSD across ' num2str(num) ' slow phases']);
+                    grid on;
+
+                    % --- Fit and overlay linear trends for diffusion constants ---
+                    p_raw = polyfit(avg_taus, msd_raw_avg, 1);
+                    p_det = polyfit(avg_taus, msd_det_avg, 1);
+                    plot(avg_taus, polyval(p_raw, avg_taus), 'b:','LineWidth', 1);
+                    plot(avg_taus, polyval(p_det, avg_taus), 'k:','LineWidth', 1);
+                    legend('Raw MSD (systematic + random)', 'Detrended MSD (random only)', 'raw trend linear fit', 'detrended linear fit');
+
+                    D_raw = p_raw(1)/4;
+                    D_det = p_det(1)/4;
+
+                    text(avg_taus(end)*0.6, max(msd_raw_avg)*0.8, ...
+                        {['D_{raw} = ' num2str(D_raw, '%.3f') ' arcmin^2/s'], ...
+                        ['D_{detrended} = ' num2str(D_det, '%.3f') ' arcmin^2/s'], ...
+                        ['Reduction = ' num2str(100*(1 - D_det/D_raw), '%.1f') '%']});
+                end
+
+
+                %% Plot average MSD across all slow phases
+                if ~isempty(all_msd_raw)
+                    subplot(2,1,2);
+                    msd_raw_avg = mean(all_msd_raw, 'omitnan');
+                    msd_det_avg = mean(all_msd_det, 'omitnan');
+
+                    %% --- Plot comparison ---
+                    
+                    plot(avg_taus, msd_raw_avg, 'b', 'LineWidth', 1.5); hold on;
+                    plot(avg_taus, msd_det_avg, 'k--', 'LineWidth', 1.5);
+
+                    xlabel('Time lag (s)');
+                    ylabel('Average MSD (arcmin^2)');
+                    title(['Eye: ' num2str(eye) ' Unweighted average MSD across ' num2str(num) ' slow phases']);
+                    grid on;
+
+                    % --- Fit and overlay linear trends for diffusion constants ---
+                    p_raw = polyfit(avg_taus, msd_raw_avg, 1);
+                    p_det = polyfit(avg_taus, msd_det_avg, 1);
+                    plot(avg_taus, polyval(p_raw, avg_taus), 'b:','LineWidth', 1);
+                    plot(avg_taus, polyval(p_det, avg_taus), 'k:','LineWidth', 1);
+                    legend('Raw MSD (systematic + random)', 'Detrended MSD (random only)', 'raw linear fit', 'detrended linear fit');
+
+                    D_raw = p_raw(1)/4;
+                    D_det = p_det(1)/4;
+
+                    text(avg_taus(end)*0.6, max(msd_raw_avg)*0.8, ...
+                        {['D_{raw} = ' num2str(D_raw, '%.3f') ' arcmin^2/s'], ...
+                        ['D_{detrended} = ' num2str(D_det, '%.3f') ' arcmin^2/s'], ...
+                        ['Reduction = ' num2str(100*(1 - D_det/D_raw), '%.1f') '%']});
+                end
+
+                if exist('trend_slopes_X', 'var')
+                    figure;
+                    subplot(2,2,1);
+                    histogram(trend_slopes_X, 30);
+                    xlabel('Systematic drift velocity X (arcmin/s)');
+                    ylabel('Count');
+                    title(['Eye: ' num2str(eye) ' Distribution of X drift slopes']);
+
+                    subplot(2,2,2);
+                    histogram(trend_slopes_Y, 30);
+                    xlabel('Systematic drift velocity Y (arcmin/s)');
+                    ylabel('Count');
+                    title(['Eye: ' num2str(eye) ' Distribution of Y drift slopes']);
+
+                    subplot(2,2,[3 4]);
+                    hold on;
+                    quiver(zeros(size(trend_slopes_X)), zeros(size(trend_slopes_Y)), ...
+                        trend_slopes_X, trend_slopes_Y, 0, ...
+                        'Color', [0.7 0.7 0.7], 'MaxHeadSize', 0.1);
+
+                    % Mean drift vector in red
+                    quiver(0, 0, mean(trend_slopes_X, 'omitnan'), mean(trend_slopes_Y, 'omitnan'), ...
+                        0, 'r', 'LineWidth', 2, 'MaxHeadSize', 0.5);
+
+                    axis equal; grid on;
+                    xlabel('X drift velocity (arcmin/s)');
+                    ylabel('Y drift velocity (arcmin/s)');
+                    title(['Eye: ' num2str(eye) ' Systematic drift directions (gray) and mean (red)']);
+                end
+
+
+                %% weighted average displacement
+                dispX = mean(all_meanDispX, 'omitnan', Weights=all_dur);
+                dispY = mean(all_meanDispY, 'omitnan', Weights=all_dur);
+
+                %% --- Helper Functions --- %%
+            end
+
+            function [taus, msd, n] = compute_msd(x, y, dt, lags)  % edited to collect systematic drift
+                N = length(x);
+                taus = lags * dt;
+                msd = nan(size(lags));
+                n = nan(size(lags));
+                for idx = 1:length(lags)
+                    lag = lags(idx);
+                    dx = x(1+lag:N) - x(1:N-lag);
+                    dy = y(1+lag:N) - y(1:N-lag);
+                    msd(idx) = mean(dx.^2 + dy.^2, 'omitnan');
+                    n(idx) = sum(~isnan(dx.^2 + dy.^2));
+                end
+            end
+
+            function [taus, msd, n] = compute_msd_detrended(x, y, dt, lags)
+                % Remove overall linear trend before computing MSD
+                N = length(x);
+
+                % Build time vector
+                t = (0:N-1)' * dt;
+
+                % Fit linear trend to x and y
+                p_x = polyfit(t, x, 1);  % p_x(1) = slope (velocity)
+                p_y = polyfit(t, y, 1);
+
+                % Subtract trend from x and y (i.e., detrend)
+                x_detrended = x - polyval(p_x, t);
+                y_detrended = y - polyval(p_y, t);
+
+                % Compute MSD on detrended signal
+                taus = lags * dt;
+                msd = nan(size(lags));
+                n = nan(size(lags));
+                for idx = 1:length(lags)
+                    lag = lags(idx);
+                    dx = x_detrended(1+lag:N) - x_detrended(1:N-lag);
+                    dy = y_detrended(1+lag:N) - y_detrended(1:N-lag);
+                    msd(idx) = mean(dx.^2 + dy.^2, 'omitnan');
+                    n(idx) = sum(~isnan(dx.^2 + dy.^2));
+                end
+            end
+
+        end
     end
+    
 end
