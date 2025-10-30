@@ -24,11 +24,11 @@ classdef Calibration < ArumeExperimentDesigns.EyeTracking
             dlg.DisplayOptions.ScreenDistance = { 85 '* (cm)' [1 3000] }; 
             dlg.TrialDuration =  { 3 '* (s)' [1 100] };
             dlg.DisplayOptions.SelectedScreen = { 1 '* (screen)' [0 5] };
-            dlg.DisplayOptions.StereoMode = { 4 '* (mode)' [0 9] };  % 0=no stereo, 4=stereo
+            dlg.DisplayOptions.StereoMode = { 0 '* (mode)' [0 9] };  % 0=no stereo, 4=stereo
             dlg.NumberOfRepetitions = 1;
             
             %% Add new options
-            dlg.TargetSize = 10;
+            dlg.TargetSize = 3;
             dlg.Calibration_Type = { {'5 dots' '9 dots' '13 dots' '17 dots' '{Stereo}'} };
             dlg.Calibration_Distance_H = { 5 '* (deg)' [1 3000] };
             dlg.Calibration_Distance_V = { 5 '* (deg)' [1 3000] };
@@ -132,10 +132,10 @@ classdef Calibration < ArumeExperimentDesigns.EyeTracking
                     else
                         Screen('FillRect', graph.window, this.ExperimentOptions.BackgroundBrightness);
                         %-- Draw fixation spot
-                        [mx, my] = RectCenter(this.Graph.wRect);
-                        targetPix = this.Graph.pxWidth/this.ExperimentOptions.DisplayOptions.ScreenWidth * this.ExperimentOptions.DisplayOptions.ScreenDistance * tand(this.ExperimentOptions.TargetSize);
-                        targetHPix = this.Graph.pxWidth/this.ExperimentOptions.DisplayOptions.ScreenWidth * this.ExperimentOptions.DisplayOptions.ScreenDistance * tand(this.targetPositions{thisTrialData.TargetPosition}(1));
-                        targetYPix = this.Graph.pxWidth/this.ExperimentOptions.DisplayOptions.ScreenWidth * this.ExperimentOptions.DisplayOptions.ScreenDistance * tand(this.targetPositions{thisTrialData.TargetPosition}(2));
+                        [mx, my] = RectCenter(graph.wRect);
+                        targetPix = graph.pxWidth/this.ExperimentOptions.DisplayOptions.ScreenWidth * this.ExperimentOptions.DisplayOptions.ScreenDistance * tand(this.ExperimentOptions.TargetSize);
+                        targetHPix = graph.pxWidth/this.ExperimentOptions.DisplayOptions.ScreenWidth * this.ExperimentOptions.DisplayOptions.ScreenDistance * tand(this.targetPositions{thisTrialData.TargetPosition}(1));
+                        targetYPix = graph.pxWidth/this.ExperimentOptions.DisplayOptions.ScreenWidth * this.ExperimentOptions.DisplayOptions.ScreenDistance * tand(this.targetPositions{thisTrialData.TargetPosition}(2));
                         fixRect = [0 0 targetPix/2 targetPix/2];
                         fixRect = CenterRectOnPointd( fixRect, mx+targetHPix/2, my+targetYPix/2 );
                         Screen('FillOval', graph.window, this.fixColor, fixRect);

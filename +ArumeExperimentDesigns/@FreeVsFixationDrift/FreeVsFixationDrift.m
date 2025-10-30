@@ -44,7 +44,7 @@ classdef FreeVsFixationDrift < ArumeExperimentDesigns.EyeTracking
             Screen('Preference', 'SkipSyncTests', 0);                  % DO NOT skip sync tests (set to 1 or 2 for debugging only)
             Screen('Preference', 'VisualDebugLevel', 1);               % Minimize startup splash
             Screen('Preference', 'SuppressAllWarnings', 0);            % Show all warnings
-            Screen('Preference', 'ConserveVRAM', 4096);
+            Screen('Preference', 'ConserveVRAM', 0);
 
             h = this.ExperimentOptions.Calibration_Distance_H;
             v = this.ExperimentOptions.Calibration_Distance_V;
@@ -137,33 +137,32 @@ classdef FreeVsFixationDrift < ArumeExperimentDesigns.EyeTracking
             
         end
 
-        function [trialResult, thisTrialData] = runTrial( this, thisTrialData )
-           
+        function [trialResult, thisTrialData] = runTrial(this, thisTrialData)
             Enum = ArumeCore.ExperimentDesign.getEnum();
             graph = this.Graph;
-            
-            trialDuration = this.ExperimentOptions.TrialDuration + 3;
-            
-            %-- add here the trial code
-            Screen('FillRect', graph.window, 128);
-            
-            
-            lastFlipTime                        = Screen('Flip', graph.window);
-            secondsRemaining                    = trialDuration;
-            thisTrialData.TimeStartLoop         = lastFlipTime;
-            if ( ~isempty(this.eyeTracker) )
-                thisTrialData.EyeTrackerFrameStartLoop = this.eyeTracker.RecordEvent(sprintf('TRIAL_START_LOOP %d %d', thisTrialData.TrialNumber, thisTrialData.Condition) );
-            end
-            while secondsRemaining > 10
-                secondsElapsed   = GetSecs - thisTrialData.TimeStartLoop;
-                secondsRemaining = trialDuration - secondsElapsed;
+            trialDuration = this.ExperimentOptions.TrialDuration;
 
-                Screen('FillRect', this.Graph.window, this.ExperimentOptions.BackgroundBrightness);
+            % Get timing info
+            ifi = Screen('GetFlipInterval', graph.window); % inter-frame interval
+
+            % Start with a blank background
+            vbl = Screen('Flip', graph.window);
+
+            thisTrialData.TimeStartLoop = vbl;
+            trialResult = Enum.trialResult.CORRECT;
+
+            %----------------------------------
+            % 1️⃣  FIXATION PERIOD (first 3 s)
+            %----------------------------------
+            fixationDuration = 3; % or however long you want
+
+            while (GetSecs - thisTrialData.TimeStartLoop) < fixationDuration
+                Screen('FillRect', graph.window, this.ExperimentOptions.BackgroundBrightness);
 
                 [mx, my] = RectCenter(graph.wRect);
-                crossLength = 50; % in pixels
+                crossLength = 50;
                 crossThickness = 3;
-                crossColor = [0, 0, 0]; % red for visibility
+                crossColor = [0, 0, 0];
 
                 crossCoords = [ ...
                     -crossLength/2, 0; ...
@@ -172,38 +171,26 @@ classdef FreeVsFixationDrift < ArumeExperimentDesigns.EyeTracking
                     0,  crossLength/2 ...
                     ]';
 
-                Screen('DrawLines', this.Graph.window, crossCoords, crossThickness, crossColor, [mx, my], 2);
-                Screen('Flip', this.Graph.window); % ← key line
+                Screen('DrawLines', graph.window, crossCoords, crossThickness, crossColor, [mx, my], 2);
+
+                % Wait for next refresh and flip once per frame
+                vbl = Screen('Flip', graph.window, vbl + 0.5 * ifi);
             end
 
-            while secondsRemaining > 0
-                
-                secondsElapsed      = GetSecs - thisTrialData.TimeStartLoop;
-                secondsRemaining    = trialDuration - secondsElapsed;
-                
-                % -----------------------------------------------------------------
-                % --- Drawing of stimulus -----------------------------------------
-                % -----------------------------------------------------------------
-                thisTrialData.StartFixationStim = this.eyeTracker.RecordEvent('fix cross end');
-                %-- Find the center of the screen
-                [mx, my] = RectCenter(graph.wRect);
-                fixRect = [0 0 10 10];
-                fixRect = CenterRectOnPointd( fixRect, mx, my );
+            %----------------------------------
+            % 2️⃣  STIMULUS PERIOD
+            %----------------------------------
+            stimStart = GetSecs;
+            stimDuration = this.ExperimentOptions.TrialDuration;
 
-                Screen('DrawTexture', this.Graph.window, this.stimTexture, [],[]);
-
-                this.Graph.Flip(this, thisTrialData, secondsRemaining);
-                % -----------------------------------------------------------------
-                % --- END Drawing of stimulus -------------------------------------
-                % -----------------------------------------------------------------
-                
-                
+            while (GetSecs - stimStart) < stimDuration
+                Screen('FillRect', graph.window, this.ExperimentOptions.BackgroundBrightness);
+                Screen('DrawTexture', graph.window, this.stimTexture, [], []);
+                vbl = Screen('Flip', graph.window, vbl + 0.5 * ifi);
             end
-            
+
             trialResult = Enum.trialResult.CORRECT;
-
         end
-            
     end
 
     methods ( Access = public )
