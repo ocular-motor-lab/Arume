@@ -46,14 +46,14 @@ classdef VOGAnalysis < handle
             
             optionsDlg.Calibration.Calibration_Type = {'Pupil-CR|{Pupil}|DPI|None'};
             %optionsDlg.Calibration.ManualPostCalibration =  {'{0}','1' };
-            optionsDlg.Calibration.ManualPostCalibration.Left_Horizontal_Gain = 1;
-            optionsDlg.Calibration.ManualPostCalibration.Left_Horizontal_Offset = 0;
-            optionsDlg.Calibration.ManualPostCalibration.Left_Vertical_Gain = 1;
-            optionsDlg.Calibration.ManualPostCalibration.Left_Vertical_Offset = 0;
-            optionsDlg.Calibration.ManualPostCalibration.Right_Horizontal_Gain = 1;
-            optionsDlg.Calibration.ManualPostCalibration.Right_Horizontal_Offset = 0;
-            optionsDlg.Calibration.ManualPostCalibration.Right_Vertical_Gain = 1;
-            optionsDlg.Calibration.ManualPostCalibration.Right_Vertical_Offset = 0;
+            optionsDlg.Calibration.Adjust.Left_Horizontal_Gain = 1;
+            optionsDlg.Calibration.Adjust.Left_Horizontal_Offset = 0;
+            optionsDlg.Calibration.Adjust.Left_Vertical_Gain = 1;
+            optionsDlg.Calibration.Adjust.Left_Vertical_Offset = 0;
+            optionsDlg.Calibration.Adjust.Right_Horizontal_Gain = 1;
+            optionsDlg.Calibration.Adjust.Right_Horizontal_Offset = 0;
+            optionsDlg.Calibration.Adjust.Right_Vertical_Gain = 1;
+            optionsDlg.Calibration.Adjust.Right_Vertical_Offset = 0;
 
             % optionsDlg.Detection.Detection_Method = {'Manual|New|{Engbert}|cluster|Sai'};
             optionsDlg.Detection.Detection_Method = {'Manual|{Engbert}|cluster'};
@@ -265,15 +265,16 @@ classdef VOGAnalysis < handle
                         calibratedDataFile      = VOGAnalysis.CalibrateDataDPI(dataFile, calibrationTable);
                     case 'Pupil'
                         calibratedDataFile      = VOGAnalysis.CalibrateData(dataFile, calibrationTable);
+                    case 'None'
+                        calibratedDataFile      = VOGAnalysis.CalibrateData(dataFile, calibrationTable);
                 end
 
 
-                calibratedDataFile.LeftX = (calibratedDataFile.LeftX-params.Calibration.ManualPostCalibration.Left_Horizontal_Offset)*params.Calibration.ManualPostCalibration.Left_Horizontal_Gain;
-                calibratedDataFile.LeftY = (calibratedDataFile.LeftY-params.Calibration.ManualPostCalibration.Left_Vertical_Offset)*params.Calibration.ManualPostCalibration.Left_Vertical_Gain;
+                calibratedDataFile.LeftX = (calibratedDataFile.LeftX-params.Calibration.Adjust.Left_Horizontal_Offset)*params.Calibration.Adjust.Left_Horizontal_Gain;
+                calibratedDataFile.LeftY = (calibratedDataFile.LeftY-params.Calibration.Adjust.Left_Vertical_Offset)*params.Calibration.Adjust.Left_Vertical_Gain;
 
-                calibratedDataFile.RightX = (calibratedDataFile.RightX-params.Calibration.ManualPostCalibration.Right_Horizontal_Offset)*params.Calibration.ManualPostCalibration.Right_Horizontal_Gain;
-                calibratedDataFile.RightY = (calibratedDataFile.RightY-params.Calibration.ManualPostCalibration.Right_Vertical_Offset)*params.Calibration.ManualPostCalibration.Right_Vertical_Gain;
-
+                calibratedDataFile.RightX = (calibratedDataFile.RightX-params.Calibration.Adjust.Right_Horizontal_Offset)*params.Calibration.Adjust.Right_Horizontal_Gain;
+                calibratedDataFile.RightY = (calibratedDataFile.RightY-params.Calibration.Adjust.Right_Vertical_Offset)*params.Calibration.Adjust.Right_Vertical_Gain;
 
 
                 cleanedDataFile         = VOGAnalysis.CleanData(calibratedDataFile, params);
@@ -2417,7 +2418,7 @@ classdef VOGAnalysis < handle
             % number of quick-phases
             n_qp = size(quickPhaseTable.StartIndex,1);
             
-            textprogressbar('++ VOGAnalysis :: Calculating quick phases properties: ');
+            textprogressbar(sprintf('++ VOGAnalysis :: Calculating quick phases properties (%d qps): ',n_qp));
             Nprogsteps = length(eyes)*length(components)*n_qp/100;
             tic
             

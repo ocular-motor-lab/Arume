@@ -91,13 +91,6 @@ if ( options.Prepare_For_Analysis_And_Plots )
     for i=1:length(opts)
         varName = ['AnalysisOption_' opts{i}];
 
-        % If too long, keep the END of the name
-        if length(varName) > namelengthmax
-            warning('Variable name too long. Truncating end of: %s', varName);
-            % Keep the last part that fits within MATLAB's limit
-            varName = varName(end-namelengthmax+1:end);
-        end
-
         % Assign to table
         if isempty(optionsf.(opts{i}))
             newSessionDataTable.(varName) = {''};
