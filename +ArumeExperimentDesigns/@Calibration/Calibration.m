@@ -19,9 +19,9 @@ classdef Calibration < ArumeExperimentDesigns.EyeTracking
             dlg.Debug.DisplayVariableSelection = 'TrialNumber TrialResult TargetPosition'; % which variables to display every trial in the command line separated by spaces
               
             %% Change defauls
-            dlg.DisplayOptions.ScreenWidth = { 142.8 '* (cm)' [1 3000] }; % these settings are for the main eye tracking room
-            dlg.DisplayOptions.ScreenHeight = { 80 '* (cm)' [1 3000] }; 
-            dlg.DisplayOptions.ScreenDistance = { 85 '* (cm)' [1 3000] }; 
+            dlg.DisplayOptions.ScreenWidth = { 55 '* (cm)' [1 3000] }; % these settings are for the main eye tracking room
+            dlg.DisplayOptions.ScreenHeight = { 31 '* (cm)' [1 3000] }; 
+            dlg.DisplayOptions.ScreenDistance = { 67 '* (cm)' [1 3000] }; 
             dlg.TrialDuration =  { 3 '* (s)' [1 100] };
             dlg.DisplayOptions.SelectedScreen = { 1 '* (screen)' [0 5] };
             dlg.DisplayOptions.StereoMode = { 0 '* (mode)' [0 9] };  % 0=no stereo, 4=stereo
