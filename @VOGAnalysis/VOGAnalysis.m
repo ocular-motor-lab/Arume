@@ -45,7 +45,7 @@ classdef VOGAnalysis < handle
             optionsDlg.CleanUp.windw = 0.2; % 200 ms of window for impulse noise removal for use in remove_CRnoise
             
             optionsDlg.Calibration.Calibration_Type = {'Pupil-CR|{Pupil}|DPI|None'};
-            optionsDlg.Calibration.ManualPostCalibration =  { {'{0}','1'} };
+            %optionsDlg.Calibration.ManualPostCalibration =  {'{0}','1' };
             optionsDlg.Calibration.ManualPostCalibration.Left_Horizontal_Gain = 1;
             optionsDlg.Calibration.ManualPostCalibration.Left_Horizontal_Offset = 0;
             optionsDlg.Calibration.ManualPostCalibration.Left_Vertical_Gain = 1;
@@ -267,13 +267,13 @@ classdef VOGAnalysis < handle
                         calibratedDataFile      = VOGAnalysis.CalibrateData(dataFile, calibrationTable);
                 end
 
-                if ( params.Calibration.ManualPostCalibration )
+                
                     calibratedDataFile.LeftX = (calibratedDataFile.LeftX-params.Calibration.ManualPostCalibration.Left_Horizontal_Offset)*params.Calibration.ManualPostCalibration.Left_Horizontal_Gain;
                     calibratedDataFile.LeftY = (calibratedDataFile.LeftX-params.Calibration.ManualPostCalibration.Left_Vertical_Offset)*params.Calibration.ManualPostCalibration.Left_Vertical_Gain;
 
                     calibratedDataFile.RightX = (calibratedDataFile.RightX-params.Calibration.ManualPostCalibration.Right_Horizontal_Offset)*params.Calibration.ManualPostCalibration.Right_Horizontal_Gain;
                     calibratedDataFile.RightY = (calibratedDataFile.RightY-params.Calibration.ManualPostCalibration.Right_Vertical_Offset)*params.Calibration.ManualPostCalibration.Right_Vertical_Gain;
-                end
+                
 
 
                 cleanedDataFile         = VOGAnalysis.CleanData(calibratedDataFile, params);
