@@ -24,7 +24,7 @@ classdef FixationTargets < ArumeExperimentDesigns.EyeTracking
             dlg.DisplayOptions.ScreenDistance = { 67 '* (cm)' [1 3000] };
 
             dlg.TrialDuration =  { 10 '* (s)' [1 100] };
-            dlg.NumberRepetitions = 10;            
+            dlg.NumberRepetitions = 10;
             dlg.DisplayOptions.SelectedScreen = { 1 '* (screen)' [0 5] };
 
 
@@ -456,25 +456,57 @@ classdef FixationTargets < ArumeExperimentDesigns.EyeTracking
 
             p = this.Session.analysisResults.SlowPhases.X_MeanPosition;
             pp = round(p/2.5)*2.5;
-            [means,pred,grp,sem] = grpstats(this.Session.analysisResults.SlowPhases.X_MeanVelocity,pp, ["median","predci","gname", "sem"],"Alpha",0.1);
+            [means,pred,grp,sem] = grpstats(this.Session.analysisResults.SlowPhases.X_MeanVelocity, pp, ...
+                ["median","predci","gname", "sem"], "Alpha",0.1);
+
             figure
             subplot(2,2,1)
-            errorbar(str2double(grp), means, sem,'o')
-            set(gca,'xlim',[-15 15], 'ylim', [-3 3])
+            x = str2double(grp);
+            y = means;
+
+            % Plot data
+            errorbar(x, y, sem, 'o')
+            set(gca, 'xlim', [-15 15], 'ylim', [-3 3])
             xlabel('Horizontal position (deg)')
             ylabel('Horizontal drift velocity (deg/s)')
             title("fixation data")
 
+            % ----- Add best-fit line for range -10 to 10 -----
+            mask = (x >= -10 & x <= 10);
+            coeffs = polyfit(x(mask), y(mask), 1);  % linear fit
+            xfit = linspace(-10, 10, 100);
+            yfit = polyval(coeffs, xfit);
+            hold on
+            plot(xfit, yfit, 'r-', 'LineWidth', .5)
+            hold off
+
+
+            % ===== Second subplot (Y data) =====
             p = this.Session.analysisResults.SlowPhases.Y_MeanPosition;
             pp = round(p/2.5)*2.5;
-            [means,pred,grp,sem] = grpstats(this.Session.analysisResults.SlowPhases.Y_MeanVelocity,pp, ["median","predci","gname", "sem"],"Alpha",0.1);
+            [means,pred,grp,sem] = grpstats(this.Session.analysisResults.SlowPhases.Y_MeanVelocity, pp, ...
+                ["median","predci","gname", "sem"], "Alpha",0.1);
 
             subplot(2,2,2)
-            errorbar(str2double(grp)*-1, means*-1, sem,'o')
+            x = str2double(grp) * -1;
+            y = means * -1;
+
+            % Plot data
+            errorbar(x, y, sem, 'o')
             xlabel('Vertical position (deg)')
             ylabel({'Vertical drift velocity (deg/s)' ; '*-(y) to correct for flipped sign in data collection'})
             set(gca,'xlim',[-15 15], 'ylim', [-3 3])
             title("fixation data")
+
+            % ----- Add best-fit line for range -10 to 10 -----
+            mask = (x >= -10 & x <= 10);
+            coeffs = polyfit(x(mask), y(mask), 1);
+            xfit = linspace(-15, 15, 100);
+            yfit = polyval(coeffs, xfit);
+            hold on
+            plot(xfit, yfit, 'r-', 'LineWidth', .5)
+            hold off
+
 
 
             p = this.Session.analysisResults.SlowPhases.Left_X_MeanPosition - this.Session.analysisResults.SlowPhases.Right_X_MeanPosition;
@@ -662,7 +694,7 @@ classdef FixationTargets < ArumeExperimentDesigns.EyeTracking
                     msd_det_avg = mean(all_msd_det, 'omitnan', Weights=all_n_det);
 
                     %% --- Plot comparison ---
-                    
+
                     plot(avg_taus, msd_raw_avg, 'b', 'LineWidth', 1.5); hold on;
                     plot(avg_taus, msd_det_avg, 'k--', 'LineWidth', 1.5);
 
@@ -695,7 +727,7 @@ classdef FixationTargets < ArumeExperimentDesigns.EyeTracking
                     msd_det_avg = mean(all_msd_det, 'omitnan');
 
                     %% --- Plot comparison ---
-                    
+
                     plot(avg_taus, msd_raw_avg, 'b', 'LineWidth', 1.5); hold on;
                     plot(avg_taus, msd_det_avg, 'k--', 'LineWidth', 1.5);
 
@@ -756,6 +788,98 @@ classdef FixationTargets < ArumeExperimentDesigns.EyeTracking
                 dispY = mean(all_meanDispY, 'omitnan', Weights=all_dur);
 
                 %% --- Helper Functions --- %%
+
+                %% --- Helper Functions --- %%
+                % --- Clean and validate data ---
+                trend_slopes_X = trend_slopes_X(:);
+                trend_slopes_Y = trend_slopes_Y(:);
+                valid = isfinite(trend_slopes_X) & isfinite(trend_slopes_Y);
+                trend_slopes_X = trend_slopes_X(valid);
+                trend_slopes_Y = trend_slopes_Y(valid);
+
+                if isempty(trend_slopes_X) || isempty(trend_slopes_Y)
+                    warning('No valid slope data for histogram.');
+                    return;
+                end
+
+                % --- Remove outliers (clip to central 99% range) ---
+                clip_prct = [0.5 99.5];  % keep middle 99% of data
+                xlims = prctile(trend_slopes_X, clip_prct);
+                ylims = prctile(trend_slopes_Y, clip_prct);
+
+                inliers = (trend_slopes_X >= xlims(1) & trend_slopes_X <= xlims(2)) & ...
+                    (trend_slopes_Y >= ylims(1) & trend_slopes_Y <= ylims(2));
+
+                trend_slopes_X = trend_slopes_X(inliers);
+                trend_slopes_Y = trend_slopes_Y(inliers);
+
+                % --- Define adaptive bin count ---
+                npoints = numel(trend_slopes_X);
+                nbins = max(30, min(100, round(sqrt(npoints)/2)));
+
+                % --- Define bin edges (use clipped range) ---
+                xedges = linspace(xlims(1), xlims(2), nbins+1);
+                yedges = linspace(ylims(1), ylims(2), nbins+1);
+
+                % --- Compute 2D histogram ---
+                [counts, xedges, yedges] = histcounts2(trend_slopes_X, trend_slopes_Y, xedges, yedges);
+                xcenters = (xedges(1:end-1) + xedges(2:end)) / 2;
+                ycenters = (yedges(1:end-1) + yedges(2:end)) / 2;
+
+                % --- Normalize and log-scale for visibility ---
+                counts_norm = counts / sum(counts(:));
+                counts_disp = log10(counts_norm + 1e-6);
+
+                % --- Plot smoothed, square 2D density map ---
+                figure('Color', 'w');
+
+                % --- Smooth counts using Gaussian filter ---
+                sigma = 2; % smoothing strength (adjust if needed)
+                counts_smooth = imgaussfilt(counts_disp, sigma);
+
+                % --- Determine combined square limits ---
+                lims = [min([xlims ylims]) max([xlims ylims])];
+
+                % --- Display the smoothed density ---
+                imagesc(xcenters, ycenters, counts_smooth');
+                axis xy equal;
+                axis([lims lims]); % force square axes
+                colormap(parula);
+                cb = colorbar;
+                ylabel(cb, 'log_{10}(normalized density)');
+                xlabel('trend\_slopes\_X (arcmin/s)');
+                ylabel('trend\_slopes\_Y (arcmin/s)');
+                title('2D Drift Velocity Distribution (Smoothed, Outliers Removed)');
+
+                % --- Overlay mean drift vector ---
+                meanX = mean(trend_slopes_X, 'omitnan');
+                meanY = mean(trend_slopes_Y, 'omitnan');
+                hold on;
+                quiver(0, 0, meanX, meanY, 0, 'r', 'LineWidth', 2, 'MaxHeadSize', 0.5);
+                hold off;
+
+                % --- Auto-adjust color scale (ignore extreme low bins) ---
+                lowCut = prctile(counts_smooth(:), 2);
+                highCut = prctile(counts_smooth(:), 98);
+                caxis([lowCut highCut]);
+
+                % --- Make plot square on screen ---
+                axis square;
+
+            end
+
+            function [taus, msd, n] = compute_msd(x, y, dt, lags)  % edited to collect systematic drift
+                N = length(x);
+                taus = lags * dt;
+                msd = nan(size(lags));
+                n = nan(size(lags));
+                for idx = 1:length(lags)
+                    lag = lags(idx);
+                    dx = x(1+lag:N) - x(1:N-lag);
+                    dy = y(1+lag:N) - y(1:N-lag);
+                    msd(idx) = mean(dx.^2 + dy.^2, 'omitnan');
+                    n(idx) = sum(~isnan(dx.^2 + dy.^2));
+                end
             end
             function colors = defineColors()
                 colors.posX = [1 0 0];      % Red
@@ -790,19 +914,6 @@ classdef FixationTargets < ArumeExperimentDesigns.EyeTracking
                 hold off;
             end
 
-            function [taus, msd, n] = compute_msd(x, y, dt, lags)  % edited to collect systematic drift
-                N = length(x);
-                taus = lags * dt;
-                msd = nan(size(lags));
-                n = nan(size(lags));
-                for idx = 1:length(lags)
-                    lag = lags(idx);
-                    dx = x(1+lag:N) - x(1:N-lag);
-                    dy = y(1+lag:N) - y(1:N-lag);
-                    msd(idx) = mean(dx.^2 + dy.^2, 'omitnan');
-                    n(idx) = sum(~isnan(dx.^2 + dy.^2));
-                end
-            end
 
             function [taus, msd, n] = compute_msd_detrended(x, y, dt, lags)
                 % Remove overall linear trend before computing MSD
@@ -911,3 +1022,5 @@ classdef FixationTargets < ArumeExperimentDesigns.EyeTracking
         end
     end
 end
+
+

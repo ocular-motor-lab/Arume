@@ -1,4 +1,4 @@
-classdef FreeVsFixationDrift < ArumeExperimentDesigns.EyeTracking
+classdef FixationFlashing < ArumeExperimentDesigns.EyeTracking
     %OPTOKINETICTORSION Summary of this class goes here
     %   Detailed explanation goes here
 
@@ -6,7 +6,6 @@ classdef FreeVsFixationDrift < ArumeExperimentDesigns.EyeTracking
         fixRad = 20;
         fixColor = [255 0 0];
         targetPositions =[];
-        stimTexture = [];
     end
 
     % ---------------------------------------------------------------------
@@ -23,13 +22,10 @@ classdef FreeVsFixationDrift < ArumeExperimentDesigns.EyeTracking
             dlg.DisplayOptions.ScreenWidth = { 55 '* (cm)' [1 3000] };
             dlg.DisplayOptions.ScreenHeight = { 31 '* (cm)' [1 3000] };
             dlg.DisplayOptions.ScreenDistance = { 67 '* (cm)' [1 3000] };
-            dlg.DisplayOptions.SelectedScreen = { 1 '* (screen)' [0 5] };
-
 
             dlg.TrialDuration =  { 10 '* (s)' [1 100] };
             dlg.NumberRepetitions = 10;
-            dlg.StimulusContrast0to100 = {80 '* (%)' [0 100] };
-            dlg.StimSizeDeg = {15 '* (deg)' [1 100] };
+            dlg.DisplayOptions.SelectedScreen = { 1 '* (screen)' [0 5] };
 
             dlg.TargetSize = 1;
             dlg.Calibration_Type = { {'Center dot' '5 dots' '{9 dots}' '13 dots' '17 dots'} };
@@ -44,7 +40,7 @@ classdef FreeVsFixationDrift < ArumeExperimentDesigns.EyeTracking
             Screen('Preference', 'SkipSyncTests', 0);                  % DO NOT skip sync tests (set to 1 or 2 for debugging only)
             Screen('Preference', 'VisualDebugLevel', 1);               % Minimize startup splash
             Screen('Preference', 'SuppressAllWarnings', 0);            % Show all warnings
-            Screen('Preference', 'ConserveVRAM', 0);
+            Screen('Preference', 'ConserveVRAM', 4096);
 
             h = this.ExperimentOptions.Calibration_Distance_H;
             v = this.ExperimentOptions.Calibration_Distance_V;
@@ -64,133 +60,112 @@ classdef FreeVsFixationDrift < ArumeExperimentDesigns.EyeTracking
                     this.targetPositions = {[0,0],[h,0],[-h,0],[0,v],[0,-v],[h,v],[h,-v],[-h,v],[-h,-v],...
                         [h/temp,0],[-h/temp,0],[0,v/temp],[0,-v/temp],[h/temp,v/temp],[h/temp,-v/temp],[-h/temp,v/temp],[-h/temp,-v/temp]};
             end
-
-            % %% trial table for fixation targets
-            % t = ArumeCore.TrialTableBuilder();
-            %
-            % t.AddConditionVariable("TargetPosition", { ...
-            %     [0 0], [0 10], [10 0], [10 10], [-10 10], [-10 -10], [10 -10] [-10 0], [0 -10] ...
-            %     [0 2], [0 4], [0 6], [0 8], [0 -2], [0 -4], [0 -6], [0 -8], ...
-            %     [2 0], [4 0], [6 0], [8 0], [-2 0], [-4 0], [-6 0], [-8 0], ...
-            %     [2 2], [4 4], [6 6], [8 8], [-2 2], [-4 4], [-6 6], [-8 8], ...
-            %     [2 -2], [4 -4], [6 -6], [8 -8], [-2 -2], [-4 -4], [-6 -6], [-8 -8] ...
-            %     });
-            %
-            % t.AddBlock(1:height(t.ConditionTable), nReps);
-            %
-            % trialSequence = 'Random';
-            % blockSequence = 'Sequential';
-            % blockSequenceRepeatitions = 1;
-            % abortAction = 'Repeat';
-            % trialsPerSession = 1000;  % You can use a large number if not splitting
-            %
-            % trialTable = t.GenerateTrialTable(trialSequence, blockSequence, blockSequenceRepeatitions, abortAction, trialsPerSession);
-
-            %% trial table for freeviewing images
             t = ArumeCore.TrialTableBuilder();
+
+            t.AddConditionVariable("TargetPosition", { ...
+                [0 0], [0 10], [10 0], [10 10], [-10 10], [-10 -10], [10 -10] [-10 0], [0 -10] ...
+                [0 2], [0 4], [0 6], [0 8], [0 -2], [0 -4], [0 -6], [0 -8], ...
+                [2 0], [4 0], [6 0], [8 0], [-2 0], [-4 0], [-6 0], [-8 0], ...
+                [2 2], [4 4], [6 6], [8 8], [-2 2], [-4 4], [-6 6], [-8 8], ...
+                [2 -2], [4 -4], [6 -6], [8 -8], [-2 -2], [-4 -4], [-6 -6], [-8 -8] ...
+                });
+
+            % Add all conditions to a single block with N repetitions
             nReps = this.ExperimentOptions.NumberRepetitions;
-
-            t.AddConditionVariable("Image", {'01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20' ,'21', '22', '23' ,'24', '25', '26', '27' ,'28' ,'29' ,'30', '31' ,'32' ,'33', '34', '35', '36', '37', '38', '39', '40'}); %% currently allows for 40 images, numbered 01-40. add more if needed
-
-            t.AddBlock(1:height(t.ConditionTable), 1); %% same number of repetitions for the fixation targets and the images
+            t.AddBlock(1:height(t.ConditionTable), 1);
 
             trialSequence = 'Random';
             blockSequence = 'Sequential';
             blockSequenceRepeatitions = nReps;
             abortAction = 'Repeat';
-            trialsPerSession = 1000;
+            trialsPerSession = 1000;  % You can use a large number if not splitting
+
             trialTable = t.GenerateTrialTable(trialSequence, blockSequence, blockSequenceRepeatitions, abortAction, trialsPerSession);
         end
 
-        function [trialResult, thisTrialData] = runPreTrial( this, thisTrialData )
-            Enum = ArumeCore.ExperimentDesign.getEnum();
-            trialResult = Enum.trialResult.CORRECT;
-
-            % JORGE AT THE MEETING
-            %experimentFolder = fileparts(mfilename('fullpath'));
-            %imageFile = fullfile(experimentFolder,[thisTrialData.Image '.jpg']);
-            % END JORGE
-            test = string(thisTrialData.Image);
-            imageFile = fullfile(fileparts(mfilename('fullpath')),[test + ".jpeg"]);
-
-            I = imread(imageFile);
-
-            monitorWidthPix     = this.Graph.wRect(3);
-            monitorWidthCm      = this.ExperimentOptions.DisplayOptions.ScreenWidth;
-            monitorDistanceCm   = this.ExperimentOptions.DisplayOptions.ScreenDistance;
-            stimSizeDeg         = this.ExperimentOptions.StimSizeDeg;
-
-            % we will asume that pixels are square
-            monitorWidthDeg     = 2*atand(monitorWidthCm/monitorDistanceCm/2);
-            % asuming linearity (not completely true for very large displays
-            %             pixelsPerDeg        = monitorWidthPix/monitorWidthDeg;
-            %             stimSizePix         = pixelsPerDeg * stimSizeDeg;
-
-            % non linear aproximation
-            stimSizeCm  = 2*tand(stimSizeDeg/2)*monitorDistanceCm
-            %stimSizePix = stimSizeCm/monitorWidthCm*monitorWidthPix;
-            stimSizePix = (monitorWidthPix/monitorWidthCm)*stimSizeCm
-
-            Isquare = uint8(double(I(:,(size(I,2) - size(I,1))/2+(1:(size(I,1))),:,:))*this.ExperimentOptions.StimulusContrast0to100/100);
-            Isquare = imresize(Isquare, [stimSizePix stimSizePix], 'bilinear');
-            this.stimTexture = Screen('MakeTexture', this.Graph.window, Isquare);
-
-        end
 
         function [trialResult, thisTrialData] = runTrial(this, thisTrialData)
-            Enum = ArumeCore.ExperimentDesign.getEnum();
-            graph = this.Graph;
-            trialDuration = this.ExperimentOptions.TrialDuration;
+            try
+                Enum = ArumeCore.ExperimentDesign.getEnum();
+                graph = this.Graph;
+                trialResult = Enum.trialResult.CORRECT;
 
-            % Get timing info
-            ifi = Screen('GetFlipInterval', graph.window); % inter-frame interval
+                lastFlipTime        = GetSecs;
+                secondsRemaining    = this.ExperimentOptions.TrialDuration;
+                thisTrialData.TimeStartLoop = lastFlipTime;
 
-            % Start with a blank background
-            vbl = Screen('Flip', graph.window);
+                if (~isempty(this.eyeTracker))
+                    thisTrialData.EyeTrackerFrameStartLoop = this.eyeTracker.RecordEvent( ...
+                        sprintf('TRIAL_START_LOOP %d %d [%d %d]', ...
+                        thisTrialData.TrialNumber, ...
+                        thisTrialData.Condition) );
+                end
 
-            thisTrialData.TimeStartLoop = vbl;
-            trialResult = Enum.trialResult.CORRECT;
+                flashPeriod = 1.0;         % seconds
+                flashOffDuration = 0.005;  % target invisible for 5 ms each second
 
-            %----------------------------------
-            % 1️⃣  FIXATION PERIOD (first 3 s)
-            %----------------------------------
-            fixationDuration = 3; % or however long you want
+                while secondsRemaining > 0
+                    currentTime        = GetSecs;
+                    secondsElapsed     = currentTime - thisTrialData.TimeStartLoop;
+                    secondsRemaining   = this.ExperimentOptions.TrialDuration - secondsElapsed;
 
-            while (GetSecs - thisTrialData.TimeStartLoop) < fixationDuration
-                Screen('FillRect', graph.window, this.ExperimentOptions.BackgroundBrightness);
+                    % Determine if target should be visible or invisible
+                    timeInCycle = mod(secondsElapsed, flashPeriod);
+                    showTarget = timeInCycle > flashOffDuration;  % invisible only for 5 ms
 
-                [mx, my] = RectCenter(graph.wRect);
-                crossLength = 50;
-                crossThickness = 3;
-                crossColor = [0, 0, 0];
+                    %-- Draw background
+                    Screen('FillRect', graph.window, this.ExperimentOptions.BackgroundBrightness);
 
-                crossCoords = [ ...
-                    -crossLength/2, 0; ...
-                    crossLength/2, 0; ...
-                    0, -crossLength/2; ...
-                    0,  crossLength/2 ...
-                    ]';
+                    if showTarget
 
-                Screen('DrawLines', graph.window, crossCoords, crossThickness, crossColor, [mx, my], 2);
+                        [mx, my] = RectCenter(this.Graph.wRect);
 
-                % Wait for next refresh and flip once per frame
-                vbl = Screen('Flip', graph.window, vbl + 0.5 * ifi);
+                        % Get the stimulus position in degrees from the trial table
+                        targetDeg = thisTrialData.TargetPosition{1};
+                        dx = targetDeg(1);
+                        dy = targetDeg(2);
+
+                        % === LOG POSITION INTO TRIAL DATA ===
+                        thisTrialData.StimulusPosition_X = targetDeg(1);
+                        thisTrialData.StimulusPosition_Y = targetDeg(2);
+
+                        % Convert visual degrees to pixels
+                        pixelsPerDegree = this.Graph.pxWidth / this.ExperimentOptions.DisplayOptions.ScreenWidth * ...
+                            this.ExperimentOptions.DisplayOptions.ScreenDistance;
+
+                        targetHPix = pixelsPerDegree * tand(dx);
+                        targetYPix = pixelsPerDegree * tand(dy);
+
+                        % Fixation location
+                        fixX = mx + targetHPix / 2;
+                        fixY = my + targetYPix / 2;
+
+                        % Fixation cross parameters
+                        targetSizeDeg = this.ExperimentOptions.TargetSize;
+                        crossLength = pixelsPerDegree * tand(targetSizeDeg); % in pixels
+                        crossThickness = 2;
+                        crossColor = [0, 0, 0];
+
+                        % Define cross lines centered on fixX, fixY
+                        crossCoords = [ ...
+                            -crossLength/2, 0; ...
+                            crossLength/2, 0; ...
+                            0, -crossLength/2; ...
+                            0,  crossLength/2 ...
+                            ]';
+
+                        Screen('DrawLines', graph.window, crossCoords, crossThickness, crossColor, [fixX, fixY], 2);
+                    end
+
+                    Screen('DrawingFinished', graph.window);
+                    this.Graph.Flip();
+                end
+
+            catch ex
+                rethrow(ex)
             end
-
-            %----------------------------------
-            % 2️⃣  STIMULUS PERIOD
-            %----------------------------------
-            stimStart = GetSecs;
-            stimDuration = this.ExperimentOptions.TrialDuration;
-
-            while (GetSecs - stimStart) < stimDuration
-                Screen('FillRect', graph.window, this.ExperimentOptions.BackgroundBrightness);
-                Screen('DrawTexture', graph.window, this.stimTexture, [], []);
-                vbl = Screen('Flip', graph.window, vbl + 0.5 * ifi);
-            end
-
-            trialResult = Enum.trialResult.CORRECT;
         end
+
     end
 
     methods ( Access = public )
@@ -497,7 +472,7 @@ classdef FreeVsFixationDrift < ArumeExperimentDesigns.EyeTracking
             set(gca, 'xlim', [-15 15], 'ylim', [-3 3])
             xlabel('Horizontal position (deg)')
             ylabel('Horizontal drift velocity (deg/s)')
-            title("freeview data")
+            title("fixation data")
 
             % ----- Add best-fit line for range -10 to 10 -----
             mask = (x >= -10 & x <= 10);
@@ -524,7 +499,7 @@ classdef FreeVsFixationDrift < ArumeExperimentDesigns.EyeTracking
             xlabel('Vertical position (deg)')
             ylabel({'Vertical drift velocity (deg/s)' ; '*-(y) to correct for flipped sign in data collection'})
             set(gca,'xlim',[-15 15], 'ylim', [-3 3])
-            title("freeview data")
+            title("fixation data")
 
             % ----- Add best-fit line for range -10 to 10 -----
             mask = (x >= -10 & x <= 10);
@@ -547,7 +522,7 @@ classdef FreeVsFixationDrift < ArumeExperimentDesigns.EyeTracking
             set(gca,'xlim',[-5 5], 'ylim', [-3 3])
             xlabel('Vergence position (deg)')
             ylabel('Vergence drift velocity (deg/s)')
-            title("freeview data")
+            title("fixation data")
 
             % p = this.Session.analysisResults.SlowPhases.Y_MeanPosition;
             % pp = round(p/2.5)*2.5;
@@ -558,22 +533,30 @@ classdef FreeVsFixationDrift < ArumeExperimentDesigns.EyeTracking
 
             % set(gca,'xlim',[-15 15], 'ylim', [-3 3])
         end
+
         function [out, options] = Plot_DriftDiffusionAnalysis(this)
             slowPhases = this.Session.analysisResults.SlowPhases;
             data = this.Session.samplesDataTable;
             time = data.Time;
 
+            condition = 'fix';
             eyes = ["right", "left"];
 
             for jk = 1:length(eyes)
-
                 eye = eyes(jk);
-                figure;
-                hold on
                 %% Define Colors
+                colors = defineColors();
+
+                %% Plot Legend (only if condition == 'fix')
+                if strcmp(condition, 'fix')
+                    plotLegend(colors);
+                end
 
                 %% Initialize variables for analysis
                 D_est_all = [];
+                timeCoord = [];
+                coord_labels = {};
+                axis_labels = {};
                 avg_taus = [];
                 all_meanDispY = [];
                 all_meanDispX = [];
@@ -667,25 +650,44 @@ classdef FreeVsFixationDrift < ArumeExperimentDesigns.EyeTracking
 
 
                     % Plot and label based on condition
+                    if strcmp(condition, 'fix')
+                        coord = slowPhases.TargetPosition{i};
+                        if ~isempty(coord)
+                            plot(taus_raw, msd_raw, '-', 'Color', getLineColor(coord, colors), 'HandleVisibility', 'off');
+                            num = num + 1;
+                            xlabel(['Number of phases: ' num2str(num)]);
+                            title(['Eye: ' num2str(eye) ' Diffusion per Slow Phase (not detrended)']);
 
-                    plot(taus_raw, msd_raw, '-', 'HandleVisibility', 'off');
-                    num = num + 1;
-                    xlabel(['Number of phases: ' num2str(num)]);
-                    title(['Eye: ' num2str(eye) ' Diffusion per Slow Phase (not detrended)']);
+                            % Estimate diffusion constant from linear fit slope
+                            validIdx = ~isnan(msd_raw);
+                            if sum(validIdx) < 2
+                                disp('baaaaaaaaaad');
+                                continue;  % Not enough points to fit a line
+                            end
 
-                    % Estimate diffusion constant from linear fit slope
-                    validIdx = ~isnan(msd_raw);
-                    if sum(validIdx) < 2
-                        disp('baaaaaaaaaad');
-                        continue;  % Not enough points to fit a line
+                            p = polyfit(taus_raw(validIdx), msd_raw(validIdx), 1);
+                            D_est = p(1) / 4; % arcmin^2/sec
+                            D_est_all = [D_est_all; D_est];
+                            timeCoord = [timeCoord; time(startInd)];
+
+                            % Label coordinate and axis/quadrant
+                            coord_labels{end+1,1} = mat2str(coord);
+                            axis_labels{end+1,1} = getAxisLabel(coord);
+                        end
+                    else
+                        plot(taus_raw, msd_raw);
+                        title('Diffusion per Slow Phase');
+                        xlabel(['Number of phases: ' num2str(num)]);
+                        num = num + 1;
                     end
-
-                    p = polyfit(taus_raw(validIdx), msd_raw(validIdx), 1);
-                    D_est = p(1) / 4; % arcmin^2/sec
-                    D_est_all = [D_est_all; D_est];
-
+                    hold on
                 end
-                hold off
+
+                %% Plot boxplots if condition == 'fix'
+                if strcmp(condition, 'fix')
+                    plotBoxplots(D_est_all, coord_labels, axis_labels, eye);
+                    title(['Eye: ' num2str(eye) ' Average MSD by coord/axis across included slow phases: ' num2str(num) ' (not detrended)']);
+                end
 
                 %% Plot average MSD across all slow phases
                 if ~isempty(all_msd_raw)
@@ -789,6 +791,8 @@ classdef FreeVsFixationDrift < ArumeExperimentDesigns.EyeTracking
                 dispY = mean(all_meanDispY, 'omitnan', Weights=all_dur);
 
                 %% --- Helper Functions --- %%
+
+                %% --- Helper Functions --- %%
                 % --- Clean and validate data ---
                 trend_slopes_X = trend_slopes_X(:);
                 trend_slopes_Y = trend_slopes_Y(:);
@@ -880,6 +884,39 @@ classdef FreeVsFixationDrift < ArumeExperimentDesigns.EyeTracking
                     n(idx) = sum(~isnan(dx.^2 + dy.^2));
                 end
             end
+            function colors = defineColors()
+                colors.posX = [1 0 0];      % Red
+                colors.negX = [0 0 1];      % Blue
+                colors.posY = [1 0.5 0];    % Orange+
+                colors.negY = [0 1 0];      % Green
+
+                colors.Q1 = (colors.posX + colors.posY) / 2;
+                colors.Q2 = (colors.negX + colors.posY) / 2;
+                colors.Q3 = (colors.negX + colors.negY) / 2;
+                colors.Q4 = (colors.posX + colors.negY) / 2;
+
+                colors.origin = [0 0 0];    % Black
+                colors.gray = [0.5 0.5 0.5];
+            end
+
+            function plotLegend(colors)
+                figure; hold on;
+                % Dummy points for legend
+                scatter(NaN, NaN, 100, colors.posX, 'filled');
+                scatter(NaN, NaN, 100, colors.negX, 'filled');
+                scatter(NaN, NaN, 100, colors.posY, 'filled');
+                scatter(NaN, NaN, 100, colors.negY, 'filled');
+                scatter(NaN, NaN, 100, colors.Q1, 'filled');
+                scatter(NaN, NaN, 100, colors.Q2, 'filled');
+                scatter(NaN, NaN, 100, colors.Q3, 'filled');
+                scatter(NaN, NaN, 100, colors.Q4, 'filled');
+                scatter(NaN, NaN, 100, colors.origin, 'filled');
+                legend({'+X Axis', '-X Axis', '+Y Axis', '-Y Axis', ...
+                    'Q1 (+X,+Y)', 'Q2 (-X,+Y)', 'Q3 (-X,-Y)', 'Q4 (+X,-Y)', 'Origin'}, ...
+                    'Location', 'northeastoutside', 'Box', 'on');
+                hold off;
+            end
+
 
             function [taus, msd, n] = compute_msd_detrended(x, y, dt, lags)
                 % Remove overall linear trend before computing MSD
@@ -909,7 +946,84 @@ classdef FreeVsFixationDrift < ArumeExperimentDesigns.EyeTracking
                 end
             end
 
+
+            function color = getLineColor(coord, colors)
+                if isempty(coord)
+                    color = colors.gray;
+                    return;
+                end
+
+                x = coord(1);
+                y = coord(2);
+                if x > 0 && y == 0
+                    color = colors.posX;
+                elseif x < 0 && y == 0
+                    color = colors.negX;
+                elseif y > 0 && x == 0
+                    color = colors.posY;
+                elseif y < 0 && x == 0
+                    color = colors.negY;
+                elseif x > 0 && y > 0
+                    color = colors.Q1;
+                elseif x < 0 && y > 0
+                    color = colors.Q2;
+                elseif x < 0 && y < 0
+                    color = colors.Q3;
+                elseif x > 0 && y < 0
+                    color = colors.Q4;
+                elseif x == 0 && y == 0
+                    color = colors.origin;
+                else
+                    color = colors.gray;
+                end
+            end
+
+            function label = getAxisLabel(coord)
+                x = coord(1);
+                y = coord(2);
+                if x > 0 && y == 0
+                    label = '+X Axis';
+                elseif x < 0 && y == 0
+                    label = '-X Axis';
+                elseif y > 0 && x == 0
+                    label = '+Y Axis';
+                elseif y < 0 && x == 0
+                    label = '-Y Axis';
+                elseif x > 0 && y > 0
+                    label = 'Q1 (+X,+Y)';
+                elseif x < 0 && y > 0
+                    label = 'Q2 (-X,+Y)';
+                elseif x < 0 && y < 0
+                    label = 'Q3 (-X,-Y)';
+                elseif x > 0 && y < 0
+                    label = 'Q4 (+X,-Y)';
+                elseif x == 0 && y == 0
+                    label = 'Origin';
+                else
+                    label = 'Other';
+                end
+            end
+
+            function plotBoxplots(D_est_all, coord_labels, axis_labels, eye)
+                figure;
+                subplot(2,1,1);
+                boxplot(D_est_all, categorical(coord_labels));
+                xlabel('Target Coordinate');
+                ylabel('Estimated Diffusion Constant (arcmin^2/sec)');
+                title(['Eye: ' num2str(eye) ' By Exact Coordinate (not detrended)']);
+                ylim([-100, 500]);
+                xtickangle(45);
+
+                subplot(2,1,2);
+                boxplot(D_est_all, categorical(axis_labels));
+                xlabel('Axis / Quadrant');
+                ylabel('Estimated Diffusion Constant (arcmin^2/sec)');
+                title(['Eye: ' num2str(eye) ' Grouped by Axis / Quadrant (not detrended)']);
+                ylim([-100, 500]);
+                xtickangle(45);
+            end
         end
     end
-
 end
+
+
