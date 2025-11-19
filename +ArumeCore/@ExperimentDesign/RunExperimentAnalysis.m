@@ -108,6 +108,11 @@ if ( options.Prepare_For_Analysis_And_Plots )
     sessionTable = newSessionDataTable;
 
     analysisResults  = struct();
+else
+    analysisResults = this.Session.analysisResults;
+    samplesDataTable = this.Session.samplesDataTable;
+    trialDataTable = this.Session.trialDataTable;
+    sessionTable = this.Session.sessionDataTable;
 end
 
 %% 5) Run analysis for the experiment

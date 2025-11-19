@@ -456,17 +456,24 @@ classdef FixationTargets < ArumeExperimentDesigns.EyeTracking
 
             p = this.Session.analysisResults.SlowPhases.X_MeanPosition;
             pp = round(p/2.5)*2.5;
-            [means,pred,grp,sem] = grpstats(this.Session.analysisResults.SlowPhases.X_MeanVelocity, pp, ...
-                ["median","predci","gname", "sem"], "Alpha",0.1);
+            [means,pred,grp,sem,numel] = grpstats(this.Session.analysisResults.SlowPhases.X_MeanVelocity, pp, ...
+                ["median","predci","gname", "sem","numel"], "Alpha",0.1);
 
             figure
-            subplot(2,2,1)
+            subplot(3,2,1)
             x = str2double(grp);
             y = means;
 
             % Plot data
             errorbar(x, y, sem, 'o')
             set(gca, 'xlim', [-15 15], 'ylim', [-3 3])
+            xlabel('Horizontal position (deg)')
+            ylabel('Horizontal drift velocity (deg/s)')
+            title("fixation data")
+
+            subplot(3,2,3)
+            bar(x, numel)
+            set(gca, 'ylim', [-3 3])
             xlabel('Horizontal position (deg)')
             ylabel('Horizontal drift velocity (deg/s)')
             title("fixation data")
@@ -514,7 +521,7 @@ classdef FixationTargets < ArumeExperimentDesigns.EyeTracking
             pp = round(p*2.5)/2.5;
             [means,pred,grp,sem] = grpstats(v,pp, ["median","predci","gname", "sem"],"Alpha",0.1);
 
-            subplot(2,2,3)
+            subplot(3,2,5)
             errorbar(str2double(grp), means, sem,'o')
             set(gca,'xlim',[-5 5], 'ylim', [-3 3])
             xlabel('Vergence position (deg)')
@@ -529,6 +536,10 @@ classdef FixationTargets < ArumeExperimentDesigns.EyeTracking
             % plot(str2double(grp), means,'o')
 
             % set(gca,'xlim',[-15 15], 'ylim', [-3 3])
+        end
+
+        function [out, options] = PlotAggregate_PositionVelocityAcrossSubjects(this, sessions, options)
+            sessions(subj).analysisResults.QuickPhases;
         end
 
         function [out, options] = Plot_DriftDiffusionAnalysis(this)
