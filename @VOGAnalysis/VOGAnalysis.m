@@ -338,8 +338,25 @@ classdef VOGAnalysis < handle
 
                 switch( params.Calibration.Calibration_Type)
                     case 'Pupil-CR'
+
+                        % TODO: this may not work well when running the
+                        % calibration twice because LeftX may be overriden?
+
+                        calibrationTables{'LeftEye','RefX'} = median(dataFile.LeftX - dataFile.LeftCR1X,'omitnan');
+                        calibrationTables{'LeftEye','RefY'}  = median(dataFile.LeftY - dataFile.LeftCR1Y,'omitnan');
+                        calibrationTables{'RightEye','RefX'}  = median(dataFile.RightX - dataFile.RightCR1X,'omitnan');
+                        calibrationTables{'RightEye','RefY'}  = median(dataFile.RightY - dataFile.RightCR1Y,'omitnan');
+
                         calibratedDataFile      = VOGAnalysis.CalibrateDataCR(dataFile, calibrationTables   );
                     case 'DPI'
+
+                        % Override the Refs because they will be the center
+                        % of the globe, which is irrelavant for DPI.
+                        calibrationTables{'LeftEye','RefX'} = median(dataFile.LeftCR1X - dataFile.LeftCR4X,'omitnan');
+                        calibrationTables{'LeftEye','RefY'}  = median(dataFile.LeftCR1Y - dataFile.LeftCR4Y,'omitnan');
+                        calibrationTables{'RightEye','RefX'}  = median(dataFile.RightCR1X - dataFile.RightCR4X,'omitnan');
+                        calibrationTables{'RightEye','RefY'}  = median(dataFile.RightCR1Y - dataFile.RightCR4Y,'omitnan');
+
                         calibratedDataFile      = VOGAnalysis.CalibrateDataDPI(dataFile, calibrationTables);
                     case 'Pupil'
                         calibratedDataFile      = VOGAnalysis.CalibrateData(dataFile, calibrationTables);
@@ -653,7 +670,10 @@ classdef VOGAnalysis < handle
             if ( strcmpi(S(1:5),'<?xml') )
                 theStruct = parseXML(file);
             end
-            
+            % TODO: make this DPI and PCR aware! it should load the
+            % reference data appropriartely and not just use the globe
+            % center or the pupil center. 
+
             calibrationTable = table();
             calibrationTable{'LeftEye', 'GlobeX'} = nan;
             calibrationTable{'LeftEye', 'GlobeY'} = nan;
