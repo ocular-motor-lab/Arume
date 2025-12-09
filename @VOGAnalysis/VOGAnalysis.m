@@ -2653,6 +2653,17 @@ classdef VOGAnalysis < handle
             slowPhaseTable.EndIndex = sp(:,2);
             slowPhaseTable.DurationMs = (sp(:,2) - sp(:,1)) * 1000 / SAMPLERATE;
           
+            tbeg = zeros(size(data.Time));
+            tn = data.TrialNumber;
+            tn(isnan(tn)) = 0;
+            t1 = data.Time([0;diff(tn)]>0);
+            t1 = [0; diff(t1)];
+            tbeg([0;diff(tn)]>0) = t1;
+            tfromTrialBegining = cumsum([diff(data.Time);0]-tbeg);
+            tfromTrialBegining(isnan(data.TrialNumber)) = nan;
+
+            slowPhaseTable.TimeFromTrialBeginning = tfromTrialBegining(sp(:,1));
+
             % beginMs = 0;
             % EndMs = 100;
             
@@ -2670,6 +2681,7 @@ classdef VOGAnalysis < handle
                     sp1_props.GoodBegining = nan(size(sp(:,1)));
                     sp1_props.GoodEnd = nan(size(sp(:,1)));
                     sp1_props.GoodTrhought = nan(size(sp(:,1)));
+                    sp1_props.TimeFromTrialBeginning = nan(size(sp(:,1)));
                     
                     sp1_props.Amplitude = nan(size(sp(:,1)));
                     sp1_props.StartPosition = pos(sp(:,1));
