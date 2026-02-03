@@ -60,154 +60,162 @@ textprogressbar('++ DetectQuickPhaseEngbertKliegl :: Detecting quick phases usin
 Nprogsteps = 5/100;
 tic
 
-switch(params.Detection.Engbert.Components)
-    case 'H'
-        componetsToUse = {'X'};
-    case 'HV'
-        componetsToUse = {'X','Y'};
-    case 'HVT'
-        componetsToUse = {'X','Y', 'T'};
-end
+try
 
-% get the velocity for each of the componets
-for k=1:length(eyes)
-    for j=1:length(eyeSignals)
-        data.([eyes{k} 'Vel' eyeSignals{j}]) = engbert_vecvel(data.([eyes{k} eyeSignals{j}]), samplerate, 2);
-        data.([eyes{k} 'Accel' eyeSignals{j}]) = engbert_vecvel(data.([eyes{k} 'Vel' eyeSignals{j}]), samplerate, 2);
-        data.([eyes{k} 'Jerk' eyeSignals{j}]) = engbert_vecvel(data.([eyes{k} 'Accel' eyeSignals{j}]), samplerate, 2);
+    switch(params.Detection.Engbert.Components)
+        case 'H'
+            componetsToUse = {'X'};
+        case 'HV'
+            componetsToUse = {'X','Y'};
+        case 'HVT'
+            componetsToUse = {'X','Y', 'T'};
     end
-end
 
-textprogressbar(1/Nprogsteps);
-
-lrsac = [];
-xy = cell(size(eyes));
-radEyes = {};
-for k=1:length(eyes)
-
-    xy{k} = data{:,{[eyes{k} 'X'], [eyes{k} 'Y'], [eyes{k} 'T']}};
-    v = data{:,{[eyes{k} 'VelX'], [eyes{k} 'VelY'], [eyes{k} 'VelT']}};
-
-    isInTrial = ones(size(data.Time)); % TODO!!!
-    blinkYesNo = isnan(v(:,1)) | isnan(v(:,2));
-
-    [sac, rad] = engbert_microsacc(xy{k}, v ,params.Detection.Engbert.VFAC,params.Detection.Engbert.MINDUR, blinkYesNo, componetsToUse);
-    %--------------------------------------------------------------------
-    % OUTPUT
-    %  sac(1:num,1)   onset of saccade
-    %  sac(1:num,2)   end of saccade
-    %  sac(1:num,3)   peak velocity of saccade (vpeak)
-    %  sac(1:num,4)   horizontal component     (dx)
-    %  sac(1:num,5)   vertical component       (dy)
-    %  sac(1:num,6)   horizontal amplitude     (dX)
-    %  sac(1:num,7)   vertical amplitude       (dY)
-    %  sac(1:num,9)   peak test variable       (dY)
-
-
-    %% -- Filter bad microsaccades --------------------------------------------
-    %-- remove usacc in intertrials and in blinks
-    good_samples = isInTrial & ~ blinkYesNo;
-
-    if ( ~isempty( sac ) )
-        is_good = zeros(size(sac,1),1);
-        for j=1:length(is_good)
-            is_good(j) = sum( ~good_samples( sac(j,1):sac(j,2)) ) == 0;
+    % get the velocity for each of the componets
+    for k=1:length(eyes)
+        for j=1:length(eyeSignals)
+            data.([eyes{k} 'Vel' eyeSignals{j}]) = engbert_vecvel(data.([eyes{k} eyeSignals{j}]), samplerate, 2);
+            data.([eyes{k} 'Accel' eyeSignals{j}]) = engbert_vecvel(data.([eyes{k} 'Vel' eyeSignals{j}]), samplerate, 2);
+            data.([eyes{k} 'Jerk' eyeSignals{j}]) = engbert_vecvel(data.([eyes{k} 'Accel' eyeSignals{j}]), samplerate, 2);
         end
-        sac = sac( is_good==1, :);
     end
 
-    lrsac.(eyes{k}) = sac;
-    radEyes{k} = rad;
-end
+    textprogressbar(1/Nprogsteps);
 
-textprogressbar(2/Nprogsteps);
+    lrsac = [];
+    xy = cell(size(eyes));
+    radEyes = {};
+    for k=1:length(eyes)
 
-if ( (LEFT && ~isempty(lrsac.Left)) || (RIGHT && ~isempty(lrsac.Right)) ) % some saccades detected
+        xy{k} = data{:,{[eyes{k} 'X'], [eyes{k} 'Y'], [eyes{k} 'T']}};
+        v = data{:,{[eyes{k} 'VelX'], [eyes{k} 'VelY'], [eyes{k} 'VelT']}};
+
+        isInTrial = ones(size(data.Time)); % TODO!!!
+        blinkYesNo = isnan(v(:,1)) | isnan(v(:,2));
+
+        [sac, rad] = engbert_microsacc(xy{k}, v ,params.Detection.Engbert.VFAC,params.Detection.Engbert.MINDUR, blinkYesNo, componetsToUse);
+        %--------------------------------------------------------------------
+        % OUTPUT
+        %  sac(1:num,1)   onset of saccade
+        %  sac(1:num,2)   end of saccade
+        %  sac(1:num,3)   peak velocity of saccade (vpeak)
+        %  sac(1:num,4)   horizontal component     (dx)
+        %  sac(1:num,5)   vertical component       (dy)
+        %  sac(1:num,6)   horizontal amplitude     (dX)
+        %  sac(1:num,7)   vertical amplitude       (dY)
+        %  sac(1:num,9)   peak test variable       (dY)
 
 
-    %% - Remove monoculars (overlap threshold)
-    if ( LEFT && RIGHT && params.Detection.Engbert.Remove_Monoculars )
-        [left_monoculars_idx, right_monoculars_idx] = FindMonoculars( lrsac.Left, lrsac.Right, params.Detection.Engbert.Binocular_Minimum_Overlap, params.Detection.Engbert.Recover_Monoculars, params.Detection.Engbert.Recover_Monoculars_Threshold );
-        lrsac.Left(left_monoculars_idx,:) = [];
-        lrsac.Right(right_monoculars_idx,:)  = [];
-    end
+        %% -- Filter bad microsaccades --------------------------------------------
+        %-- remove usacc in intertrials and in blinks
+        good_samples = isInTrial & ~ blinkYesNo;
 
-    textprogressbar(3/Nprogsteps);
-
-    %% - Remove overshoots
-    if ( params.Detection.Engbert.Remove_Overshoots )
-        if ( LEFT && RIGHT )
-            if ( params.Detection.Engbert.Remove_Monoculars && (length(lrsac.Left) == length(lrsac.Right) && ~params.Detection.Engbert.Recover_Monoculars) )
-                % if monoculars have been removed we can find overshoots
-                % binocularly
-                [overshoots_idx] = FindOvershoots( xy{1}, lrsac.Left, xy{2}, lrsac.Right, samplerate,  params.Detection.Engbert.Overshoot_Interval );
-                left_overshoots_idx = overshoots_idx;
-                right_overshoots_idx = overshoots_idx;
-            else
-                % if monoculars are still present we find the overshoots
-                % independently in each eye
-                left_overshoots_idx = FindOvershoots( xy{1}, lrsac.Left, [], [], samplerate, params.Detection.Engbert.Overshoot_Interval );
-                right_overshoots_idx = FindOvershoots( [], [], xy{2}, lrsac.Right, samplerate, params.Detection.Engbert.Overshoot_Interval );
+        if ( ~isempty( sac ) )
+            is_good = zeros(size(sac,1),1);
+            for j=1:length(is_good)
+                is_good(j) = sum( ~good_samples( sac(j,1):sac(j,2)) ) == 0;
             end
-            lrsac.Left(left_overshoots_idx,:) = [];
-            lrsac.Right(right_overshoots_idx,:) = [];
-        elseif ( LEFT )
-            [left_overshoots_idx] = FindOvershoots( xy{1}, lrsac.Left, [], [], samplerate, params.Detection.Engbert.Overshoot_Interval );
-            lrsac.Left(left_overshoots_idx,:) = [];
-        elseif ( RIGHT )
-            [right_overshoots_idx] = FindOvershoots( [], [], xy{1}, lrsac.Right, samplerate, params.Detection.Engbert.Overshoot_Interval );
-            lrsac.Right(right_overshoots_idx,:) = [];
+            sac = sac( is_good==1, :);
         end
+
+        lrsac.(eyes{k}) = sac;
+        radEyes{k} = rad;
     end
 
-    textprogressbar(4/Nprogsteps);
+    textprogressbar(2/Nprogsteps);
 
-    % up to this point because we may have tried to recover monoculars, it is
-    % possible that the left and right eyes don't have the same number of
-    % saccades
-    %
-    % here we will condense them into a single binocular sac variable that has
-    % the begining and ends according to the single eye begining and end
-    if ( LEFT && RIGHT  && (length(lrsac.Left) == length(lrsac.Right) && ~params.Detection.Engbert.Recover_Monoculars) )
-        % if we truly have matching binocular saccades in the left and right
-        % eye we consider the begining the first begining between the two eyes
-        % and the end the last ending between the two eyes
-        sac = [min([lrsac.Left(:,1) lrsac.Right(:,1)],[],2) max([lrsac.Left(:,2) lrsac.Right(:,2)],[],2)];
-    elseif ( LEFT && RIGHT)
-        % if we are not the same, we can build a yes/no vector for all the
-        % samples for each eye to see if they belong to a saccade or not and
-        % then do the logical OR between the two eyes and then get the begining
-        % and end of whatever periods with "yes" we get
-        lu = zeros(size(data.Time,1)+1,1);
-        ru = zeros(size(data.Time,1)+1,1);
-        lu(lrsac.Left(:,1)) = 1;
-        lu(lrsac.Left(:,2)+1) = -1;
-        lu = cumsum(lu); % yes/no saccade in the left eye
-        ru(lrsac.Right(:,1)) = 1;
-        ru(lrsac.Right(:,2)+1) = -1;
-        ru = cumsum(ru); % yes/no saccade in the right eye
-        sac = [];
-        u = double(lu(1:end-1) | ru(1:end-1)); % yes/no left OR right eye
-        sac(:,1) = find(diff([0;u])>0);
-        sac(:,2) = find(diff([0;u])<0);
-    elseif (LEFT)
-        sac = lrsac.Left;
-    elseif (RIGHT)
-        sac = lrsac.Right;
+    if ( (LEFT && ~isempty(lrsac.Left)) || (RIGHT && ~isempty(lrsac.Right)) ) % some saccades detected
+
+
+        %% - Remove monoculars (overlap threshold)
+        if ( LEFT && RIGHT && ~isempty(lrsac.Left) && ~isempty(lrsac.Right) && params.Detection.Engbert.Remove_Monoculars )
+            [left_monoculars_idx, right_monoculars_idx] = FindMonoculars( lrsac.Left, lrsac.Right, params.Detection.Engbert.Binocular_Minimum_Overlap, params.Detection.Engbert.Recover_Monoculars, params.Detection.Engbert.Recover_Monoculars_Threshold );
+            lrsac.Left(left_monoculars_idx,:) = [];
+            lrsac.Right(right_monoculars_idx,:)  = [];
+        end
+
+        textprogressbar(3/Nprogsteps);
+
+        %% - Remove overshoots
+        if ( params.Detection.Engbert.Remove_Overshoots )
+            if ( LEFT && RIGHT )
+                if ( params.Detection.Engbert.Remove_Monoculars && (length(lrsac.Left) == length(lrsac.Right) && ~params.Detection.Engbert.Recover_Monoculars) )
+                    % if monoculars have been removed we can find overshoots
+                    % binocularly
+                    [overshoots_idx] = FindOvershoots( xy{1}, lrsac.Left, xy{2}, lrsac.Right, samplerate,  params.Detection.Engbert.Overshoot_Interval );
+                    left_overshoots_idx = overshoots_idx;
+                    right_overshoots_idx = overshoots_idx;
+                else
+                    % if monoculars are still present we find the overshoots
+                    % independently in each eye
+                    left_overshoots_idx = FindOvershoots( xy{1}, lrsac.Left, [], [], samplerate, params.Detection.Engbert.Overshoot_Interval );
+                    right_overshoots_idx = FindOvershoots( [], [], xy{2}, lrsac.Right, samplerate, params.Detection.Engbert.Overshoot_Interval );
+                end
+                lrsac.Left(left_overshoots_idx,:) = [];
+                lrsac.Right(right_overshoots_idx,:) = [];
+            elseif ( LEFT )
+                [left_overshoots_idx] = FindOvershoots( xy{1}, lrsac.Left, [], [], samplerate, params.Detection.Engbert.Overshoot_Interval );
+                lrsac.Left(left_overshoots_idx,:) = [];
+            elseif ( RIGHT )
+                [right_overshoots_idx] = FindOvershoots( [], [], xy{1}, lrsac.Right, samplerate, params.Detection.Engbert.Overshoot_Interval );
+                lrsac.Right(right_overshoots_idx,:) = [];
+            end
+        end
+
+        textprogressbar(4/Nprogsteps);
+
+        % up to this point because we may have tried to recover monoculars, it is
+        % possible that the left and right eyes don't have the same number of
+        % saccades
+        %
+        % here we will condense them into a single binocular sac variable that has
+        % the begining and ends according to the single eye begining and end
+        if ( LEFT && RIGHT  && (length(lrsac.Left) == length(lrsac.Right) && ~params.Detection.Engbert.Recover_Monoculars) )
+            % if we truly have matching binocular saccades in the left and right
+            % eye we consider the begining the first begining between the two eyes
+            % and the end the last ending between the two eyes
+            sac = [min([lrsac.Left(:,1) lrsac.Right(:,1)],[],2) max([lrsac.Left(:,2) lrsac.Right(:,2)],[],2)];
+        elseif ( LEFT && RIGHT)
+            % if we are not the same, we can build a yes/no vector for all the
+            % samples for each eye to see if they belong to a saccade or not and
+            % then do the logical OR between the two eyes and then get the begining
+            % and end of whatever periods with "yes" we get
+            lu = zeros(size(data.Time,1)+1,1);
+            ru = zeros(size(data.Time,1)+1,1);
+            lu(lrsac.Left(:,1)) = 1;
+            lu(lrsac.Left(:,2)+1) = -1;
+            lu = cumsum(lu); % yes/no saccade in the left eye
+            ru(lrsac.Right(:,1)) = 1;
+            ru(lrsac.Right(:,2)+1) = -1;
+            ru = cumsum(ru); % yes/no saccade in the right eye
+            sac = [];
+            u = double(lu(1:end-1) | ru(1:end-1)); % yes/no left OR right eye
+            sac(:,1) = find(diff([0;u])>0);
+            sac(:,2) = find(diff([0;u])<0);
+        elseif (LEFT)
+            sac = lrsac.Left;
+        elseif (RIGHT)
+            sac = lrsac.Right;
+        end
+
+
+        textprogressbar(5/Nprogsteps);
+
+
     end
 
+catch ME
+    timeElapsed = toc;
 
-    textprogressbar(5/Nprogsteps);
-
-
+    textprogressbar(sprintf('NOT DONE DUE TO ERROR  after %0.2f seconds.', timeElapsed));
+    rethrow(ME)
 end
-
 timeElapsed = toc;
 
 textprogressbar(sprintf('Done in %0.2f seconds.', timeElapsed));
 
 if ( (LEFT && ~isempty(lrsac.Left)) || (RIGHT && ~isempty(lrsac.Right)) ) % some saccades detected
-    
+
 
     %% refine beginings and ends
 
@@ -559,6 +567,10 @@ elseif (~isempty(rsac) )
     rmags = getmagnitude( rxy, rsac );
     lmags = rmags;
     lsac = rsac;
+else
+    % no saccades in either eye
+    overshoots_idx = [];
+    return;
 end
 
 mean_mag = mean([lmags rmags],2);
