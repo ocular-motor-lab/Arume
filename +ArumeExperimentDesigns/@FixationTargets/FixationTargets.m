@@ -4,7 +4,8 @@ classdef FixationTargets < ArumeExperimentDesigns.EyeTracking
 
     properties
         fixRad = 20;
-        fixColor = [255 0 0];
+        fixColo
+        r = [255 0 0];
         targetPositions =[];
     end
 
