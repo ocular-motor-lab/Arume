@@ -1,4 +1,4 @@
-classdef TestingCoords < ArumeExperimentDesigns.EyeTracking
+classdef TorsionTesting < ArumeExperimentDesigns.EyeTracking
     %OPTOKINETICTORSION Summary of this class goes here
     %   Detailed explanation goes here
 
@@ -62,7 +62,7 @@ classdef TestingCoords < ArumeExperimentDesigns.EyeTracking
             t = ArumeCore.TrialTableBuilder();
 
             t.AddConditionVariable("TargetPosition", { ...
-                [0 0], [-10 -10], [0 0], [0 -10], [0 0]});
+                [0 0]});
 
             % Add all conditions to a single block with N repetitions
             nReps = this.ExperimentOptions.NumberRepetitions;

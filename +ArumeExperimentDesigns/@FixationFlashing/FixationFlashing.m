@@ -102,7 +102,7 @@ classdef FixationFlashing < ArumeExperimentDesigns.EyeTracking
                 end
 
                 flashPeriod = 1.0;         % seconds
-                flashOffDuration = 0.005;  % target invisible for 5 ms each second
+                flashOffDuration = 0.970;  % target invisible for 970 ms each second
 
                 while secondsRemaining > 0
                     currentTime        = GetSecs;
