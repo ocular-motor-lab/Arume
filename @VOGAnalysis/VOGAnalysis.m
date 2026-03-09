@@ -45,6 +45,15 @@ classdef VOGAnalysis < handle
             optionsDlg.CleanUp.windw = 0.2; % 200 ms of window for impulse noise removal for use in remove_CRnoise
             
             optionsDlg.Calibration.Calibration_Type = {'Pupil-CR|{Pupil}|DPI|None'};
+            %optionsDlg.Calibration.ManualPostCalibration =  {'{0}','1' };
+            optionsDlg.Calibration.Adjust.Left_Horizontal_Gain = 1;
+            optionsDlg.Calibration.Adjust.Left_Horizontal_Offset = 0;
+            optionsDlg.Calibration.Adjust.Left_Vertical_Gain = 1;
+            optionsDlg.Calibration.Adjust.Left_Vertical_Offset = 0;
+            optionsDlg.Calibration.Adjust.Right_Horizontal_Gain = 1;
+            optionsDlg.Calibration.Adjust.Right_Horizontal_Offset = 0;
+            optionsDlg.Calibration.Adjust.Right_Vertical_Gain = 1;
+            optionsDlg.Calibration.Adjust.Right_Vertical_Offset = 0;
 
             % optionsDlg.Detection.Detection_Method = {'Manual|New|{Engbert}|cluster|Sai'};
             optionsDlg.Detection.Detection_Method = {'Manual|{Engbert}|cluster'};
@@ -256,7 +265,16 @@ classdef VOGAnalysis < handle
                         calibratedDataFile      = VOGAnalysis.CalibrateDataDPI(dataFile, calibrationTable);
                     case 'Pupil'
                         calibratedDataFile      = VOGAnalysis.CalibrateData(dataFile, calibrationTable);
+                    case 'None'
+                        calibratedDataFile      = VOGAnalysis.CalibrateData(dataFile, calibrationTable);
                 end
+
+
+                calibratedDataFile.LeftX = (calibratedDataFile.LeftX-params.Calibration.Adjust.Left_Horizontal_Offset)*params.Calibration.Adjust.Left_Horizontal_Gain;
+                calibratedDataFile.LeftY = (calibratedDataFile.LeftY-params.Calibration.Adjust.Left_Vertical_Offset)*params.Calibration.Adjust.Left_Vertical_Gain;
+
+                calibratedDataFile.RightX = (calibratedDataFile.RightX-params.Calibration.Adjust.Right_Horizontal_Offset)*params.Calibration.Adjust.Right_Horizontal_Gain;
+                calibratedDataFile.RightY = (calibratedDataFile.RightY-params.Calibration.Adjust.Right_Vertical_Offset)*params.Calibration.Adjust.Right_Vertical_Gain;
 
 
                 cleanedDataFile         = VOGAnalysis.CleanData(calibratedDataFile, params);
@@ -320,8 +338,25 @@ classdef VOGAnalysis < handle
 
                 switch( params.Calibration.Calibration_Type)
                     case 'Pupil-CR'
+
+                        % TODO: this may not work well when running the
+                        % calibration twice because LeftX may be overriden?
+
+                        calibrationTables{'LeftEye','RefX'} = median(dataFile.LeftX - dataFile.LeftCR1X,'omitnan');
+                        calibrationTables{'LeftEye','RefY'}  = median(dataFile.LeftY - dataFile.LeftCR1Y,'omitnan');
+                        calibrationTables{'RightEye','RefX'}  = median(dataFile.RightX - dataFile.RightCR1X,'omitnan');
+                        calibrationTables{'RightEye','RefY'}  = median(dataFile.RightY - dataFile.RightCR1Y,'omitnan');
+
                         calibratedDataFile      = VOGAnalysis.CalibrateDataCR(dataFile, calibrationTables   );
                     case 'DPI'
+
+                        % Override the Refs because they will be the center
+                        % of the globe, which is irrelavant for DPI.
+                        calibrationTables{'LeftEye','RefX'} = median(dataFile.LeftCR1X - dataFile.LeftCR4X,'omitnan');
+                        calibrationTables{'LeftEye','RefY'}  = median(dataFile.LeftCR1Y - dataFile.LeftCR4Y,'omitnan');
+                        calibrationTables{'RightEye','RefX'}  = median(dataFile.RightCR1X - dataFile.RightCR4X,'omitnan');
+                        calibrationTables{'RightEye','RefY'}  = median(dataFile.RightCR1Y - dataFile.RightCR4Y,'omitnan');
+
                         calibratedDataFile      = VOGAnalysis.CalibrateDataDPI(dataFile, calibrationTables);
                     case 'Pupil'
                         calibratedDataFile      = VOGAnalysis.CalibrateData(dataFile, calibrationTables);
@@ -635,7 +670,10 @@ classdef VOGAnalysis < handle
             if ( strcmpi(S(1:5),'<?xml') )
                 theStruct = parseXML(file);
             end
-            
+            % TODO: make this DPI and PCR aware! it should load the
+            % reference data appropriartely and not just use the globe
+            % center or the pupil center. 
+
             calibrationTable = table();
             calibrationTable{'LeftEye', 'GlobeX'} = nan;
             calibrationTable{'LeftEye', 'GlobeY'} = nan;
@@ -2399,7 +2437,7 @@ classdef VOGAnalysis < handle
             % number of quick-phases
             n_qp = size(quickPhaseTable.StartIndex,1);
             
-            textprogressbar('++ VOGAnalysis :: Calculating quick phases properties: ');
+            textprogressbar(sprintf('++ VOGAnalysis :: Calculating quick phases properties (%d qps): ',n_qp));
             Nprogsteps = length(eyes)*length(components)*n_qp/100;
             tic
             
@@ -2614,6 +2652,17 @@ classdef VOGAnalysis < handle
             slowPhaseTable.EndIndex = sp(:,2);
             slowPhaseTable.DurationMs = (sp(:,2) - sp(:,1)) * 1000 / SAMPLERATE;
           
+            tbeg = zeros(size(data.Time));
+            tn = data.TrialNumber;
+            tn(isnan(tn)) = 0;
+            t1 = data.Time([0;diff(tn)]>0);
+            t1 = [0; diff(t1)];
+            tbeg([0;diff(tn)]>0) = t1;
+            tfromTrialBegining = cumsum([diff(data.Time);0]-tbeg);
+            tfromTrialBegining(isnan(data.TrialNumber)) = nan;
+
+            slowPhaseTable.TimeFromTrialBeginning = tfromTrialBegining(sp(:,1));
+
             % beginMs = 0;
             % EndMs = 100;
             
@@ -2631,6 +2680,7 @@ classdef VOGAnalysis < handle
                     sp1_props.GoodBegining = nan(size(sp(:,1)));
                     sp1_props.GoodEnd = nan(size(sp(:,1)));
                     sp1_props.GoodTrhought = nan(size(sp(:,1)));
+                    sp1_props.TimeFromTrialBeginning = nan(size(sp(:,1)));
                     
                     sp1_props.Amplitude = nan(size(sp(:,1)));
                     sp1_props.StartPosition = pos(sp(:,1));
@@ -4009,7 +4059,7 @@ if (isstruct(struct_def)) % Init
         dflt = rm_ignore_dflt(dflt,struct_def);
         present_val = rm_ignore_dflt(present_val,struct_def);
     else
-        dflt = rm_ignore_dflt(dflt,struct_def); % AF 6/20/02: Comment this line out if cuases problems.
+        %dflt = rm_ignore_dflt(dflt,struct_def); % AF 6/20/02: Comment this line out if cuases problems.
         present_val = rm_ignore_dflt(present_val,struct_def);
     end
     [struct_def units limits protected] = split_def(struct_def);
