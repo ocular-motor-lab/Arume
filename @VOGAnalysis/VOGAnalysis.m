@@ -1387,7 +1387,6 @@ classdef VOGAnalysis < handle
             else
                 referenceXDeg = asin((calibrationTable{'LeftEye', 'RefX'} - calibrationTable{'LeftEye', 'GlobeX'}) / calibrationTable{'LeftEye', 'GlobeRadiusX'}) * 180 / pi;
                 referenceYDeg = asin((calibrationTable{'LeftEye', 'RefY'} - calibrationTable{'LeftEye', 'GlobeY'}) / calibrationTable{'LeftEye', 'GlobeRadiusY'}) * 180 / pi;
-                
                 lx = asin((rawData.LeftX - calibrationTable{'LeftEye', 'GlobeX'}) / calibrationTable{'LeftEye', 'GlobeRadiusX'}) * 180 / pi;
                 ly = asin((rawData.LeftY - calibrationTable{'LeftEye', 'GlobeY'}) / calibrationTable{'LeftEye', 'GlobeRadiusY'}) * 180 / pi;
                 
@@ -2988,7 +2987,7 @@ classdef VOGAnalysis < handle
             spvjom.RightYSE = spvye';
         end
         
-        function [spv, positionFiltered] = GetSPV_Simple(timeSec, position)
+        function [spv, positionFiltered] = GetSPV_Simple(timeSec, position, win)
             % GET SPV SIMPLE Calculates slow phase velocity (SPV) from a
             % position signal with a simple algorithm. No need to have
             % detected the quickphases before.
@@ -3003,18 +3002,23 @@ classdef VOGAnalysis < handle
             %   Inputs:
             %       - timeSec: timestamps of the data (column vector) in seconds.
             %       - position: position data (must be same size as timeSec).
+            %       - win: window size for the filter (1 s default).
             %
             %   Outputs:
             %       - spv: instantaneous slow phase velocity.
             %       - positionFiltered: corresponding filtered position signal.
             
+            if (~exist('win','var'))
+                win = 1;
+            end
+
             firstPassVThrehold              = 100;  %deg/s
             firstPassMedfiltWindow          = 4;    %s
             firstPassMedfiltNanFraction     = 0.25;   %
             firstPassPadding                = 30;   %ms
             
             secondPassVThrehold             = 10;   %deg/s
-            secondPassMedfiltWindow         = 1;    %s
+            secondPassMedfiltWindow         = win;    %s
             secondPassMedfiltNanFraction    = 0.5;   %
             secondPassPadding               = 30;   %ms
             
