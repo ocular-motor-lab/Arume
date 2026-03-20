@@ -20,7 +20,7 @@ classdef VOGAnalysis < handle
             params = VOGAnalysis.GetParameterOptions();
             params = StructDlg(params,'',[],[],'off');
         end
-        
+
         function optionsDlg = GetParameterOptions()
             
             optionsDlg.Detect_Quik_and_Slow_Phases =  { {'0','{1}'} };
