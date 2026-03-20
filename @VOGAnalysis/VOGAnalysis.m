@@ -20,7 +20,7 @@ classdef VOGAnalysis < handle
             params = VOGAnalysis.GetParameterOptions();
             params = StructDlg(params,'',[],[],'off');
         end
-        
+
         function optionsDlg = GetParameterOptions()
             
             optionsDlg.Detect_Quik_and_Slow_Phases =  { {'0','{1}'} };
@@ -1425,7 +1425,6 @@ classdef VOGAnalysis < handle
             else
                 referenceXDeg = asin((calibrationTable{'LeftEye', 'RefX'} - calibrationTable{'LeftEye', 'GlobeX'}) / calibrationTable{'LeftEye', 'GlobeRadiusX'}) * 180 / pi;
                 referenceYDeg = asin((calibrationTable{'LeftEye', 'RefY'} - calibrationTable{'LeftEye', 'GlobeY'}) / calibrationTable{'LeftEye', 'GlobeRadiusY'}) * 180 / pi;
-                
                 lx = asin((rawData.LeftX - calibrationTable{'LeftEye', 'GlobeX'}) / calibrationTable{'LeftEye', 'GlobeRadiusX'}) * 180 / pi;
                 ly = asin((rawData.LeftY - calibrationTable{'LeftEye', 'GlobeY'}) / calibrationTable{'LeftEye', 'GlobeRadiusY'}) * 180 / pi;
                 
@@ -3041,7 +3040,7 @@ classdef VOGAnalysis < handle
             spvjom.RightYSE = spvye';
         end
         
-        function [spv, positionFiltered] = GetSPV_Simple(timeSec, position)
+        function [spv, positionFiltered] = GetSPV_Simple(timeSec, position, win)
             % GET SPV SIMPLE Calculates slow phase velocity (SPV) from a
             % position signal with a simple algorithm. No need to have
             % detected the quickphases before.
@@ -3056,18 +3055,23 @@ classdef VOGAnalysis < handle
             %   Inputs:
             %       - timeSec: timestamps of the data (column vector) in seconds.
             %       - position: position data (must be same size as timeSec).
+            %       - win: window size for the filter (1 s default).
             %
             %   Outputs:
             %       - spv: instantaneous slow phase velocity.
             %       - positionFiltered: corresponding filtered position signal.
             
+            if (~exist('win','var'))
+                win = 1;
+            end
+
             firstPassVThrehold              = 100;  %deg/s
             firstPassMedfiltWindow          = 4;    %s
             firstPassMedfiltNanFraction     = 0.25;   %
             firstPassPadding                = 30;   %ms
             
             secondPassVThrehold             = 10;   %deg/s
-            secondPassMedfiltWindow         = 1;    %s
+            secondPassMedfiltWindow         = win;    %s
             secondPassMedfiltNanFraction    = 0.5;   %
             secondPassPadding               = 30;   %ms
             
@@ -3386,28 +3390,28 @@ classdef VOGAnalysis < handle
                     MEDIUM_RED = [0.9000 0.2000 0.2000];
                     
                     figure
-                    timeL = data.LeftSeconds;
+                    timeL = data.LeftTime;
 %                     timeR = data.RightSeconds;
                     timeR = timeL;
                     
                     h(1) = subplot(3,1,1,'nextplot','add');
-                    plot(timeL, data.LeftPupilX, 'color', [ MEDIUM_BLUE ])
-                    plot(timeR, data.RightPupilX, 'color', [ MEDIUM_RED])
+                    plot(timeL, data.LeftX, 'color', [ MEDIUM_BLUE ])
+                    plot(timeR, data.RightX, 'color', [ MEDIUM_RED])
                     plot(timeL, data.LeftCR1X, 'color', [ MEDIUM_BLUE ]/2)
                     plot(timeR, data.RightCR1X, 'color', [ MEDIUM_RED]/2)
                     ylabel('Horizontal (deg)','fontsize', 16);
                     legend({'Left' 'Right' 'LeftCR1' 'RightCR1'})
                     
                     h(2) = subplot(3,1,2,'nextplot','add');
-                    plot(timeL, data.LeftPupilY, 'color', [ MEDIUM_BLUE ])
-                    plot(timeR, data.RightPupilY, 'color', [ MEDIUM_RED])
+                    plot(timeL, data.LeftY, 'color', [ MEDIUM_BLUE ])
+                    plot(timeR, data.RightY, 'color', [ MEDIUM_RED])
                     plot(timeL, data.LeftCR1Y, 'color', [ MEDIUM_BLUE ]/2)
                     plot(timeR, data.RightCR1Y, 'color', [ MEDIUM_RED]/2)
                     ylabel('Vertical (deg)','fontsize', 16);
                     
                     h(3) = subplot(3,1,3,'nextplot','add');
-                    plot(timeL, data.LeftTorsion, 'color', [ MEDIUM_BLUE ])
-                    plot(timeR, data.RightTorsion, 'color', [ MEDIUM_RED])
+                    plot(timeL, data.LeftT, 'color', [ MEDIUM_BLUE ])
+                    plot(timeR, data.RightT, 'color', [ MEDIUM_RED])
                     ylabel('Torsion (deg)','fontsize', 16);
                     xlabel('Time (s)');
                     linkaxes(h,'x');
