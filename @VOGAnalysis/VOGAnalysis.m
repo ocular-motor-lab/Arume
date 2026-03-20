@@ -3387,28 +3387,28 @@ classdef VOGAnalysis < handle
                     MEDIUM_RED = [0.9000 0.2000 0.2000];
                     
                     figure
-                    timeL = data.LeftSeconds;
+                    timeL = data.LeftTime;
 %                     timeR = data.RightSeconds;
                     timeR = timeL;
                     
                     h(1) = subplot(3,1,1,'nextplot','add');
-                    plot(timeL, data.LeftPupilX, 'color', [ MEDIUM_BLUE ])
-                    plot(timeR, data.RightPupilX, 'color', [ MEDIUM_RED])
+                    plot(timeL, data.LeftX, 'color', [ MEDIUM_BLUE ])
+                    plot(timeR, data.RightX, 'color', [ MEDIUM_RED])
                     plot(timeL, data.LeftCR1X, 'color', [ MEDIUM_BLUE ]/2)
                     plot(timeR, data.RightCR1X, 'color', [ MEDIUM_RED]/2)
                     ylabel('Horizontal (deg)','fontsize', 16);
                     legend({'Left' 'Right' 'LeftCR1' 'RightCR1'})
                     
                     h(2) = subplot(3,1,2,'nextplot','add');
-                    plot(timeL, data.LeftPupilY, 'color', [ MEDIUM_BLUE ])
-                    plot(timeR, data.RightPupilY, 'color', [ MEDIUM_RED])
+                    plot(timeL, data.LeftY, 'color', [ MEDIUM_BLUE ])
+                    plot(timeR, data.RightY, 'color', [ MEDIUM_RED])
                     plot(timeL, data.LeftCR1Y, 'color', [ MEDIUM_BLUE ]/2)
                     plot(timeR, data.RightCR1Y, 'color', [ MEDIUM_RED]/2)
                     ylabel('Vertical (deg)','fontsize', 16);
                     
                     h(3) = subplot(3,1,3,'nextplot','add');
-                    plot(timeL, data.LeftTorsion, 'color', [ MEDIUM_BLUE ])
-                    plot(timeR, data.RightTorsion, 'color', [ MEDIUM_RED])
+                    plot(timeL, data.LeftT, 'color', [ MEDIUM_BLUE ])
+                    plot(timeR, data.RightT, 'color', [ MEDIUM_RED])
                     ylabel('Torsion (deg)','fontsize', 16);
                     xlabel('Time (s)');
                     linkaxes(h,'x');

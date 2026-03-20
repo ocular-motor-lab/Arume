@@ -392,8 +392,11 @@ classdef ExperimentDesign < handle
                 end
 
                 if (i==1)
-                    if ( (trialStartTime-calibrations.DateTime(pastClosestCalibration)) < minutes(5) )
+                    maxTimeBetweenCalibrationAndFirstTrialInMin = 30;
+                    if ( (trialStartTime-calibrations.DateTime(pastClosestCalibration)) < minutes(maxTimeBetweenCalibrationAndFirstTrialInMin) )
                         calibrationsForEachTrial(i) = pastClosestCalibration;
+                    else
+                        fprintf('TOO MUCH TIME IN BETWEEN CALIBRATION AND DATA COLLECTION (more than %d)', maxTimeBetweenCalibrationAndFirstTrialInMin);
                     end
                 else
                     previousTrialCalibration = calibrationsForEachTrial(i-1);
@@ -1317,13 +1320,19 @@ classdef ExperimentDesign < handle
     methods ( Access = public ) % Eye tracking Plot methods
         
         function Plot_VOG_RawData(this)
-            switch(this.ExperimentOptions.EyeTracker) 
-                case 'OpenIris'
-                    data = this.Session.rawDataTable;
-                    VOGAnalysis.PlotRawTraces(data);
+            files = this.Session.currentRun.LinkedFiles;
+            for i=1:length(files)
+                switch(this.ExperimentOptions.EyeTracker) 
+                    case 'OpenIris'
+                        file = this.Session.currentRun.LinkedFiles(1).vogDataFile;
+                        data = VOGAnalysis.LoadOpenIrisData(fullfile(this.Session.dataPath,  file));
+                        VOGAnalysis.PlotRawTraces(data);
+                        set(gcf,'name', file);
+
                 case 'Fove'
                     data = this.Session.rawDataTable;
                     VOGAnalysis.PlotRawTraces(data,'Fove');
+                end
             end
         end
         
@@ -1365,8 +1374,8 @@ classdef ExperimentDesign < handle
                     yl = get(h(i),'ylim');
                     
                     trialStarts = nan(size(data.Time));
-                    trialStarts(this.Session.trialDataTable.SampleStartTrial-1) = yl(1);
-                    trialStarts(this.Session.trialDataTable.SampleStartTrial) = yl(2);
+                    trialStarts(this.Session.trialDataTable.SampleStartTrial) = yl(1);
+                    trialStarts(this.Session.trialDataTable.SampleStartTrial+1) = yl(2);
                     
                     trialStops = nan(size(data.Time));
                     trialStops(this.Session.trialDataTable.SampleStopTrial-1) = yl(1);

@@ -169,8 +169,8 @@ classdef Calibration < ArumeExperimentDesigns.EyeTracking
 
              targetPositions_ = cell2mat(this.targetPositions');
 
-             calibrationPointsX = targetPositions_(trialDataTable.TargetPosition,1);
-             calibrationPointsY = targetPositions_(trialDataTable.TargetPosition,2);
+             calibrationPointsX = targetPositions_(trialDataTable.TargetPosition,1)/2;
+             calibrationPointsY = targetPositions_(trialDataTable.TargetPosition,2)/2;
 
              %%%%%%%%%%% SR 3/13/25 THIS IS TO PROCESS OLDER EXPTS WITH A
              %%%%%%%%%%% CALIBRATION THAT HAD THE YS FLIPPED. THIS WILL
@@ -252,8 +252,8 @@ classdef Calibration < ArumeExperimentDesigns.EyeTracking
 
             targetPositions_ = cell2mat(this.targetPositions');
 
-            calibrationPointsX = targetPositions_(trialDataTable.TargetPosition,1);
-            calibrationPointsY = targetPositions_(trialDataTable.TargetPosition,2);
+            calibrationPointsX = targetPositions_(trialDataTable.TargetPosition,1)/2;
+            calibrationPointsY = targetPositions_(trialDataTable.TargetPosition,2)/2;
 
             % Get the indices from the start of the trial+0.5 seconds to
             % the end of the trial
