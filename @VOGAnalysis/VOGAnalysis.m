@@ -20,7 +20,7 @@ classdef VOGAnalysis < handle
             params = VOGAnalysis.GetParameterOptions();
             params = StructDlg(params,'',[],[],'off');
         end
-        
+
         function optionsDlg = GetParameterOptions()
             
             optionsDlg.Detect_Quik_and_Slow_Phases =  { {'0','{1}'} };
@@ -2701,7 +2701,7 @@ classdef VOGAnalysis < handle
                     opts = optimset('Display','off');
                     for i=1:size(sp,1)
                         if ( mod(i,100) == 0 )
-                            textprogressbar((((k-1)*length(rows)+j-1)*size(sp,1)+i)/Nprogsteps);
+                            % textprogressbar((((k-1)*length(rows)+j-1)*size(sp,1)+i)/Nprogsteps);
                         end
                         spidx = sp(i,1):sp(i,2);
                         sp1_props.GoodBegining(i)   = spidx(1)>1 && ~isnan(vel(spidx(1)-1));
@@ -2814,7 +2814,10 @@ classdef VOGAnalysis < handle
             
             slowPhaseTable = struct2table(slowPhaseTable);
             slowPhaseTable.TrialNumber =  data.TrialNumber(slowPhaseTable.StartIndex);
-            
+            if ismember('count', data.Properties.VariableNames)
+                slowPhaseTable.DriftCounter = data.count(slowPhaseTable.StartIndex);
+            end
+
             timeElapsed = toc;
             textprogressbar(sprintf('Done in %0.2f seconds.', timeElapsed));
         end
