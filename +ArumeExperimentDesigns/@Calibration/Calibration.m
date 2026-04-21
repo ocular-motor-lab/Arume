@@ -30,8 +30,13 @@ classdef Calibration < ArumeExperimentDesigns.EyeTracking
             %% Add new options
             dlg.TargetSize = 3;
             dlg.Calibration_Type = { {'5 dots' '9 dots' '13 dots' '17 dots' '{Stereo}'} };
-            dlg.Calibration_Distance_H = { 5 '* (deg)' [1 3000] };
+            dlg.Calibration_Distance_H = { 5 '* (deg)' [1 3000] }; 
             dlg.Calibration_Distance_V = { 5 '* (deg)' [1 3000] };
+            % NOTE!!!! this is the distance from most right target to most
+            % left target. So the corner of the grid will actually be [h/2
+            % v/2] it was not intended this way but there was a bug in the
+            % code that made it this way
+            % TODO: document it and save it in more consistent way.
             dlg.BackgroundBrightness = 255/2; % scalar between 0 (black) and 255 (white)
         end
 
@@ -171,7 +176,7 @@ classdef Calibration < ArumeExperimentDesigns.EyeTracking
              targetPositions_ = cell2mat(this.targetPositions');
 
              calibrationPointsX = targetPositions_(trialDataTable.TargetPosition,1)/2;
-             calibrationPointsY = targetPositions_(trialDataTable.TargetPosition,2)/2;
+             calibrationPointsY = -targetPositions_(trialDataTable.TargetPosition,2)/2;
 
              %%%%%%%%%%% SR 3/13/25 THIS IS TO PROCESS OLDER EXPTS WITH A
              %%%%%%%%%%% CALIBRATION THAT HAD THE YS FLIPPED. THIS WILL
