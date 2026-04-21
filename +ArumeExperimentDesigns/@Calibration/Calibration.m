@@ -93,6 +93,7 @@ classdef Calibration < ArumeExperimentDesigns.EyeTracking
                 lastFlipTime        = GetSecs;
                 secondsRemaining    = this.ExperimentOptions.TrialDuration;
                 thisTrialData.TimeStartLoop = lastFlipTime;
+                thisTrialData.pxWidth = graph.pxWidth;
                 
                 if ( ~isempty(this.eyeTracker) )
                     thisTrialData.EyeTrackerFrameStartLoop = this.eyeTracker.RecordEvent(sprintf('TRIAL_START_LOOP %d %d %d', thisTrialData.TrialNumber, thisTrialData.Condition, thisTrialData.TargetPosition) );
@@ -253,7 +254,7 @@ classdef Calibration < ArumeExperimentDesigns.EyeTracking
             targetPositions_ = cell2mat(this.targetPositions');
 
             calibrationPointsX = targetPositions_(trialDataTable.TargetPosition,1)/2;
-            calibrationPointsY = targetPositions_(trialDataTable.TargetPosition,2)/2;
+            calibrationPointsY = -targetPositions_(trialDataTable.TargetPosition,2)/2;
 
             % Get the indices from the start of the trial+0.5 seconds to
             % the end of the trial

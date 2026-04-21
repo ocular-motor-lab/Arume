@@ -5,12 +5,12 @@ classdef JDPursuit < ArumeExperimentDesigns.EyeTracking
         % Experiment time properties
         stimOffFixate_seconds = 0.5; %seconds
         stimOffPursue_seconds = 1; %seconds
-        stimOnPursue_seconds  = 2; %seconds
+        stimOnPursue_seconds  = 1; %seconds
         stimFadeOut_seconds   = 0.5; %seconds
 
         % Stimulus properties
-        stimColor = [255 255 255]; %[0 0 0]; % [255 0 0]; %red
-        stimRect_size =  [0 0 25 80]; % [0 0 45 112]; %pixels %120
+        stimColor = [0 0 0]; %[255 255 255]; % [255 0 0]; %red
+        stimRect_size =  [0 0 25 30]; % [0 0 45 112]; %pixels %120
         fix_size = 20; %pixels
 
         allStimShift = 0; %this value here doesn't do anything, it gets updated in the code depending on other parameters
@@ -19,12 +19,12 @@ classdef JDPursuit < ArumeExperimentDesigns.EyeTracking
         textOrderforTrials = [1 Shuffle([2:19]) 20 1 Shuffle([2:19]) 20 1 Shuffle([2:19]) 20 1 Shuffle([2:19]) 20 1 Shuffle([2:19]) 20 randperm(10) 20 1 1 Shuffle([2:19]) 20 1 Shuffle([2:19]) 20 1 Shuffle([2:19]) 20 1 Shuffle([2:19]) 20 1 Shuffle([2:19]) 20 randperm(10) 20 1 1 Shuffle([2:19]) 20 1 Shuffle([2:19]) 20 1 Shuffle([2:19]) 20 1 Shuffle([2:19]) 20 1 Shuffle([2:19]) 20 randperm(10) 20 1 1 Shuffle([2:19]) 20 1 Shuffle([2:19]) 20 1 Shuffle([2:19]) 20 1 Shuffle([2:19]) 20 1 Shuffle([2:19]) 20 randperm(10) 20 1 1 Shuffle([2:19]) 20 1 Shuffle([2:19]) 20 1 Shuffle([2:19]) 20 1 Shuffle([2:19]) 20]; %made it this way so that the same ones is played in a row
 
         % Central white circle with black ring
-        blackRing_half_length = 90; %increase to make ring bigger, also change 'insideCircle_half_length' %120
-        insideCircle_half_length = 40; %ceil(180 / 3); % increase to make white circle bigger
+        blackRing_half_length = 30; %90; %increase to make ring bigger, also change 'insideCircle_half_length' %120
+        insideCircle_half_length = 15;% 40; %ceil(180 / 3); % increase to make white circle bigger
         
         %bools: background
         turnOnRing = 1; % turn on the horizontal bars surrounding stim
-        blankwhite = 0; % 1--ganzfeld, 0--cow
+        blankblack = 0; % 1--ganzfeld, 0--cow
 
     end
 
@@ -37,15 +37,16 @@ classdef JDPursuit < ArumeExperimentDesigns.EyeTracking
             dlg = GetOptionsDialog@ArumeExperimentDesigns.EyeTracking(this, importing);
 
             %% ADD new options
-            dlg.Correct_Speed_TEST_deg = { 4.8 '* (deg/s)' [0 300]};
+            dlg.Correct_Speed_TEST_deg = { 4.8 '* (deg/s)' [0 300]}; %4.8 
             dlg.Number_of_Speeds = {9 '* (N (must be odd!))' [1 100] };
             dlg.Rate_lag_or_advance_deg = { 1.2 '* (deg/s)' [0 300]};
 
-            dlg.SpeedStep_deg = { 0.04 '* (deg/s)' [0 300]}; %0.07 %trainingTrials = 2
+            dlg.SpeedStep_deg = { 0.06 '* (deg/s)' [0 300]}; %0.07 %trainingTrials = 2
 
-            dlg.NumberOfRepetitions = {2 '* (N)' [1 100] };
+            dlg.NumberOfRepetitions = {4 '* (N)' [1 100] };
 
             dlg.LRoffset = {100 '* (100 if grow, 202 if shrink)' [0 500] };
+            % dlg.LRoffset_pix_diff = {20 '* (different lengths)' [0 500] };
             dlg.old_control_Fix_Left = 0;
             dlg.control_Fix_noMove = 0;
             dlg.endAtCross = 0;
@@ -56,6 +57,7 @@ classdef JDPursuit < ArumeExperimentDesigns.EyeTracking
             dlg.ScreenHeight_pixels = { 1080 '* (pixels)' [1 5000] };
             dlg.GrowingOutwards = 1;
             
+            % dlg.blankblack = 1;
 
             %% CHANGE DEFAULTS values for existing options
 
@@ -92,6 +94,7 @@ classdef JDPursuit < ArumeExperimentDesigns.EyeTracking
             t.AddConditionVariable('ppd_x',ppd_W);
             t.AddConditionVariable('ppd_y',ppd_H);
             t.AddConditionVariable('LRoffset',this.ExperimentOptions.LRoffset);
+            % t.AddConditionVariable('LRoffset_pix_diff', this.ExperimentOptions.LRoffset_pix_diff)
             t.AddConditionVariable('control_Fix_Left', this.ExperimentOptions.old_control_Fix_Left);
             t.AddConditionVariable('control_Fix_noMove', this.ExperimentOptions.control_Fix_noMove);
             t.AddConditionVariable('endAtCross', this.ExperimentOptions.endAtCross);
@@ -120,6 +123,7 @@ classdef JDPursuit < ArumeExperimentDesigns.EyeTracking
                 t.AddConditionVariable('Speed_ref_pix',this.ExperimentOptions.Correct_Speed_TEST_pix);
             end
 
+            % t.AddConditionVariable('LRoffset',this.ExperimentOptions.LRoffset + ([1:5] - 3) * this.ExperimentOptions.LRoffset_pix_stepsDif);
             t.AddConditionVariable('StartingFromLeft',[ 0 1]); %            t.AddConditionVariable('StartingFromLeft',[ 0 1]);
             t.AddConditionVariable('GrowingOutwards',this.ExperimentOptions.GrowingOutwards); %t.AddConditionVariable('GrowingOutwards',[ 0 1]);
             t.AddConditionVariable('RefIsLead',[ 1]);
@@ -131,6 +135,7 @@ classdef JDPursuit < ArumeExperimentDesigns.EyeTracking
             t2.AddConditionVariable('ppd_x',ppd_W);
             t2.AddConditionVariable('ppd_y',ppd_H);
             t2.AddConditionVariable('LRoffset',this.ExperimentOptions.LRoffset);
+            % t2.AddConditionVariable('LRoffset_pix_diff', this.ExperimentOptions.LRoffset_pix_diff)
             t2.AddConditionVariable('control_Fix_Left', this.ExperimentOptions.old_control_Fix_Left);
             t2.AddConditionVariable('control_Fix_noMove', this.ExperimentOptions.control_Fix_noMove);
             t2.AddConditionVariable('endAtCross', this.ExperimentOptions.endAtCross);
@@ -147,6 +152,7 @@ classdef JDPursuit < ArumeExperimentDesigns.EyeTracking
                 t2.AddConditionVariable('Speed_ref_pix',this.ExperimentOptions.Correct_Speed_TEST_pix + ([1:this.ExperimentOptions.Number_of_Speeds] - center_idx) * this.ExperimentOptions.SpeedStep_pix);
             end
 
+            % t2.AddConditionVariable('LRoffset',this.ExperimentOptions.LRoffset + ([1:5] - 3) * this.ExperimentOptions.LRoffset_pix_stepsDif);
             t2.AddConditionVariable('StartingFromLeft',[ 0 1]); %            t.AddConditionVariable('StartingFromLeft',[ 0 1]);
             t2.AddConditionVariable('GrowingOutwards',this.ExperimentOptions.GrowingOutwards); %t.AddConditionVariable('GrowingOutwards',[ 0 1]);
             t2.AddConditionVariable('RefIsLead',[ 0]);
@@ -175,8 +181,13 @@ classdef JDPursuit < ArumeExperimentDesigns.EyeTracking
                 trialResult = Enum.trialResult.CORRECT;
                 % this.ExperimentOptions.DisplayOptions.PlaySound = 1; %JD add
 
-                black = BlackIndex(graph.window);
-                white = WhiteIndex(graph.window);
+                if this.blankblack == 1
+                    white = BlackIndex(graph.window);
+                    black = WhiteIndex(graph.window);
+                else
+                    black = BlackIndex(graph.window);
+                    white = WhiteIndex(graph.window);
+                end
 
                 lastFlipTime        = GetSecs;
                 secondsRemaining    = this.ExperimentOptions.TrialDuration;
@@ -184,15 +195,38 @@ classdef JDPursuit < ArumeExperimentDesigns.EyeTracking
                 %JD added make background
                 wholeLumRasterCancelJDset = [255 255 255];
 
-                [tex1, tex2, tex3, tex4, tex5, tex6, tex7, tex8, tex9, tex10, tex11, tex12, tex13, tex14, tex15, tex16, tex17, tex18, tex19, tex20, tex99] = ...
+                [tex1, tex2, tex3, tex4, tex5, tex6, tex7, tex8, tex9, tex10] = ...
                     makeTextures(wholeLumRasterCancelJDset, graph.pxWidth, graph.pxHeight, graph.window);
 
                 %-- Find the center of the screen
                 [mx, my] = RectCenter(graph.wRect);
 
                 newTextNumof20 = this.textOrderforTrials(thisTrialData.TrialNumber);
+                if newTextNumof20 > 10
+                    newTextNumof20 = newTextNumof20-10;
+                end
+
                 tex1oF = eval(sprintf('tex%1.f',newTextNumof20));
                 [~] = setCowBkgdwithCross(graph, mx, my, this, tex1oF, white);
+
+                %setting up LRoffset, to be random
+                Lag_LRoffset = thisTrialData.LRoffset; %randi(round([thisTrialData.LRoffset-thisTrialData.LRoffset_pix_diff/4 , thisTrialData.LRoffset+3*thisTrialData.LRoffset_pix_diff/4]));
+
+                % % Valid ranges for B
+                % lower_range = round(thisTrialData.LRoffset-thisTrialData.LRoffset_pix_diff/4) : (Lag_LRoffset - 15);
+                % upper_range = (Lag_LRoffset + 15) : round(thisTrialData.LRoffset+3*thisTrialData.LRoffset_pix_diff/4);
+                % 
+                % valid_values = [lower_range, upper_range];
+                % 
+                % if isempty(lower_range) && isempty(upper_range)
+                %     Lead_LRoffset = randi(round([thisTrialData.LRoffset-thisTrialData.LRoffset_pix_diff/4 , thisTrialData.LRoffset+3*thisTrialData.LRoffset_pix_diff/4]));
+                % else
+                %     Lead_LRoffset = valid_values(randi(length(valid_values)));
+                % end
+                Lead_LRoffset =Lag_LRoffset;
+                
+                thisTrialData.Lag_LRoffset = Lag_LRoffset;
+                thisTrialData.Lead_LRoffset = Lead_LRoffset;
 
                 %Added so that it always places based on where it was at the previous flip, not seconds, so that dropped frames don't judder
                 FlipTimes = zeros( 10000 ,2);
@@ -250,30 +284,30 @@ classdef JDPursuit < ArumeExperimentDesigns.EyeTracking
                                     % [Adding middle--fixation circle in center]----------------------------------------------
                                     fixCirc_size = [0 0 this.fix_size this.fix_size];
                                     fixRect = CenterRectOnPointd( fixCirc_size,  this.allStimShift, my );
-                                    Screen('FillOval', graph.window,  [0 0 0], fixRect);
+                                    Screen('FillOval', graph.window,  black, fixRect);
         
                                     fixCross_size = [0 0 this.fix_size/4 this.fix_size];
                                     fixRect = CenterRectOnPointd( fixCross_size,   this.allStimShift, my );
-                                    Screen('FillOval', graph.window,  [255 255 255], fixRect);
+                                    Screen('FillOval', graph.window,  white, fixRect);
         
                                     fixCross_size = [0 0 this.fix_size this.fix_size/4];
                                     fixRect = CenterRectOnPointd( fixCross_size,   this.allStimShift, my );
-                                    Screen('FillOval', graph.window,  [255 255 255], fixRect);
+                                    Screen('FillOval', graph.window,  white, fixRect);
                                     % ---------------------------------------------- [Adding middle--fixation circle in center]
                         elseif thisTrialData.control_Fix_noMove == 1 || thisTrialData.NOPursueExp == 1
                                    if thisTrialData.randEye == 0
                                        %[Adding left--fixation circle in center]----------------------------------------------
                                        fixCirc_size = [0 0 this.fix_size this.fix_size];
                                        fixRect = CenterRectOnPointd( fixCirc_size,  mx, my);%+ (this.blackRing_half_length-this.insideCircle_half_length)/2+this.insideCircle_half_length );
-                                       Screen('FillOval', graph.window,  [0 0 0], fixRect);
+                                       Screen('FillOval', graph.window,  black, fixRect);
 
                                        fixCross_size = [0 0 this.fix_size/4 this.fix_size];
                                        fixRect = CenterRectOnPointd( fixCross_size,  mx, my);%+ (this.blackRing_half_length-this.insideCircle_half_length)/2+this.insideCircle_half_length );
-                                       Screen('FillOval', graph.window,  [255 255 255], fixRect);
+                                       Screen('FillOval', graph.window,  white, fixRect);
 
                                        fixCross_size = [0 0 this.fix_size this.fix_size/4];
                                        fixRect = CenterRectOnPointd( fixCross_size, mx, my);%+ (this.blackRing_half_length-this.insideCircle_half_length)/2+this.insideCircle_half_length );
-                                       Screen('FillOval', graph.window,  [255 255 255], fixRect);
+                                       Screen('FillOval', graph.window,  white, fixRect);
                                        % ---------------------------------------------- [Adding middle--fixation circle in center]
                                    end
                         end
@@ -299,9 +333,9 @@ classdef JDPursuit < ArumeExperimentDesigns.EyeTracking
                         if thisTrialData.control_Fix_Left ==1
                             %LEFT
                             if thisTrialData.StartingFromLeft == 0
-                                fixRect = CenterRectOnPointd( this.stimRect_size, (secondsElapsed - first_reset_secondsElapsed)*thisTrialData.Speed_Ref_pix-thisTrialData.LRoffset +this.allStimShift, my );
+                                fixRect = CenterRectOnPointd( this.stimRect_size, (secondsElapsed - first_reset_secondsElapsed)*thisTrialData.Speed_Ref_pix-Lead_LRoffset +this.allStimShift, my );
                             else
-                                fixRect = CenterRectOnPointd( this.stimRect_size, (secondsElapsed - first_reset_secondsElapsed)*thisTrialData.Speed_TEST_pix-thisTrialData.LRoffset +this.allStimShift, my ); %start left
+                                fixRect = CenterRectOnPointd( this.stimRect_size, (secondsElapsed - first_reset_secondsElapsed)*thisTrialData.Speed_TEST_pix-Lag_LRoffset +this.allStimShift, my ); %start left
                             end
 
                             Screen('FillRect', graph.window,  this.stimColor, fixRect);
@@ -309,15 +343,15 @@ classdef JDPursuit < ArumeExperimentDesigns.EyeTracking
                                     % [Adding left--fixation circle in center]----------------------------------------------
                                     fixCirc_size = [0 0 this.fix_size this.fix_size];
                                     fixRect = CenterRectOnPointd( fixCirc_size,   (secondsElapsed - first_reset_secondsElapsed)*thisTrialData.Speed_TEST_pix-thisTrialData.LRoffset +this.allStimShift, my );
-                                    Screen('FillOval', graph.window,  [0 0 0], fixRect);
+                                    Screen('FillOval', graph.window,  black, fixRect);
         
                                     fixCross_size = [0 0 this.fix_size/4 this.fix_size];
                                     fixRect = CenterRectOnPointd( fixCross_size,   (secondsElapsed - first_reset_secondsElapsed)*thisTrialData.Speed_TEST_pix-thisTrialData.LRoffset +this.allStimShift, my );
-                                    Screen('FillOval', graph.window,  [255 255 255], fixRect);
+                                    Screen('FillOval', graph.window,  white, fixRect);
         
                                     fixCross_size = [0 0 this.fix_size this.fix_size/4];
                                     fixRect = CenterRectOnPointd( fixCross_size,   (secondsElapsed - first_reset_secondsElapsed)*thisTrialData.Speed_TEST_pix-thisTrialData.LRoffset +this.allStimShift, my );
-                                    Screen('FillOval', graph.window,  [255 255 255], fixRect);
+                                    Screen('FillOval', graph.window,  white, fixRect);
                                     % ---------------------------------------------- [Adding middle--fixation circle in center]
 
                             reset_secondsElapsed =(secondsElapsed - first_reset_secondsElapsed); %exactly amount of time you need to subtract, so that the three are equidistant in the beginning
@@ -327,15 +361,15 @@ classdef JDPursuit < ArumeExperimentDesigns.EyeTracking
                                         % [Adding left--fixation circle in center]----------------------------------------------
                                         fixCirc_size = [0 0 this.fix_size this.fix_size];
                                         fixRect = CenterRectOnPointd( fixCirc_size,  mx, my);%+ (this.blackRing_half_length-this.insideCircle_half_length)/2+this.insideCircle_half_length );
-                                        Screen('FillOval', graph.window,  [0 0 0], fixRect);
+                                        Screen('FillOval', graph.window,  black, fixRect);
         
                                         fixCross_size = [0 0 this.fix_size/4 this.fix_size];
                                         fixRect = CenterRectOnPointd( fixCross_size,  mx, my);%+ (this.blackRing_half_length-this.insideCircle_half_length)/2+this.insideCircle_half_length );
-                                        Screen('FillOval', graph.window,  [255 255 255], fixRect);
+                                        Screen('FillOval', graph.window,  white, fixRect);
         
                                         fixCross_size = [0 0 this.fix_size this.fix_size/4];
                                         fixRect = CenterRectOnPointd( fixCross_size, mx, my);%+ (this.blackRing_half_length-this.insideCircle_half_length)/2+this.insideCircle_half_length );
-                                        Screen('FillOval', graph.window,  [255 255 255], fixRect);
+                                        Screen('FillOval', graph.window,  white, fixRect);
                                         % ---------------------------------------------- [Adding middle--fixation circle in center]
                                     end
                             reset_secondsElapsed =secondsElapsed; %exactly amount of time you need to subtract, so that the three are equidistant in the beginning
@@ -361,15 +395,15 @@ classdef JDPursuit < ArumeExperimentDesigns.EyeTracking
                             % [Adding left--fixation circle in center]----------------------------------------------
                             fixCirc_size = [0 0 this.fix_size this.fix_size];
                             fixRect = CenterRectOnPointd( fixCirc_size,  mx, my);%+ (this.blackRing_half_length-this.insideCircle_half_length)/2+this.insideCircle_half_length );
-                            Screen('FillOval', graph.window,  [0 0 0], fixRect);
+                            Screen('FillOval', graph.window,  black, fixRect);
 
                             fixCross_size = [0 0 this.fix_size/4 this.fix_size];
                             fixRect = CenterRectOnPointd( fixCross_size,  mx, my);%+ (this.blackRing_half_length-this.insideCircle_half_length)/2+this.insideCircle_half_length );
-                            Screen('FillOval', graph.window,  [255 255 255], fixRect);
+                            Screen('FillOval', graph.window,  white, fixRect);
 
                             fixCross_size = [0 0 this.fix_size this.fix_size/4];
                             fixRect = CenterRectOnPointd( fixCross_size, mx, my);%+ (this.blackRing_half_length-this.insideCircle_half_length)/2+this.insideCircle_half_length );
-                            Screen('FillOval', graph.window,  [255 255 255], fixRect);
+                            Screen('FillOval', graph.window,  white, fixRect);
                             % ---------------------------------------------- [Adding middle--fixation circle in center]
 
                             reset_secondsElapsed =secondsElapsed ; %exactly amount of time you need to subtract, so that the three are equidistant in the beginning
@@ -383,15 +417,15 @@ classdef JDPursuit < ArumeExperimentDesigns.EyeTracking
                                     % [Adding middle--fixation circle in center]----------------------------------------------
                                     fixCirc_size = [0 0 this.fix_size this.fix_size];
                                     fixRect = CenterRectOnPointd( fixCirc_size,   (secondsElapsed - first_reset_secondsElapsed)*thisTrialData.Speed_middle_pix +this.allStimShift, my );
-                                    Screen('FillOval', graph.window,  [0 0 0], fixRect);
+                                    Screen('FillOval', graph.window,  black, fixRect);
         
                                     fixCross_size = [0 0 this.fix_size/4 this.fix_size];
                                     fixRect = CenterRectOnPointd( fixCross_size,   (secondsElapsed - first_reset_secondsElapsed)*thisTrialData.Speed_middle_pix +this.allStimShift, my );
-                                    Screen('FillOval', graph.window,  [255 255 255], fixRect);
+                                    Screen('FillOval', graph.window,  white, fixRect);
         
                                     fixCross_size = [0 0 this.fix_size this.fix_size/4];
                                     fixRect = CenterRectOnPointd( fixCross_size,   (secondsElapsed - first_reset_secondsElapsed)*thisTrialData.Speed_middle_pix +this.allStimShift, my );
-                                    Screen('FillOval', graph.window,  [255 255 255], fixRect);
+                                    Screen('FillOval', graph.window,  white, fixRect);
                                     % ---------------------------------------------- [Adding middle--fixation circle in center]
                             
                             reset_secondsElapsed =secondsElapsed ; %exactly amount of time you need to subtract, so that the three are equidistant in the beginning
@@ -410,7 +444,7 @@ classdef JDPursuit < ArumeExperimentDesigns.EyeTracking
                         predicted_lead = abs(predicted_travel_distance_pix_REF - predicted_travel_distance_pix_middle);
 
                         %change background
-                        [~] = setCowBkgdwithCross(graph, mx, my, this, tex1oF, black);
+                        [~] = setCowBkgdwithCross(graph, mx, my, this, tex1oF, white);
 
                         %-- Find the center of the screen
                         [mx, my] = RectCenter(graph.wRect);
@@ -418,26 +452,26 @@ classdef JDPursuit < ArumeExperimentDesigns.EyeTracking
                         %LEFT
                         if thisTrialData.StartingFromLeft == 0
                             if thisTrialData.GrowingOutwards == 1 %normal
-                                fixRect = CenterRectOnPointd( this.stimRect_size, (secondsElapsed-reset_secondsElapsed)*  thisTrialData.Speed_ref_pix-thisTrialData.LRoffset+reset_secondsElapsed_middle +this.allStimShift, my );
+                                fixRect = CenterRectOnPointd( this.stimRect_size, (secondsElapsed-reset_secondsElapsed)*  thisTrialData.Speed_ref_pix-Lead_LRoffset+reset_secondsElapsed_middle +this.allStimShift, my );
                             else %white bar shrinks
                                 % fixRect = CenterRectOnPointd( this.stimRect_size, (secondsElapsed-reset_secondsElapsed)*  thisTrialData.Speed_middle_pix-thisTrialData.LRoffset+reset_secondsElapsed_middle +this.allStimShift      - predicted_lead* (1-(secondsElapsed-reset_secondsElapsed)/this.stimOnPursue_seconds), my );
                             
                                 %making the left one now be Test
-                                fixRect = CenterRectOnPointd( this.stimRect_size, (secondsElapsed-reset_secondsElapsed)*  thisTrialData.Speed_middle_pix -thisTrialData.LRoffset+reset_secondsElapsed_middle +this.allStimShift -     predicted_lead* (1-(secondsElapsed-reset_secondsElapsed)/this.stimOnPursue_seconds)+  (predicted_lag-predicted_lead)* (secondsElapsed-reset_secondsElapsed), my ); %this one starts equal and ends unequal
+                                fixRect = CenterRectOnPointd( this.stimRect_size, (secondsElapsed-reset_secondsElapsed)*  thisTrialData.Speed_middle_pix -Lead_LRoffset+reset_secondsElapsed_middle +this.allStimShift -     predicted_lead* (1-(secondsElapsed-reset_secondsElapsed)/this.stimOnPursue_seconds)+  (predicted_lag-predicted_lead)* (secondsElapsed-reset_secondsElapsed), my ); %this one starts equal and ends unequal
                             end
                         else
                             if thisTrialData.GrowingOutwards == 1 %normal
-                                fixRect = CenterRectOnPointd( this.stimRect_size, (secondsElapsed-reset_secondsElapsed)*  thisTrialData.Speed_TEST_pix-thisTrialData.LRoffset+reset_secondsElapsed_middle +this.allStimShift, my );
+                                fixRect = CenterRectOnPointd( this.stimRect_size, (secondsElapsed-reset_secondsElapsed)*  thisTrialData.Speed_TEST_pix-Lag_LRoffset+reset_secondsElapsed_middle +this.allStimShift, my );
                             else % white bar shrinks
                                 % % % fixRect = CenterRectOnPointd( this.stimRect_size, (secondsElapsed-reset_secondsElapsed)*  thisTrialData.Speed_middle_pix -thisTrialData.LRoffset+reset_secondsElapsed_middle +this.allStimShift -     predicted_lag* (1-(secondsElapsed-reset_secondsElapsed)/this.stimOnPursue_seconds), my ); %this is so that it ends equal,do I want that?
                                 % fixRect = CenterRectOnPointd( this.stimRect_size, (secondsElapsed-reset_secondsElapsed)*  thisTrialData.Speed_middle_pix -thisTrialData.LRoffset+reset_secondsElapsed_middle +this.allStimShift -     predicted_lead* (1-(secondsElapsed-reset_secondsElapsed)/this.stimOnPursue_seconds)+  (predicted_lag-predicted_lead)* (secondsElapsed-reset_secondsElapsed), my ); %this one starts equal and ends unequal
                                 
                                 %making the left one now be Ref
-                                fixRect = CenterRectOnPointd( this.stimRect_size, (secondsElapsed-reset_secondsElapsed)*  thisTrialData.Speed_middle_pix-thisTrialData.LRoffset+reset_secondsElapsed_middle +this.allStimShift      - predicted_lead* (1-(secondsElapsed-reset_secondsElapsed)/this.stimOnPursue_seconds), my );
+                                fixRect = CenterRectOnPointd( this.stimRect_size, (secondsElapsed-reset_secondsElapsed)*  thisTrialData.Speed_middle_pix-Lag_LRoffset+reset_secondsElapsed_middle +this.allStimShift      - predicted_lead* (1-(secondsElapsed-reset_secondsElapsed)/this.stimOnPursue_seconds), my );
                                 
                             end
                         end
-                        fixRect(1) = 0;
+                        % fixRect(1) = 0;
                         Screen('FillRect', graph.window,  this.stimColor, fixRect);
                         
                         %MIDDLE
@@ -448,82 +482,82 @@ classdef JDPursuit < ArumeExperimentDesigns.EyeTracking
                                     % [Adding left--fixation circle in center]----------------------------------------------
                                     fixCirc_size = [0 0 this.fix_size this.fix_size];
                                     fixRect = CenterRectOnPointd( fixCirc_size, (secondsElapsed-reset_secondsElapsed)*  thisTrialData.Speed_TEST_pix-thisTrialData.LRoffset+reset_secondsElapsed_middle +this.allStimShift, my );
-                                    Screen('FillOval', graph.window,  [0 0 0], fixRect);
+                                    Screen('FillOval', graph.window,  black, fixRect);
         
                                     fixCross_size = [0 0 this.fix_size/4 this.fix_size];
                                     fixRect = CenterRectOnPointd( fixCross_size, (secondsElapsed-reset_secondsElapsed)*  thisTrialData.Speed_TEST_pix-thisTrialData.LRoffset+reset_secondsElapsed_middle +this.allStimShift, my );
-                                    Screen('FillOval', graph.window,  [255 255 255], fixRect);
+                                    Screen('FillOval', graph.window,  white, fixRect);
         
                                     fixCross_size = [0 0 this.fix_size this.fix_size/4];
                                     fixRect = CenterRectOnPointd( fixCross_size, (secondsElapsed-reset_secondsElapsed)*  thisTrialData.Speed_TEST_pix-thisTrialData.LRoffset+reset_secondsElapsed_middle +this.allStimShift, my );
-                                    Screen('FillOval', graph.window,  [255 255 255], fixRect);
+                                    Screen('FillOval', graph.window,  white, fixRect);
                                     % ---------------------------------------------- [Adding middle--fixation circle in center]
                                 elseif thisTrialData.control_Fix_noMove == 1
                                     if thisTrialData.randEye == 0
                                         % [Adding left--fixation circle in center]----------------------------------------------
                                         fixCirc_size = [0 0 this.fix_size this.fix_size];
                                         fixRect = CenterRectOnPointd( fixCirc_size,  mx, my);%+  (this.blackRing_half_length-this.insideCircle_half_length)/2+this.insideCircle_half_length );
-                                        Screen('FillOval', graph.window,  [0 0 0], fixRect);
+                                        Screen('FillOval', graph.window,  black, fixRect);
 
                                         fixCross_size = [0 0 this.fix_size/4 this.fix_size];
                                         fixRect = CenterRectOnPointd( fixCross_size,  mx, my);%+ (this.blackRing_half_length-this.insideCircle_half_length)/2+this.insideCircle_half_length );
-                                        Screen('FillOval', graph.window,  [255 255 255], fixRect);
+                                        Screen('FillOval', graph.window,  white, fixRect);
 
                                         fixCross_size = [0 0 this.fix_size this.fix_size/4];
                                         fixRect = CenterRectOnPointd( fixCross_size, mx, my);%+  (this.blackRing_half_length-this.insideCircle_half_length)/2+this.insideCircle_half_length );
-                                        Screen('FillOval', graph.window,  [255 255 255], fixRect);
+                                        Screen('FillOval', graph.window,  white, fixRect);
                                     end
                                 else
                                     % [Adding middle--fixation circle in center]----------------------------------------------
                                     fixCirc_size = [0 0 this.fix_size this.fix_size];
                                     fixRect = CenterRectOnPointd( fixCirc_size, (secondsElapsed-reset_secondsElapsed)*  thisTrialData.Speed_middle_pix+reset_secondsElapsed_middle +this.allStimShift, my );
-                                    Screen('FillOval', graph.window,  [0 0 0], fixRect);
+                                    Screen('FillOval', graph.window,  black, fixRect);
         
                                     fixCross_size = [0 0 this.fix_size/4 this.fix_size];
                                     fixRect = CenterRectOnPointd( fixCross_size, (secondsElapsed-reset_secondsElapsed)*  thisTrialData.Speed_middle_pix+reset_secondsElapsed_middle +this.allStimShift, my );
-                                    Screen('FillOval', graph.window,  [255 255 255], fixRect);
+                                    Screen('FillOval', graph.window,  white, fixRect);
         
                                     fixCross_size = [0 0 this.fix_size this.fix_size/4];
                                     fixRect = CenterRectOnPointd( fixCross_size, (secondsElapsed-reset_secondsElapsed)*  thisTrialData.Speed_middle_pix+reset_secondsElapsed_middle +this.allStimShift, my );
-                                    Screen('FillOval', graph.window,  [255 255 255], fixRect);
+                                    Screen('FillOval', graph.window,  white, fixRect);
                                     % ---------------------------------------------- [Adding middle--fixation circle in center]
                                 end
                         %RIGHT
                         if thisTrialData.StartingFromLeft == 0
                             if thisTrialData.GrowingOutwards == 1 %normal
-                                fixRect = CenterRectOnPointd( this.stimRect_size, (secondsElapsed-reset_secondsElapsed)*  thisTrialData.Speed_TEST_pix+thisTrialData.LRoffset+reset_secondsElapsed_middle +this.allStimShift, my );
+                                fixRect = CenterRectOnPointd( this.stimRect_size, (secondsElapsed-reset_secondsElapsed)*  thisTrialData.Speed_TEST_pix+Lag_LRoffset+reset_secondsElapsed_middle +this.allStimShift, my );
                             else % white bar shrinks
                                 % fixRect = CenterRectOnPointd( this.stimRect_size, (secondsElapsed-reset_secondsElapsed)*  thisTrialData.Speed_middle_pix +thisTrialData.LRoffset+reset_secondsElapsed_middle +this.allStimShift +     predicted_lead* (1-(secondsElapsed-reset_secondsElapsed)/this.stimOnPursue_seconds)-  (predicted_lag-predicted_lead)* (secondsElapsed-reset_secondsElapsed), my ); %this one starts equal and ends unequal
                             
                                 %making right one now be Ref
-                                fixRect = CenterRectOnPointd( this.stimRect_size, (secondsElapsed-reset_secondsElapsed)*  thisTrialData.Speed_middle_pix+thisTrialData.LRoffset+reset_secondsElapsed_middle +this.allStimShift      + predicted_lead* (1-(secondsElapsed-reset_secondsElapsed)/this.stimOnPursue_seconds), my );
+                                fixRect = CenterRectOnPointd( this.stimRect_size, (secondsElapsed-reset_secondsElapsed)*  thisTrialData.Speed_middle_pix+Lag_LRoffset+reset_secondsElapsed_middle +this.allStimShift      + predicted_lead* (1-(secondsElapsed-reset_secondsElapsed)/this.stimOnPursue_seconds), my );
                             end
                         else
                             if thisTrialData.GrowingOutwards == 1 %normal
-                                fixRect = CenterRectOnPointd( this.stimRect_size, (secondsElapsed-reset_secondsElapsed)*  thisTrialData.Speed_ref_pix+thisTrialData.LRoffset+reset_secondsElapsed_middle +this.allStimShift, my );
+                                fixRect = CenterRectOnPointd( this.stimRect_size, (secondsElapsed-reset_secondsElapsed)*  thisTrialData.Speed_ref_pix+Lead_LRoffset+reset_secondsElapsed_middle +this.allStimShift, my );
                             else % white bar shrinks
                                 % fixRect = CenterRectOnPointd( this.stimRect_size, (secondsElapsed-reset_secondsElapsed)*  thisTrialData.Speed_middle_pix+thisTrialData.LRoffset+reset_secondsElapsed_middle +this.allStimShift      + predicted_lead* (1-(secondsElapsed-reset_secondsElapsed)/this.stimOnPursue_seconds), my );
                                 
                                 %making the right one now be Test
-                                fixRect = CenterRectOnPointd( this.stimRect_size, (secondsElapsed-reset_secondsElapsed)*  thisTrialData.Speed_middle_pix +thisTrialData.LRoffset+reset_secondsElapsed_middle +this.allStimShift +     predicted_lead* (1-(secondsElapsed-reset_secondsElapsed)/this.stimOnPursue_seconds)-  (predicted_lag-predicted_lead)* (secondsElapsed-reset_secondsElapsed), my ); %this one starts equal and ends unequal
+                                fixRect = CenterRectOnPointd( this.stimRect_size, (secondsElapsed-reset_secondsElapsed)*  thisTrialData.Speed_middle_pix +Lead_LRoffset+reset_secondsElapsed_middle +this.allStimShift +     predicted_lead* (1-(secondsElapsed-reset_secondsElapsed)/this.stimOnPursue_seconds)-  (predicted_lag-predicted_lead)* (secondsElapsed-reset_secondsElapsed), my ); %this one starts equal and ends unequal
                             end
                         end
-                        fixRect(3) = mx*2;
+                        % fixRect(3) = mx*2;
                         Screen('FillRect', graph.window,  this.stimColor, fixRect);
         %%%
                                 if thisTrialData.control_Fix_noMove == 1 && thisTrialData.randEye == 0
                                     % [Adding left--fixation circle in center]----------------------------------------------
                                     fixCirc_size = [0 0 this.fix_size this.fix_size];
                                     fixRect = CenterRectOnPointd( fixCirc_size,  mx, my);%+  (this.blackRing_half_length-this.insideCircle_half_length)/2+this.insideCircle_half_length );
-                                    Screen('FillOval', graph.window,  [0 0 0], fixRect);
+                                    Screen('FillOval', graph.window,  black, fixRect);
 
                                     fixCross_size = [0 0 this.fix_size/4 this.fix_size];
                                     fixRect = CenterRectOnPointd( fixCross_size,  mx, my);%+ (this.blackRing_half_length-this.insideCircle_half_length)/2+this.insideCircle_half_length );
-                                    Screen('FillOval', graph.window,  [255 255 255], fixRect);
+                                    Screen('FillOval', graph.window,  white, fixRect);
 
                                     fixCross_size = [0 0 this.fix_size this.fix_size/4];
                                     fixRect = CenterRectOnPointd( fixCross_size, mx, my);%+  (this.blackRing_half_length-this.insideCircle_half_length)/2+this.insideCircle_half_length );
-                                    Screen('FillOval', graph.window,  [255 255 255], fixRect);
+                                    Screen('FillOval', graph.window,  white, fixRect);
                                 end
 
                         
@@ -534,6 +568,10 @@ classdef JDPursuit < ArumeExperimentDesigns.EyeTracking
                         fadeC =  min((secondsElapsed-fade_reset_secondsElapsed) / this.stimFadeOut_seconds, 1);
                         FadeToWhiteColor = [fadeC fadeC fadeC].*255;
 
+                        if this.blankblack == 1
+                            FadeToWhiteColor = 255-FadeToWhiteColor;
+                        end
+                        FadeToWhiteColor = white;
                         %change background
                         [~] = setCowBkgdwithCross(graph, mx, my, this, tex1oF, FadeToWhiteColor);
 
@@ -542,7 +580,51 @@ classdef JDPursuit < ArumeExperimentDesigns.EyeTracking
                     else % >4s just wait until exp over
                         
                         %change background
-                        [~] = setCowBkgdwithCross(graph, mx, my, this, tex1oF, white);
+                        % [~] = setCowBkgdwithCross(graph, mx, my, this, tex1oF, grey);
+
+                        % % [wo1, wo2, wo3, wo4, wo5, wo6, wo7, wo8, wo9, wo10] = ...
+                        % %     makeWOTextures(graph.pxWidth, graph.pxHeight, graph.window);
+                        % % 
+                        % % %-- Find the center of the screen
+                        % % [mx, my] = RectCenter(graph.wRect);
+                        % % 
+                        % % newTextNumof20 = this.textOrderforTrials(thisTrialData.TrialNumber);
+                        % % if newTextNumof20 >10
+                        % %     newTextNumof20 = newTextNumof20-10;
+                        % % end
+                        % % maskTex = eval(sprintf('wo%1.f',newTextNumof20));
+                        % % 
+                        % % destinationRectangle =  []; % so that it fills the whole screen
+                        % % Screen('DrawTexture', graph.window, maskTex, [],destinationRectangle);
+
+                        folder = fullfile(fileparts(mfilename('fullpath')), 'Masks');
+                        img = imread(fullfile(folder,'voronoi-v4-1.png'));
+
+                        targetW = graph.pxWidth;
+                        targetH = graph.pxHeight;
+
+                        [h, w, ~] = size(img);
+
+                        % Compute scale factor so image fully covers target
+                        scale = max(targetW / w, targetH / h);
+
+                        % Resize
+                        resized = imresize(img, scale);
+
+                        % Get new size
+                        [newH, newW, ~] = size(resized);
+
+                        % Compute center crop coordinates
+                        xStart = floor((newW - targetW) / 2) + 1;
+                        yStart = floor((newH - targetH) / 2) + 1;
+
+                        cropped = resized(yStart:yStart+targetH-1, ...
+                            xStart:xStart+targetW-1, :);
+
+                        maskTex = Screen('MakeTexture', graph.window, cropped);
+
+                        destinationRectangle =  []; % so that it fills the whole screen
+                        Screen('DrawTexture', graph.window, maskTex, [],destinationRectangle);
                     end
 
 
@@ -595,7 +677,7 @@ classdef JDPursuit < ArumeExperimentDesigns.EyeTracking
                             %     sum((FlipTimes(2:nframe,2)-FlipTimes(1:nframe-1,2))*1000 > median((FlipTimes(2:nframe,2)-FlipTimes(1:nframe-1,2))*1000)*1.5));
                             if thisTrialData.TrialNumber == size(this.TrialTable,1)
                                 Plot_Psychometric(this)
-
+                                Plot_Psychometric_2graphs(this)
                                 % Plot_EyeData(this)
                             end
                             
@@ -614,28 +696,28 @@ classdef JDPursuit < ArumeExperimentDesigns.EyeTracking
                 %LEFT
                 if thisTrialData.StartingFromLeft == 0
                     if thisTrialData.GrowingOutwards == 1 %normal
-                        fixRect = CenterRectOnPointd( this.stimRect_size, (secondsElapsed-reset_secondsElapsed)*  thisTrialData.Speed_ref_pix-thisTrialData.LRoffset+reset_secondsElapsed_middle +this.allStimShift, my );
+                        fixRect = CenterRectOnPointd( this.stimRect_size, (secondsElapsed-reset_secondsElapsed)*  thisTrialData.Speed_ref_pix-thisTrialData.Lead_LRoffset+reset_secondsElapsed_middle +this.allStimShift, my );
                     else %white bar shrinks
                         % fixRect = CenterRectOnPointd( this.stimRect_size, (secondsElapsed-reset_secondsElapsed)*  thisTrialData.Speed_middle_pix-thisTrialData.LRoffset+reset_secondsElapsed_middle +this.allStimShift      - predicted_lead* (1-(secondsElapsed-reset_secondsElapsed)/this.stimOnPursue_seconds), my );
 
                         %making the left one now be Test
-                        fixRect = CenterRectOnPointd( this.stimRect_size, (secondsElapsed-reset_secondsElapsed)*  thisTrialData.Speed_middle_pix -thisTrialData.LRoffset+reset_secondsElapsed_middle +this.allStimShift -     predicted_lead* (1-(secondsElapsed-reset_secondsElapsed)/this.stimOnPursue_seconds)+  (predicted_lag-predicted_lead)* (secondsElapsed-reset_secondsElapsed), my ); %this one starts equal and ends unequal
+                        fixRect = CenterRectOnPointd( this.stimRect_size, (secondsElapsed-reset_secondsElapsed)*  thisTrialData.Speed_middle_pix -thisTrialData.Lead_LRoffset+reset_secondsElapsed_middle +this.allStimShift -     predicted_lead* (1-(secondsElapsed-reset_secondsElapsed)/this.stimOnPursue_seconds)+  (predicted_lag-predicted_lead)* (secondsElapsed-reset_secondsElapsed), my ); %this one starts equal and ends unequal
                     end
                 else
                     if thisTrialData.GrowingOutwards == 1 %normal
-                        fixRect = CenterRectOnPointd( this.stimRect_size, (secondsElapsed-reset_secondsElapsed)*  thisTrialData.Speed_TEST_pix-thisTrialData.LRoffset+reset_secondsElapsed_middle +this.allStimShift, my );
+                        fixRect = CenterRectOnPointd( this.stimRect_size, (secondsElapsed-reset_secondsElapsed)*  thisTrialData.Speed_TEST_pix-thisTrialData.Lag_LRoffset+reset_secondsElapsed_middle +this.allStimShift, my );
                     else % white bar shrinks
                         % % % fixRect = CenterRectOnPointd( this.stimRect_size, (secondsElapsed-reset_secondsElapsed)*  thisTrialData.Speed_middle_pix -thisTrialData.LRoffset+reset_secondsElapsed_middle +this.allStimShift -     predicted_lag* (1-(secondsElapsed-reset_secondsElapsed)/this.stimOnPursue_seconds), my ); %this is so that it ends equal,do I want that?
                         % fixRect = CenterRectOnPointd( this.stimRect_size, (secondsElapsed-reset_secondsElapsed)*  thisTrialData.Speed_middle_pix -thisTrialData.LRoffset+reset_secondsElapsed_middle +this.allStimShift -     predicted_lead* (1-(secondsElapsed-reset_secondsElapsed)/this.stimOnPursue_seconds)+  (predicted_lag-predicted_lead)* (secondsElapsed-reset_secondsElapsed), my ); %this one starts equal and ends unequal
 
                         %making the left one now be Ref
-                        fixRect = CenterRectOnPointd( this.stimRect_size, (secondsElapsed-reset_secondsElapsed)*  thisTrialData.Speed_middle_pix-thisTrialData.LRoffset+reset_secondsElapsed_middle +this.allStimShift      - predicted_lead* (1-(secondsElapsed-reset_secondsElapsed)/this.stimOnPursue_seconds), my );
+                        fixRect = CenterRectOnPointd( this.stimRect_size, (secondsElapsed-reset_secondsElapsed)*  thisTrialData.Speed_middle_pix-thisTrialData.Lag_LRoffset+reset_secondsElapsed_middle +this.allStimShift      - predicted_lead* (1-(secondsElapsed-reset_secondsElapsed)/this.stimOnPursue_seconds), my );
 
                     end
                 end
-                fixRect(1) = 0;
-                t =  min((secondsElapsed-fade_reset_secondsElapsed) / this.stimFadeOut_seconds, 1);
-                FadeToWhiteColor = [255 255 255]; %[t t t].*255;
+                % fixRect(1) = 0;
+                t =   min((secondsElapsed-fade_reset_secondsElapsed) / this.stimFadeOut_seconds, 1);
+                FadeToWhiteColor =[t t t].*255; % white; %
 
                 Screen('FillRect', graph.window,  FadeToWhiteColor, fixRect);
 
@@ -647,67 +729,67 @@ classdef JDPursuit < ArumeExperimentDesigns.EyeTracking
                             % [Adding left--fixation circle in center]----------------------------------------------
                             fixCirc_size = [0 0 this.fix_size this.fix_size];
                             fixRect = CenterRectOnPointd( fixCirc_size, (secondsElapsed-reset_secondsElapsed)*  thisTrialData.Speed_TEST_pix-thisTrialData.LRoffset+reset_secondsElapsed_middle +this.allStimShift, my );
-                            Screen('FillOval', graph.window,  [0 0 0], fixRect);
+                            Screen('FillOval', graph.window,  black, fixRect);
         
                             fixCross_size = [0 0 this.fix_size/4 this.fix_size];
                             fixRect = CenterRectOnPointd( fixCross_size, (secondsElapsed-reset_secondsElapsed)*  thisTrialData.Speed_TEST_pix-thisTrialData.LRoffset+reset_secondsElapsed_middle +this.allStimShift, my );
-                            Screen('FillOval', graph.window,  [255 255 255], fixRect);
+                            Screen('FillOval', graph.window,  white, fixRect);
         
                             fixCross_size = [0 0 this.fix_size this.fix_size/4];
                             fixRect = CenterRectOnPointd( fixCross_size, (secondsElapsed-reset_secondsElapsed)*  thisTrialData.Speed_TEST_pix-thisTrialData.LRoffset+reset_secondsElapsed_middle +this.allStimShift, my );
-                            Screen('FillOval', graph.window,  [255 255 255], fixRect);
+                            Screen('FillOval', graph.window,  white, fixRect);
                             % ---------------------------------------------- [Adding middle--fixation circle in center]
                 elseif thisTrialData.control_Fix_noMove == 1
                             if thisTrialData.randEye == 0
                                 % [Adding left--fixation circle in center]----------------------------------------------
                                 fixCirc_size = [0 0 this.fix_size this.fix_size];
                                 fixRect = CenterRectOnPointd( fixCirc_size,  mx, my);%+  (this.blackRing_half_length-this.insideCircle_half_length)/2+this.insideCircle_half_length );
-                                Screen('FillOval', graph.window,  [0 0 0], fixRect);
+                                Screen('FillOval', graph.window,  black, fixRect);
         
                                 fixCross_size = [0 0 this.fix_size/4 this.fix_size];
                                 fixRect = CenterRectOnPointd( fixCross_size,  mx, my);%+ (this.blackRing_half_length-this.insideCircle_half_length)/2+this.insideCircle_half_length );
-                                Screen('FillOval', graph.window,  [255 255 255], fixRect);
+                                Screen('FillOval', graph.window,  white, fixRect);
         
                                 fixCross_size = [0 0 this.fix_size this.fix_size/4];
                                 fixRect = CenterRectOnPointd( fixCross_size, mx, my);%+  (this.blackRing_half_length-this.insideCircle_half_length)/2+this.insideCircle_half_length );
-                                Screen('FillOval', graph.window,  [255 255 255], fixRect);
+                                Screen('FillOval', graph.window,  white, fixRect);
                             end
                 else
                             % [Adding middle--fixation circle in center]----------------------------------------------
                             fixCirc_size = [0 0 this.fix_size this.fix_size];
                             fixRect = CenterRectOnPointd( fixCirc_size, (secondsElapsed-reset_secondsElapsed)*  thisTrialData.Speed_middle_pix+reset_secondsElapsed_middle +this.allStimShift, my );
-                            Screen('FillOval', graph.window,  [0 0 0], fixRect);
+                            Screen('FillOval', graph.window,  black, fixRect);
         
                             fixCross_size = [0 0 this.fix_size/4 this.fix_size];
                             fixRect = CenterRectOnPointd( fixCross_size, (secondsElapsed-reset_secondsElapsed)*  thisTrialData.Speed_middle_pix+reset_secondsElapsed_middle +this.allStimShift, my );
-                            Screen('FillOval', graph.window,  [255 255 255], fixRect);
+                            Screen('FillOval', graph.window,  white, fixRect);
         
                             fixCross_size = [0 0 this.fix_size this.fix_size/4];
                             fixRect = CenterRectOnPointd( fixCross_size, (secondsElapsed-reset_secondsElapsed)*  thisTrialData.Speed_middle_pix+reset_secondsElapsed_middle +this.allStimShift, my );
-                            Screen('FillOval', graph.window,  [255 255 255], fixRect);
+                            Screen('FillOval', graph.window,  white, fixRect);
                             % ---------------------------------------------- [Adding middle--fixation circle in center]
                 end
                 %RIGHT
                 if thisTrialData.StartingFromLeft == 0
                     if thisTrialData.GrowingOutwards == 1 %normal
-                        fixRect = CenterRectOnPointd( this.stimRect_size, (secondsElapsed-reset_secondsElapsed)*  thisTrialData.Speed_TEST_pix+thisTrialData.LRoffset+reset_secondsElapsed_middle +this.allStimShift, my );
+                        fixRect = CenterRectOnPointd( this.stimRect_size, (secondsElapsed-reset_secondsElapsed)*  thisTrialData.Speed_TEST_pix+thisTrialData.Lag_LRoffset+reset_secondsElapsed_middle +this.allStimShift, my );
                     else % white bar shrinks
                         % fixRect = CenterRectOnPointd( this.stimRect_size, (secondsElapsed-reset_secondsElapsed)*  thisTrialData.Speed_middle_pix +thisTrialData.LRoffset+reset_secondsElapsed_middle +this.allStimShift +     predicted_lead* (1-(secondsElapsed-reset_secondsElapsed)/this.stimOnPursue_seconds)-  (predicted_lag-predicted_lead)* (secondsElapsed-reset_secondsElapsed), my ); %this one starts equal and ends unequal
 
                         %making right one now be Ref
-                        fixRect = CenterRectOnPointd( this.stimRect_size, (secondsElapsed-reset_secondsElapsed)*  thisTrialData.Speed_middle_pix+thisTrialData.LRoffset+reset_secondsElapsed_middle +this.allStimShift      + predicted_lead* (1-(secondsElapsed-reset_secondsElapsed)/this.stimOnPursue_seconds), my );
+                        fixRect = CenterRectOnPointd( this.stimRect_size, (secondsElapsed-reset_secondsElapsed)*  thisTrialData.Speed_middle_pix+thisTrialData.Lag_LRoffset+reset_secondsElapsed_middle +this.allStimShift      + predicted_lead* (1-(secondsElapsed-reset_secondsElapsed)/this.stimOnPursue_seconds), my );
                     end
                 else
                     if thisTrialData.GrowingOutwards == 1 %normal
-                        fixRect = CenterRectOnPointd( this.stimRect_size, (secondsElapsed-reset_secondsElapsed)*  thisTrialData.Speed_ref_pix+thisTrialData.LRoffset+reset_secondsElapsed_middle +this.allStimShift, my );
+                        fixRect = CenterRectOnPointd( this.stimRect_size, (secondsElapsed-reset_secondsElapsed)*  thisTrialData.Speed_ref_pix+thisTrialData.Lead_LRoffset+reset_secondsElapsed_middle +this.allStimShift, my );
                     else % white bar shrinks
                         % fixRect = CenterRectOnPointd( this.stimRect_size, (secondsElapsed-reset_secondsElapsed)*  thisTrialData.Speed_middle_pix+thisTrialData.LRoffset+reset_secondsElapsed_middle +this.allStimShift      + predicted_lead* (1-(secondsElapsed-reset_secondsElapsed)/this.stimOnPursue_seconds), my );
 
                         %making the right one now be Test
-                        fixRect = CenterRectOnPointd( this.stimRect_size, (secondsElapsed-reset_secondsElapsed)*  thisTrialData.Speed_middle_pix +thisTrialData.LRoffset+reset_secondsElapsed_middle +this.allStimShift +     predicted_lead* (1-(secondsElapsed-reset_secondsElapsed)/this.stimOnPursue_seconds)-  (predicted_lag-predicted_lead)* (secondsElapsed-reset_secondsElapsed), my ); %this one starts equal and ends unequal
+                        fixRect = CenterRectOnPointd( this.stimRect_size, (secondsElapsed-reset_secondsElapsed)*  thisTrialData.Speed_middle_pix +thisTrialData.Lead_LRoffset+reset_secondsElapsed_middle +this.allStimShift +     predicted_lead* (1-(secondsElapsed-reset_secondsElapsed)/this.stimOnPursue_seconds)-  (predicted_lag-predicted_lead)* (secondsElapsed-reset_secondsElapsed), my ); %this one starts equal and ends unequal
                     end
                 end
-                fixRect(3) = mx*2;
+                % fixRect(3) = mx*2;
                 jdColor = [255 0 0];
                 Screen('FillRect', graph.window,  FadeToWhiteColor, fixRect);
                 %%%
@@ -715,21 +797,21 @@ classdef JDPursuit < ArumeExperimentDesigns.EyeTracking
                             % [Adding left--fixation circle in center]----------------------------------------------
                             fixCirc_size = [0 0 this.fix_size this.fix_size];
                             fixRect = CenterRectOnPointd( fixCirc_size,  mx, my);%+  (this.blackRing_half_length-this.insideCircle_half_length)/2+this.insideCircle_half_length );
-                            Screen('FillOval', graph.window,  [0 0 0], fixRect);
+                            Screen('FillOval', graph.window,  black, fixRect);
         
                             fixCross_size = [0 0 this.fix_size/4 this.fix_size];
                             fixRect = CenterRectOnPointd( fixCross_size,  mx, my);%+ (this.blackRing_half_length-this.insideCircle_half_length)/2+this.insideCircle_half_length );
-                            Screen('FillOval', graph.window,  [255 255 255], fixRect);
+                            Screen('FillOval', graph.window,  white, fixRect);
         
                             fixCross_size = [0 0 this.fix_size this.fix_size/4];
                             fixRect = CenterRectOnPointd( fixCross_size, mx, my);%+  (this.blackRing_half_length-this.insideCircle_half_length)/2+this.insideCircle_half_length );
-                            Screen('FillOval', graph.window,  [255 255 255], fixRect);
+                            Screen('FillOval', graph.window,  white, fixRect);
                         end
 
             end %end fade out
 
             % Make 20 textures
-            function [tex1, tex2, tex3, tex4, tex5, tex6, tex7, tex8, tex9, tex10, tex11, tex12, tex13, tex14, tex15, tex16, tex17, tex18, tex19, tex20, tex99] = ...
+            function [tex1, tex2, tex3, tex4, tex5, tex6, tex7, tex8, tex9, tex10] = ...
                     makeTextures(wholeLumRasterCancelJDset, screen_width, screen_height, w)
 
                 %cd('/Users/Josephine1/Documents/MATLAB/Roorda Lab/Data_and_AnalysisCode/gifMakers_presentations/JDs20noiseBMPS_folder'); % I know this is redundant, but didn't know a better way JD 7/21/23
@@ -744,7 +826,7 @@ classdef JDPursuit < ArumeExperimentDesigns.EyeTracking
                 [jdnoise2] = cropAndMakeBkgLum(jdnoise2,wholeLumRasterCancelJDset, screen_width, screen_height);
                 tex2 = Screen('MakeTexture', w, jdnoise2);
 
-                jdnoise3 = imread(fullfile(folder,'JDnoise3.bmp'));
+                jdnoise3 = imread(fullfile(folder,'JDnoise20.bmp')); %3 had a dalmation dog face distracting 3/12/26
                 [jdnoise3] = cropAndMakeBkgLum(jdnoise3,wholeLumRasterCancelJDset, screen_width, screen_height);
                 tex3 = Screen('MakeTexture', w, jdnoise3);
 
@@ -756,7 +838,7 @@ classdef JDPursuit < ArumeExperimentDesigns.EyeTracking
                 [jdnoise5] = cropAndMakeBkgLum(jdnoise5,wholeLumRasterCancelJDset, screen_width, screen_height);
                 tex5 = Screen('MakeTexture', w, jdnoise5);
 
-                jdnoise6 = imread(fullfile(folder,'JDnoise6.bmp'));
+                jdnoise6 = imread(fullfile(folder,'JDnoise11.bmp'));
                 [jdnoise6] = cropAndMakeBkgLum(jdnoise6,wholeLumRasterCancelJDset, screen_width, screen_height);
                 tex6 = Screen('MakeTexture', w, jdnoise6);
 
@@ -776,50 +858,50 @@ classdef JDPursuit < ArumeExperimentDesigns.EyeTracking
                 [jdnoise10] = cropAndMakeBkgLum(jdnoise10,wholeLumRasterCancelJDset, screen_width, screen_height);
                 tex10 = Screen('MakeTexture', w, jdnoise10);
 
-                jdnoise11 = imread(fullfile(folder,'JDnoise11.bmp'));
-                [jdnoise11] = cropAndMakeBkgLum(jdnoise11,wholeLumRasterCancelJDset, screen_width, screen_height);
-                tex11 = Screen('MakeTexture', w, jdnoise11);
-
-                jdnoise12 = imread(fullfile(folder,'JDnoise12.bmp'));
-                [jdnoise12] = cropAndMakeBkgLum(jdnoise12,wholeLumRasterCancelJDset, screen_width, screen_height);
-                tex12= Screen('MakeTexture', w, jdnoise12);
-
-                jdnoise13 = imread(fullfile(folder,'JDnoise13.bmp'));
-                [jdnoise13] = cropAndMakeBkgLum(jdnoise13,wholeLumRasterCancelJDset, screen_width, screen_height);
-                tex13 = Screen('MakeTexture', w, jdnoise13);
-
-                jdnoise14 = imread(fullfile(folder,'JDnoise14.bmp'));
-                [jdnoise14] = cropAndMakeBkgLum(jdnoise14,wholeLumRasterCancelJDset, screen_width, screen_height);
-                tex14 = Screen('MakeTexture', w, jdnoise14);
-
-                jdnoise15 = imread(fullfile(folder,'JDnoise15.bmp'));
-                [jdnoise15] = cropAndMakeBkgLum(jdnoise15,wholeLumRasterCancelJDset, screen_width, screen_height);
-                tex15 = Screen('MakeTexture', w, jdnoise15);
-
-                jdnoise16 = imread(fullfile(folder,'JDnoise16.bmp'));
-                [jdnoise16] = cropAndMakeBkgLum(jdnoise16,wholeLumRasterCancelJDset, screen_width, screen_height);
-                tex16 = Screen('MakeTexture', w, jdnoise16);
-
-                jdnoise17 = imread(fullfile(folder,'JDnoise17.bmp'));
-                [jdnoise17] = cropAndMakeBkgLum(jdnoise17,wholeLumRasterCancelJDset, screen_width, screen_height);
-                tex17 = Screen('MakeTexture', w, jdnoise17);
-
-                jdnoise18 = imread(fullfile(folder,'JDnoise18.bmp'));
-                [jdnoise18] = cropAndMakeBkgLum(jdnoise18,wholeLumRasterCancelJDset, screen_width, screen_height);
-                tex18 = Screen('MakeTexture', w, jdnoise18);
-
-                jdnoise19 = imread(fullfile(folder,'JDnoise19.bmp'));
-                [jdnoise19] = cropAndMakeBkgLum(jdnoise19,wholeLumRasterCancelJDset, screen_width, screen_height);
-                tex19 = Screen('MakeTexture', w, jdnoise19);
-
-                jdnoise20 = imread(fullfile(folder,'JDnoise20.bmp'));
-                [jdnoise20] = cropAndMakeBkgLum(jdnoise20,wholeLumRasterCancelJDset, screen_width, screen_height);
-                tex20 = Screen('MakeTexture', w, jdnoise20);
-
-                whiteblank99 = imread(fullfile(folder,'JDnoise20.bmp'));
-                whiteblank99(:,:,:)=255;
-                [whiteblank99] = cropAndMakeBkgLum(whiteblank99,wholeLumRasterCancelJDset, screen_width, screen_height);
-                tex99 = Screen('MakeTexture', w, whiteblank99);
+                % jdnoise11 = imread(fullfile(folder,'JDnoise11.bmp'));
+                % [jdnoise11] = cropAndMakeBkgLum(jdnoise11,wholeLumRasterCancelJDset, screen_width, screen_height);
+                % tex11 = Screen('MakeTexture', w, jdnoise11);
+                % 
+                % jdnoise12 = imread(fullfile(folder,'JDnoise12.bmp'));
+                % [jdnoise12] = cropAndMakeBkgLum(jdnoise12,wholeLumRasterCancelJDset, screen_width, screen_height);
+                % tex12= Screen('MakeTexture', w, jdnoise12);
+                % 
+                % jdnoise13 = imread(fullfile(folder,'JDnoise13.bmp'));
+                % [jdnoise13] = cropAndMakeBkgLum(jdnoise13,wholeLumRasterCancelJDset, screen_width, screen_height);
+                % tex13 = Screen('MakeTexture', w, jdnoise13);
+                % 
+                % jdnoise14 = imread(fullfile(folder,'JDnoise14.bmp'));
+                % [jdnoise14] = cropAndMakeBkgLum(jdnoise14,wholeLumRasterCancelJDset, screen_width, screen_height);
+                % tex14 = Screen('MakeTexture', w, jdnoise14);
+                % 
+                % jdnoise15 = imread(fullfile(folder,'JDnoise15.bmp'));
+                % [jdnoise15] = cropAndMakeBkgLum(jdnoise15,wholeLumRasterCancelJDset, screen_width, screen_height);
+                % tex15 = Screen('MakeTexture', w, jdnoise15);
+                % 
+                % jdnoise16 = imread(fullfile(folder,'JDnoise16.bmp'));
+                % [jdnoise16] = cropAndMakeBkgLum(jdnoise16,wholeLumRasterCancelJDset, screen_width, screen_height);
+                % tex16 = Screen('MakeTexture', w, jdnoise16);
+                % 
+                % jdnoise17 = imread(fullfile(folder,'JDnoise17.bmp'));
+                % [jdnoise17] = cropAndMakeBkgLum(jdnoise17,wholeLumRasterCancelJDset, screen_width, screen_height);
+                % tex17 = Screen('MakeTexture', w, jdnoise17);
+                % 
+                % jdnoise18 = imread(fullfile(folder,'JDnoise18.bmp'));
+                % [jdnoise18] = cropAndMakeBkgLum(jdnoise18,wholeLumRasterCancelJDset, screen_width, screen_height);
+                % tex18 = Screen('MakeTexture', w, jdnoise18);
+                % 
+                % jdnoise19 = imread(fullfile(folder,'JDnoise19.bmp'));
+                % [jdnoise19] = cropAndMakeBkgLum(jdnoise19,wholeLumRasterCancelJDset, screen_width, screen_height);
+                % tex19 = Screen('MakeTexture', w, jdnoise19);
+                % 
+                % jdnoise20 = imread(fullfile(folder,'JDnoise20.bmp'));
+                % [jdnoise20] = cropAndMakeBkgLum(jdnoise20,wholeLumRasterCancelJDset, screen_width, screen_height);
+                % tex20 = Screen('MakeTexture', w, jdnoise20);
+                % 
+                % whiteblank99 = imread(fullfile(folder,'JDnoise20.bmp'));
+                % whiteblank99(:,:,:)=255;
+                % [whiteblank99] = cropAndMakeBkgLum(whiteblank99,wholeLumRasterCancelJDset, screen_width, screen_height);
+                % tex99 = Screen('MakeTexture', w, whiteblank99);
 
             end
             % set the raster-cancel-background lum for each texture
@@ -844,23 +926,31 @@ classdef JDPursuit < ArumeExperimentDesigns.EyeTracking
                 end
 
             end
+            
 
             function [mx] = setCowBkgdwithCross(graph, mx, my, this, tex1oF, insideColor)
 
-                black = BlackIndex(graph.window);
-                white = WhiteIndex(graph.window);
+                blackC = BlackIndex(graph.window);
+                whiteC = WhiteIndex(graph.window);
 
-                if this.blankwhite == 1
-                    Screen('FillRect', graph.window, white);
+                if this.blankblack == 1
+                    Screen('FillRect', graph.window, blackC);
+                    
+                    Screen('FillRect', graph.window ...
+                            , insideColor,... %these numbers are for 4.2e-01 luminance
+                            [1,...
+                            my - this.insideCircle_half_length,...
+                            mx + mx,...
+                            my + this.insideCircle_half_length]); %2deg box
                 else
-                    Screen('FillRect', graph.window, black);
+                    Screen('FillRect', graph.window, blackC);
                     destinationRectangle =  []; % so that it fills the whole screen
                     Screen('DrawTexture', graph.window, tex1oF, [],destinationRectangle);
 
                     if this.turnOnRing == 1
-                        blackRing_rgb = [1 1 1]; %[0 0 0];
+                        blackRing_rgb = [1 1 1]; %
                         % Drawing the black circle first so that it becomes ring
-                        Screen('FillRect',graph.window,white,... %black oval
+                        Screen('FillRect',graph.window,whiteC,... %black oval
                             [1,...
                             my - this.blackRing_half_length,...
                             mx + mx,...
@@ -875,6 +965,79 @@ classdef JDPursuit < ArumeExperimentDesigns.EyeTracking
                             my + this.insideCircle_half_length]); %2deg box
                     end
                 end
+            end
+
+            % Make 20 textures
+            function [tex1, tex2, tex3, tex4, tex5, tex6, tex7, tex8, tex9, tex10] = ...
+                    makeWOTextures(screen_width, screen_height, w)
+                %cd('/Users/Josephine1/Documents/MATLAB/Roorda Lab/Data_and_AnalysisCode/gifMakers_presentations/JDs20noiseBMPS_folder'); % I know this is redundant, but didn't know a better way JD 7/21/23
+
+                folder = fullfile(fileparts(mfilename('fullpath')), 'Masks');
+
+                mask1 = imread(fullfile(folder,'voronoi-v4-1.png'));
+                [mask1] = resizeAndCropWO(mask1, screen_width, screen_height);
+                tex1 = Screen('MakeTexture', w, mask1);
+
+                mask2 = imread(fullfile(folder,'voronoi-v4-2.png'));
+                [mask2] = resizeAndCropWO(mask2, screen_width, screen_height);
+                tex2 = Screen('MakeTexture', w, mask2);
+
+                mask3 = imread(fullfile(folder,'voronoi-v4-3.png'));
+                [mask3] = resizeAndCropWO(mask3, screen_width, screen_height);
+                tex3 = Screen('MakeTexture', w, mask3);
+
+                mask4 = imread(fullfile(folder,'voronoi-v4-4.png'));
+                [mask4] = resizeAndCropWO(mask4, screen_width, screen_height);
+                tex4 = Screen('MakeTexture', w, mask4);
+
+                mask5 = imread(fullfile(folder,'voronoi-v4-5.png'));
+                [mask5] = resizeAndCropWO(mask5, screen_width, screen_height);
+                tex5 = Screen('MakeTexture', w, mask5);
+
+                mask6 = imread(fullfile(folder,'voronoi-v4-6.png'));
+                [mask6] = resizeAndCropWO(mask6, screen_width, screen_height);
+                tex6 = Screen('MakeTexture', w, mask6);
+
+                mask7 = imread(fullfile(folder,'voronoi-v4-7.png'));
+                [mask7] = resizeAndCropWO(mask7, screen_width, screen_height);
+                tex7 = Screen('MakeTexture', w, mask7);
+
+                mask8 = imread(fullfile(folder,'voronoi-v4-8.png'));
+                [mask8] = resizeAndCropWO(mask8, screen_width, screen_height);
+                tex8 = Screen('MakeTexture', w, mask8);
+
+                mask9 = imread(fullfile(folder,'voronoi-v4-9.png'));
+                [mask9] = resizeAndCropWO(mask9, screen_width, screen_height);
+                tex9 = Screen('MakeTexture', w, mask9);
+
+                mask10 = imread(fullfile(folder,'voronoi-v4-10.png'));
+                [mask10] = resizeAndCropWO(mask10, screen_width, screen_height);
+                tex10 = Screen('MakeTexture', w, mask10);
+            end
+
+            function [cropped] = resizeAndCropWO(img, screen_width, screen_height)
+                % targetW = graph.pxWidth;
+                % targetH = graph.pxHeight;
+
+                [h, w, ~] = size(img);
+
+                % Compute scale factor so image fully covers target
+                scale = max(screen_width / w, screen_height / h);
+
+                % Resize
+                resized = imresize(img, scale);
+
+                % Get new size
+                [newH, newW, ~] = size(resized);
+
+                % Compute center crop coordinates
+                xStart = floor((newW - screen_width) / 2) + 1;
+                yStart = floor((newH - screen_height) / 2) + 1;
+
+                cropped = resized(yStart:yStart+screen_height-1, ...
+                    xStart:xStart+screen_width-1, :);
+
+                % maskTex = Screen('MakeTexture', graph.window, cropped);
             end
 
         end %runTrial end
@@ -1060,142 +1223,142 @@ classdef JDPursuit < ArumeExperimentDesigns.EyeTracking
             set(gca,'fontsize', 18)
             title(strrep(this.Session.shortName,'_',' '))
             saveFolder = this.Session.folder;
-            saveas(gcf, [saveFolder, '/', this.Session.subjectCode, '_', this.Session.sessionCode '_PF_','RefIsLead_',num2str(numConditions(nc))','.jpg'])
+            saveas(gcf, [saveFolder, '/', this.Session.subjectCode, '_', this.Session.sessionCode '_PF_','RefIsLead_',num2str(numConditions(nc))','_indiv.jpg'])
 
 
         end
 
-        % % function Plot_Psychometric(this)
-        % %     folder = fullfile(fileparts(mfilename('fullpath')), 'Palamedes');
-        % %     addpath(folder);
-        % % 
-        % %     trialDataTable = this.Session.currentRun.pastTrialTable;
-        % % 
-        % %     %convertings pixels to degrees
-        % %     trialDataTable.Speed_TEST_deg = trialDataTable.Speed_TEST_pix./trialDataTable.ppd_x;
-        % %     trialDataTable.Speed_middle_deg = trialDataTable.Speed_middle_pix./trialDataTable.ppd_x;
-        % %     trialDataTable.Speed_ref_deg = trialDataTable.Speed_ref_pix./trialDataTable.ppd_x;
-        % % 
-        % %     %getting rate of gap increasing
-        % %     trialDataTable.Rate_test = abs(trialDataTable.Speed_middle_deg - trialDataTable.Speed_TEST_deg);
-        % %     trialDataTable.Rate_ref = abs(trialDataTable.Speed_ref_deg - trialDataTable.Speed_middle_deg);
-        % % 
-        % %     numConditions = unique(trialDataTable.RefIsLead);
-        % % 
-        % % 
-        % %     for nc = 1: size(numConditions,1)
-        % %         curT = trialDataTable(trialDataTable.RefIsLead == numConditions(nc),:);
-        % % 
-        % %         if numConditions(nc) == 1
-        % %             curT.ChoseRef(curT.StartingFromLeft ==1 & curT.Response == 'R' & curT.GrowingOutwards == 1) = 1;
-        % %             curT.ChoseRef(curT.StartingFromLeft ==0 & curT.Response == 'L' & curT.GrowingOutwards == 1) = 1;
-        % % 
-        % %             %I added for table shrinking...
-        % %             curT.ChoseRef(curT.StartingFromLeft ==1 & curT.Response == 'L' & curT.GrowingOutwards == 0) = 1;
-        % %             curT.ChoseRef(curT.StartingFromLeft ==0 & curT.Response == 'R' & curT.GrowingOutwards == 0) = 1;
-        % % 
-        % %             [uniqueVals, ~, idx] = unique(abs(curT.Speed_TEST_deg));
-        % %             % marker_sizes = accumarray(idx,1);
-        % % 
-        % %             StimLevels = nan(1,size(uniqueVals,1)); NumPos = nan(1,size(uniqueVals,1)); OutOfNum = nan(1,size(uniqueVals,1));
-        % %             for i = 1:size(uniqueVals,1)
-        % %                 curData = curT(abs(curT.Speed_TEST_deg) ==uniqueVals(i), :);
-        % % 
-        % %                 StimLevels(i) = uniqueVals(i);
-        % %                 NumPos(i) = sum(curData.ChoseRef);
-        % %                 OutOfNum(i) = length(curData.ChoseRef);
-        % %             end
-        % %         else
-        % %             curT.ChoseRef(curT.StartingFromLeft ==1 & curT.Response == 'L' & curT.GrowingOutwards == 1) = 1;
-        % %             curT.ChoseRef(curT.StartingFromLeft ==0 & curT.Response == 'R' & curT.GrowingOutwards == 1) = 1;
-        % % 
-        % %             %I added for table shrinking...
-        % %             curT.ChoseRef(curT.StartingFromLeft ==1 & curT.Response == 'R' & curT.GrowingOutwards == 0) = 1;
-        % %             curT.ChoseRef(curT.StartingFromLeft ==0 & curT.Response == 'L' & curT.GrowingOutwards == 0) = 1;
-        % % 
-        % %             [uniqueVals, ~, idx] = unique(abs(curT.Speed_ref_deg));
-        % %             % marker_sizes = accumarray(idx,1);
-        % % 
-        % %             StimLevels = nan(1,size(uniqueVals,1)); NumPos = nan(1,size(uniqueVals,1)); OutOfNum = nan(1,size(uniqueVals,1));
-        % %             for i = 1:size(uniqueVals,1)
-        % %                 curData = curT(abs(curT.Speed_ref_deg) ==uniqueVals(i), :);
-        % % 
-        % %                 StimLevels(i) = uniqueVals(i);
-        % %                 NumPos(i) = sum(curData.ChoseRef);
-        % %                 OutOfNum(i) = length(curData.ChoseRef);
-        % %             end
-        % %         end
-        % % 
-        % %         PF = @PAL_Logistic;
-        % % 
-        % %         paramsFree = [1 1 0 0];
-        % %         searchGrid.alpha = mean(StimLevels);
-        % %         searchGrid.beta = 3.5;
-        % %         searchGrid.gamma = 0.01;
-        % %         searchGrid.lambda = 0.01;
-        % % 
-        % % 
-        % %         %Perform fit
-        % %         if (numConditions(nc) == 1 && curT.GrowingOutwards(1) == 1) || (numConditions(nc) == 0 && curT.GrowingOutwards(1) == 0)
-        % %             [paramsValues] = PAL_PFML_Fit(StimLevels,NumPos,OutOfNum,searchGrid,paramsFree,PF);
-        % %         else
-        % %             NumPos_flipped = OutOfNum - NumPos;
-        % %             [paramsValues] = PAL_PFML_Fit(StimLevels,NumPos_flipped,OutOfNum,searchGrid,paramsFree,PF);
-        % %         end
-        % % 
-        % %         %plotting fit
-        % %         ProportionCorrect = NumPos./OutOfNum;
-        % %         xEval = [min(StimLevels):max(abs(StimLevels))./1000:max(StimLevels)];
-        % %         yEval = PF(paramsValues,xEval);
-        % %         if (numConditions(nc) == 0 && curT.GrowingOutwards(1) == 1) || (numConditions(nc) == 1 && curT.GrowingOutwards(1) == 0)
-        % %             yEval = 1 - yEval;
-        % %         end
-        % % 
-        % %         PSE = PF(paramsValues, 0.5, 'inv');
-        % % 
-        % %         figure('Color','w'); hold on; grid on;
-        % %         plot(xEval,yEval,'-','Color',[0 0.7 0], 'LineWidth',4);
-        % %         plot(StimLevels,ProportionCorrect, 'ko', 'MarkerFaceColor','k', 'MarkerSize',10);
-        % % 
-        % %         B = 400;
-        % %         searchGrid.alpha = paramsValues(1) - 0.1:0.001:paramsValues(1)+0.1;
-        % %         searchGrid.beta = paramsValues(2);
-        % % 
-        % %         [SD] = PAL_PFML_BootstrapParametric(StimLevels,OutOfNum,paramsValues,paramsFree,B,PF,'searchGrid',searchGrid);
-        % % 
-        % %         errorbar(PSE,0.5, SD(1), 'horizontal', 'ro','MarkerFaceColor', 'r', 'LineWidth',1.5, 'MarkerSize',15)
-        % %         text(PSE+0.5, 0.5, sprintf('PSE = %1.2f \\pm %1.2f ms', PSE, SD(1)));
-        % % 
-        % %         %formating graph
-        % %         if trialDataTable.NOPursueExp ==0
-        % %             if numConditions(nc) == 1
-        % %                 xline(abs(curT.Speed_middle_deg(1))-curT.Rate_ref(1), '--','Color',[0.5 0.5 0.5], 'LineWidth',2);
-        % %             else
-        % %                 xline(abs(curT.Speed_middle_deg(1))+curT.Rate_test(1), '--','Color',[0.5 0.5 0.5], 'LineWidth',2);
-        % %             end
-        % %         end
-        % %         ylim([0 1]); yticks([0:0.1:1]);
-        % % 
-        % %         if numConditions(nc) == 1
-        % %             xlabel('Lagging stimulus speed (deg/s)')
-        % %             ylabel('Reponse == Leading Stimulus')
-        % %         else
-        % %             xlabel('Leading stimulus speed (deg/s)')
-        % %             ylabel('Reponse == Lagging Stimulus')
-        % %         end
-        % % 
-        % %         set(gca,'fontsize', 18)
-        % %         title(strrep(this.Session.shortName,'_',' '))
-        % %         saveFolder = this.Session.folder;
-        % %         saveas(gcf, [saveFolder, '/', this.Session.subjectCode, '_', this.Session.sessionCode '_PF_','RefIsLead_',num2str(numConditions(nc))','.jpg'])
-        % %     end
-        % % 
-        % %     % figure
-        % %     % trialDataTable = this.Session.trialDataTable;
-        % %     % plot(trialDataTable.Speed_left, double(trialDataTable.Response=='R')+randn(size(trialDataTable.Response))/20,'o');
-        % %     % xlabel('Speed')
-        % %     % ylabel('Reponse == Right')
-        % % end
+        function Plot_Psychometric_2graphs(this)
+            folder = fullfile(fileparts(mfilename('fullpath')), 'Palamedes');
+            addpath(folder);
+
+            trialDataTable = this.Session.currentRun.pastTrialTable;
+
+            %convertings pixels to degrees
+            trialDataTable.Speed_TEST_deg = trialDataTable.Speed_TEST_pix./trialDataTable.ppd_x;
+            trialDataTable.Speed_middle_deg = trialDataTable.Speed_middle_pix./trialDataTable.ppd_x;
+            trialDataTable.Speed_ref_deg = trialDataTable.Speed_ref_pix./trialDataTable.ppd_x;
+
+            %getting rate of gap increasing
+            trialDataTable.Rate_test = abs(trialDataTable.Speed_middle_deg - trialDataTable.Speed_TEST_deg);
+            trialDataTable.Rate_ref = abs(trialDataTable.Speed_ref_deg - trialDataTable.Speed_middle_deg);
+
+            numConditions = unique(trialDataTable.RefIsLead);
+
+
+            for nc = 1: size(numConditions,1)
+                curT = trialDataTable(trialDataTable.RefIsLead == numConditions(nc),:);
+
+                if numConditions(nc) == 1
+                    curT.ChoseRef(curT.StartingFromLeft ==1 & curT.Response == 'R' & curT.GrowingOutwards == 1) = 1;
+                    curT.ChoseRef(curT.StartingFromLeft ==0 & curT.Response == 'L' & curT.GrowingOutwards == 1) = 1;
+
+                    %I added for table shrinking...
+                    curT.ChoseRef(curT.StartingFromLeft ==1 & curT.Response == 'L' & curT.GrowingOutwards == 0) = 1;
+                    curT.ChoseRef(curT.StartingFromLeft ==0 & curT.Response == 'R' & curT.GrowingOutwards == 0) = 1;
+
+                    [uniqueVals, ~, idx] = unique(abs(curT.Speed_TEST_deg));
+                    % marker_sizes = accumarray(idx,1);
+
+                    StimLevels = nan(1,size(uniqueVals,1)); NumPos = nan(1,size(uniqueVals,1)); OutOfNum = nan(1,size(uniqueVals,1));
+                    for i = 1:size(uniqueVals,1)
+                        curData = curT(abs(curT.Speed_TEST_deg) ==uniqueVals(i), :);
+
+                        StimLevels(i) = uniqueVals(i);
+                        NumPos(i) = sum(curData.ChoseRef);
+                        OutOfNum(i) = length(curData.ChoseRef);
+                    end
+                else
+                    curT.ChoseRef(curT.StartingFromLeft ==1 & curT.Response == 'L' & curT.GrowingOutwards == 1) = 1;
+                    curT.ChoseRef(curT.StartingFromLeft ==0 & curT.Response == 'R' & curT.GrowingOutwards == 1) = 1;
+
+                    %I added for table shrinking...
+                    curT.ChoseRef(curT.StartingFromLeft ==1 & curT.Response == 'R' & curT.GrowingOutwards == 0) = 1;
+                    curT.ChoseRef(curT.StartingFromLeft ==0 & curT.Response == 'L' & curT.GrowingOutwards == 0) = 1;
+
+                    [uniqueVals, ~, idx] = unique(abs(curT.Speed_ref_deg));
+                    % marker_sizes = accumarray(idx,1);
+
+                    StimLevels = nan(1,size(uniqueVals,1)); NumPos = nan(1,size(uniqueVals,1)); OutOfNum = nan(1,size(uniqueVals,1));
+                    for i = 1:size(uniqueVals,1)
+                        curData = curT(abs(curT.Speed_ref_deg) ==uniqueVals(i), :);
+
+                        StimLevels(i) = uniqueVals(i);
+                        NumPos(i) = sum(curData.ChoseRef);
+                        OutOfNum(i) = length(curData.ChoseRef);
+                    end
+                end
+
+                PF = @PAL_Logistic;
+
+                paramsFree = [1 1 0 0];
+                searchGrid.alpha = mean(StimLevels);
+                searchGrid.beta = 3.5;
+                searchGrid.gamma = 0.01;
+                searchGrid.lambda = 0.01;
+
+
+                %Perform fit
+                if (numConditions(nc) == 1 && curT.GrowingOutwards(1) == 1) || (numConditions(nc) == 0 && curT.GrowingOutwards(1) == 0)
+                    [paramsValues] = PAL_PFML_Fit(StimLevels,NumPos,OutOfNum,searchGrid,paramsFree,PF);
+                else
+                    NumPos_flipped = OutOfNum - NumPos;
+                    [paramsValues] = PAL_PFML_Fit(StimLevels,NumPos_flipped,OutOfNum,searchGrid,paramsFree,PF);
+                end
+
+                %plotting fit
+                ProportionCorrect = NumPos./OutOfNum;
+                xEval = [min(StimLevels):max(abs(StimLevels))./1000:max(StimLevels)];
+                yEval = PF(paramsValues,xEval);
+                if (numConditions(nc) == 0 && curT.GrowingOutwards(1) == 1) || (numConditions(nc) == 1 && curT.GrowingOutwards(1) == 0)
+                    yEval = 1 - yEval;
+                end
+
+                PSE = PF(paramsValues, 0.5, 'inv');
+
+                figure('Color','w'); hold on; grid on;
+                plot(xEval,yEval,'-','Color',[0 0.7 0], 'LineWidth',4);
+                plot(StimLevels,ProportionCorrect, 'ko', 'MarkerFaceColor','k', 'MarkerSize',10);
+
+                B = 400;
+                searchGrid.alpha = paramsValues(1) - 0.1:0.001:paramsValues(1)+0.1;
+                searchGrid.beta = paramsValues(2);
+
+                [SD] = PAL_PFML_BootstrapParametric(StimLevels,OutOfNum,paramsValues,paramsFree,B,PF,'searchGrid',searchGrid);
+
+                errorbar(PSE,0.5, SD(1), 'horizontal', 'ro','MarkerFaceColor', 'r', 'LineWidth',1.5, 'MarkerSize',15)
+                text(PSE+0.5, 0.5, sprintf('PSE = %1.2f \\pm %1.2f ms', PSE, SD(1)));
+
+                %formating graph
+                if trialDataTable.NOPursueExp ==0
+                    if numConditions(nc) == 1
+                        xline(abs(curT.Speed_middle_deg(1))-curT.Rate_ref(1), '--','Color',[0.5 0.5 0.5], 'LineWidth',2);
+                    else
+                        xline(abs(curT.Speed_middle_deg(1))+curT.Rate_test(1), '--','Color',[0.5 0.5 0.5], 'LineWidth',2);
+                    end
+                end
+                ylim([0 1]); yticks([0:0.1:1]);
+
+                if numConditions(nc) == 1
+                    xlabel('Lagging stimulus speed (deg/s)')
+                    ylabel('Reponse == Leading Stimulus')
+                else
+                    xlabel('Leading stimulus speed (deg/s)')
+                    ylabel('Reponse == Lagging Stimulus')
+                end
+
+                set(gca,'fontsize', 18)
+                title(strrep(this.Session.shortName,'_',' '))
+                saveFolder = this.Session.folder;
+                saveas(gcf, [saveFolder, '/', this.Session.subjectCode, '_', this.Session.sessionCode '_PF_','RefIsLead_',num2str(numConditions(nc))','.jpg'])
+            end
+
+            % figure
+            % trialDataTable = this.Session.trialDataTable;
+            % plot(trialDataTable.Speed_left, double(trialDataTable.Response=='R')+randn(size(trialDataTable.Response))/20,'o');
+            % xlabel('Speed')
+            % ylabel('Reponse == Right')
+        end
 
     end
 
