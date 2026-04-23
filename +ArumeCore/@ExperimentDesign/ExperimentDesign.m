@@ -101,7 +101,7 @@ classdef ExperimentDesign < handle
 
             % Get the eye tracking data to know where the eye is looking at
             if ( ~exist("eyeData","var"))
-                eyeData = this.eyeTracker.GetCurrentData();
+              eyeData = this.eyeTracker.GetCurrentData();
             end
 
             if isfield(eyeData,'mx') && isfield(eyeData,'my')
@@ -141,6 +141,7 @@ classdef ExperimentDesign < handle
                         end
                     end
             end
+
         end
     end
         

@@ -53,7 +53,7 @@ classdef PTB < handle
             result = Graph.DlgSelect( ...
                 'Choose an option:', ...
                 { 'n' 'c' 'q'}, ...
-                { 'Choose n' 'Choose c' 'quit'} , [],[])
+                { 'Choose n' 'Choose c' 'quit'} , [],[]);
 
             Graph.Clear();
         end
@@ -100,7 +100,7 @@ classdef PTB < handle
             % -- GRAPHICS KEYBOARD and MOUSE
             %-- hide the mouse cursor during the experiment
             if ( ~debugMode)
-                HideCursor;
+                HideCursor; 
                 ListenChar(2);
             else
                 ListenChar(1);
