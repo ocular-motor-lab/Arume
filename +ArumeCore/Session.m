@@ -288,7 +288,7 @@ classdef Session < ArumeCore.DataDB
                 if ~iscell(this.currentRun.LinkedFiles.(fileTag))
                     this.currentRun.LinkedFiles.(fileTag) = {this.currentRun.LinkedFiles.(fileTag)};
                 end
-                this.currentRun.LinkedFiles.(fileTag) = vertcat( this.currentRun.LinkedFiles.(fileTag), strcat(fileName, ext) );
+                this.currentRun.LinkedFiles.(fileTag) = vertcat( this.currentRun.LinkedFiles.(fileTag), {strcat(fileName, ext)} );
             end               
         end
         
