@@ -20,7 +20,7 @@ classdef VOGAnalysis < handle
             params = VOGAnalysis.GetParameterOptions();
             params = StructDlg(params,'',[],[],'off');
         end
-        
+
         function optionsDlg = GetParameterOptions()
             
             optionsDlg.Detect_Quik_and_Slow_Phases =  { {'0','{1}'} };
@@ -45,6 +45,15 @@ classdef VOGAnalysis < handle
             optionsDlg.CleanUp.windw = 0.2; % 200 ms of window for impulse noise removal for use in remove_CRnoise
             
             optionsDlg.Calibration.Calibration_Type = {'Pupil-CR|{Pupil}|DPI|None'};
+            %optionsDlg.Calibration.ManualPostCalibration =  {'{0}','1' };
+            optionsDlg.Calibration.Adjust.Left_Horizontal_Gain = 1;
+            optionsDlg.Calibration.Adjust.Left_Horizontal_Offset = 0;
+            optionsDlg.Calibration.Adjust.Left_Vertical_Gain = 1;
+            optionsDlg.Calibration.Adjust.Left_Vertical_Offset = 0;
+            optionsDlg.Calibration.Adjust.Right_Horizontal_Gain = 1;
+            optionsDlg.Calibration.Adjust.Right_Horizontal_Offset = 0;
+            optionsDlg.Calibration.Adjust.Right_Vertical_Gain = 1;
+            optionsDlg.Calibration.Adjust.Right_Vertical_Offset = 0;
 
             % optionsDlg.Detection.Detection_Method = {'Manual|New|{Engbert}|cluster|Sai'};
             optionsDlg.Detection.Detection_Method = {'Manual|{Engbert}|cluster'};
@@ -107,6 +116,27 @@ classdef VOGAnalysis < handle
             end
             if ( sum(strcmp('LeftCR2Y',calibratedData.Properties.VariableNames))>0 || sum(strcmp('RightCR2Y',calibratedData.Properties.VariableNames))>0 )
                 eyeSignals{end+1} = 'CR2Y';
+            end
+
+            if ( sum(strcmp('LeftCR3X',calibratedData.Properties.VariableNames))>0 || sum(strcmp('RightCR3X',calibratedData.Properties.VariableNames))>0 )
+                eyeSignals{end+1} = 'CR3X';
+            end
+            if ( sum(strcmp('LeftCR3Y',calibratedData.Properties.VariableNames))>0 || sum(strcmp('RightCR3Y',calibratedData.Properties.VariableNames))>0 )
+                eyeSignals{end+1} = 'CR3Y';
+            end
+
+            if ( sum(strcmp('LeftCR4X',calibratedData.Properties.VariableNames))>0 || sum(strcmp('RightCR4X',calibratedData.Properties.VariableNames))>0 )
+                eyeSignals{end+1} = 'CR4X';
+            end
+            if ( sum(strcmp('LeftCR4Y',calibratedData.Properties.VariableNames))>0 || sum(strcmp('RightCR4Y',calibratedData.Properties.VariableNames))>0 )
+                eyeSignals{end+1} = 'CR4Y';
+            end
+
+            if ( sum(strcmp('LeftPupilX',calibratedData.Properties.VariableNames))>0 || sum(strcmp('RightPupilX',calibratedData.Properties.VariableNames))>0 )
+                eyeSignals{end+1} = 'PupilX';
+            end
+            if ( sum(strcmp('LeftPupilY',calibratedData.Properties.VariableNames))>0 || sum(strcmp('RightPupilY',calibratedData.Properties.VariableNames))>0 )
+                eyeSignals{end+1} = 'PupilY';
             end
 
             
@@ -223,21 +253,29 @@ classdef VOGAnalysis < handle
                         calibrationTable = table();
                 end
                 
-                if ( ~isempty(calibrationTable) )
-                    switch( params.Calibration.Calibration_Type)
-                        case 'Pupil-CR'
-                            calibratedDataFile      = VOGAnalysis.CalibrateDataCR(dataFile, calibrationTable);
-                        case 'DPI'
-                            calibratedDataFile      = VOGAnalysis.CalibrateDataDPI(dataFile, calibrationTable);
-                        case 'Pupil'
-                            calibratedDataFile      = VOGAnalysis.CalibrateData(dataFile, calibrationTable);
-                    end
-                else
+                if ( isempty(calibrationTable) )
                     disp(sprintf('WARNING THIS FILE (%s) HAS AN EMPTY CALIBRATION going to default open iris calibration', dataFiles{i}));
-
                     calibrationTable       = VOGAnalysis.ReadOpenIrisCalibrationFile(calibrationFilePath);
-                    calibratedDataFile      = VOGAnalysis.CalibrateData(dataFile, calibrationTable);
                 end
+
+                switch( params.Calibration.Calibration_Type)
+                    case 'Pupil-CR'
+                        calibratedDataFile      = VOGAnalysis.CalibrateDataCR(dataFile, calibrationTable);
+                    case 'DPI'
+                        calibratedDataFile      = VOGAnalysis.CalibrateDataDPI(dataFile, calibrationTable);
+                    case 'Pupil'
+                        calibratedDataFile      = VOGAnalysis.CalibrateData(dataFile, calibrationTable);
+                    case 'None'
+                        calibratedDataFile      = VOGAnalysis.CalibrateData(dataFile, calibrationTable);
+                end
+
+
+                calibratedDataFile.LeftX = (calibratedDataFile.LeftX-params.Calibration.Adjust.Left_Horizontal_Offset)*params.Calibration.Adjust.Left_Horizontal_Gain;
+                calibratedDataFile.LeftY = (calibratedDataFile.LeftY-params.Calibration.Adjust.Left_Vertical_Offset)*params.Calibration.Adjust.Left_Vertical_Gain;
+
+                calibratedDataFile.RightX = (calibratedDataFile.RightX-params.Calibration.Adjust.Right_Horizontal_Offset)*params.Calibration.Adjust.Right_Horizontal_Gain;
+                calibratedDataFile.RightY = (calibratedDataFile.RightY-params.Calibration.Adjust.Right_Vertical_Offset)*params.Calibration.Adjust.Right_Vertical_Gain;
+
 
                 cleanedDataFile         = VOGAnalysis.CleanData(calibratedDataFile, params);
                 fileSamplesDataSet      = VOGAnalysis.ResampleData(cleanedDataFile, params);
@@ -300,8 +338,25 @@ classdef VOGAnalysis < handle
 
                 switch( params.Calibration.Calibration_Type)
                     case 'Pupil-CR'
+
+                        % TODO: this may not work well when running the
+                        % calibration twice because LeftX may be overriden?
+
+                        calibrationTables{'LeftEye','RefX'} = median(dataFile.LeftX - dataFile.LeftCR1X,'omitnan');
+                        calibrationTables{'LeftEye','RefY'}  = median(dataFile.LeftY - dataFile.LeftCR1Y,'omitnan');
+                        calibrationTables{'RightEye','RefX'}  = median(dataFile.RightX - dataFile.RightCR1X,'omitnan');
+                        calibrationTables{'RightEye','RefY'}  = median(dataFile.RightY - dataFile.RightCR1Y,'omitnan');
+
                         calibratedDataFile      = VOGAnalysis.CalibrateDataCR(dataFile, calibrationTables   );
                     case 'DPI'
+
+                        % Override the Refs because they will be the center
+                        % of the globe, which is irrelavant for DPI.
+                        calibrationTables{'LeftEye','RefX'} = median(dataFile.LeftCR1X - dataFile.LeftCR4X,'omitnan');
+                        calibrationTables{'LeftEye','RefY'}  = median(dataFile.LeftCR1Y - dataFile.LeftCR4Y,'omitnan');
+                        calibrationTables{'RightEye','RefX'}  = median(dataFile.RightCR1X - dataFile.RightCR4X,'omitnan');
+                        calibrationTables{'RightEye','RefY'}  = median(dataFile.RightCR1Y - dataFile.RightCR4Y,'omitnan');
+
                         calibratedDataFile      = VOGAnalysis.CalibrateDataDPI(dataFile, calibrationTables);
                     case 'Pupil'
                         calibratedDataFile      = VOGAnalysis.CalibrateData(dataFile, calibrationTables);
@@ -478,7 +533,17 @@ classdef VOGAnalysis < handle
                 data.LeftCR2Y               = dataFromFile.LeftCR2Y;
                 data.RightCR2X              = dataFromFile.RightCR2X;
                 data.RightCR2Y              = dataFromFile.RightCR2Y;
-                
+
+                data.LeftCR3X               = dataFromFile.LeftCR3X;
+                data.LeftCR3Y               = dataFromFile.LeftCR3Y;
+                data.RightCR3X              = dataFromFile.RightCR3X;
+                data.RightCR3Y              = dataFromFile.RightCR3Y;
+
+                data.LeftCR4X               = dataFromFile.LeftCR4X;
+                data.LeftCR4Y               = dataFromFile.LeftCR4Y;
+                data.RightCR4X              = dataFromFile.RightCR4X;
+                data.RightCR4Y              = dataFromFile.RightCR4Y;
+
                 data.Int0               = dataFromFile.Int0;
                 data.Int1               = dataFromFile.Int1;
                 
@@ -605,7 +670,10 @@ classdef VOGAnalysis < handle
             if ( strcmpi(S(1:5),'<?xml') )
                 theStruct = parseXML(file);
             end
-            
+            % TODO: make this DPI and PCR aware! it should load the
+            % reference data appropriartely and not just use the globe
+            % center or the pupil center. 
+
             calibrationTable = table();
             calibrationTable{'LeftEye', 'GlobeX'} = nan;
             calibrationTable{'LeftEye', 'GlobeY'} = nan;
@@ -936,8 +1004,8 @@ classdef VOGAnalysis < handle
             rawData = table();
             cleanedData = table();
             
-            for i=1:length(dataFiles)
-                dataFile = dataFiles{i};
+            for i=1:length(dataFiles{1}) % TODO this breaks old stuff CAREFULL NEED TO FIND A LONG TERM SOLUTION THAT WORKS FOR BOTH CASES maybe an issue with new matlab?
+                dataFile = dataFiles{i}; cprintf('CLARA CHANGE: dataFile = dataFiles{i}(i); ln 1008 of VOGAnalysis')
                 cprintf('blue','++ VOGAnalysis :: Reading data File %d of %d = %s ...\n', i, length(dataFiles), dataFile);
                 
                 dataFilePath = fullfile(dataFolder, dataFile);
@@ -1022,11 +1090,12 @@ classdef VOGAnalysis < handle
 
             %% Do the transformation from raw data to degs
             %% TO CHANGE -- ONLY APPLIES TO EYELINK-OLED SETUP (03/07/24)
-            vdist_cm = 130;
-            screenw_cm = 170;
-            w_px = 3840;
-            pxwidthcm = screenw_cm/w_px;
-            h_px = 2160;
+
+            conf = ArumeHardware.EyeTrackerEyelink.GetEyelinkPhysicalDisplayConfiguration();
+            vdist_cm = conf.vdist_cm;
+            w_px = conf.w_px;
+            pxwidthcm = conf.pxwidthcm;
+            h_px = conf.h_px;
             % widthdeg = rad2deg(atan((screenw_cm/2)/vdist_cm))*2;
             % pxperdeg = w_px/widthdeg;
 
@@ -1099,20 +1168,19 @@ classdef VOGAnalysis < handle
     %% LOADING FILES, CALIBRATING, AND CLEANUP %%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     methods (Static)
-        function [calibrationTable] = CalculateCalibration(rawCalibrationData, targetPosition)
-            
-            % regress target and data to get coefficients of calibraiton
-            
-            calibrationTable = table();
-            
-            bLeftX = robustfit(targetPosition.LeftX(~isnan(targetPosition.LeftX)),rawCalibrationData.LeftX_UNCALIBRATED(~isnan(targetPosition.LeftX)));
-            bLeftY = robustfit(targetPosition.LeftY(~isnan(targetPosition.LeftY)),rawCalibrationData.LeftY_UNCALIBRATED(~isnan(targetPosition.LeftY)));
-            bRightX = robustfit(targetPosition.RightX(~isnan(targetPosition.RightX)),rawCalibrationData.RightX_UNCALIBRATED(~isnan(targetPosition.RightX)));
-            bRightY = robustfit(targetPosition.RightY(~isnan(targetPosition.RightY)),rawCalibrationData.RightY_UNCALIBRATED(~isnan(targetPosition.RightY)));
-            
+
+        function [calibrationTable] = FitCalibration(lx, ly, rx, ry, target_lx, target_ly, target_rx, target_ry)
+
+            bLeftX = robustfit(target_lx(~isnan(lx)),lx(~isnan(lx)));
+            bLeftY = robustfit(target_ly(~isnan(ly)),ly(~isnan(ly)));
+            bRightX = robustfit(target_rx(~isnan(rx)),rx(~isnan(rx)));
+            bRightY = robustfit(target_ry(~isnan(ry)),ry(~isnan(ry)));
+
             warning('off','MATLAB:table:RowsAddedExistingVars')
             warning('off','MATLAB:table:RowsAddedNewVars')
 
+            calibrationTable = table();
+            
             calibrationTable{'LeftEye', 'GlobeX'} = bLeftX(1);
             calibrationTable{'LeftEye', 'GlobeY'} = bLeftY(1);
             calibrationTable{'LeftEye', 'GlobeRadiusX'} = abs(60*bLeftX(2));
@@ -1121,7 +1189,7 @@ classdef VOGAnalysis < handle
             calibrationTable{'LeftEye', 'SignY'} = sign(bLeftY(2));
             calibrationTable{'LeftEye', 'RefX'} = bLeftX(1);
             calibrationTable{'LeftEye', 'RefY'} = bLeftY(1);
-            
+
             calibrationTable{'RightEye', 'GlobeX'} = bRightX(1);
             calibrationTable{'RightEye', 'GlobeY'} = bRightY(1);
             calibrationTable{'RightEye', 'GlobeRadiusX'} = abs(60*bRightX(2));
@@ -1130,7 +1198,7 @@ classdef VOGAnalysis < handle
             calibrationTable{'RightEye', 'SignY'} = sign(bRightY(2));
             calibrationTable{'RightEye', 'RefX'} = bRightX(1);
             calibrationTable{'RightEye', 'RefY'} = bRightY(1);
-            
+
             calibrationTable{'LeftEye', 'OffsetX'}  = bLeftX(1);
             calibrationTable{'LeftEye', 'GainX'}    = bLeftX(2);
             calibrationTable{'LeftEye', 'OffsetY'}  = bLeftY(1);
@@ -1142,60 +1210,72 @@ classdef VOGAnalysis < handle
 
             warning('on','MATLAB:table:RowsAddedExistingVars')
             warning('on','MATLAB:table:RowsAddedNewVars')
-            
+
         end
-        
-        function [calibrationTable] = CalculateCalibrationCR(rawCalibrationData, targetPosition)
+
+        function [calibrationTable] = CalculateCalibration(rawCalibrationData)
             
             % regress target and data to get coefficients of calibraiton
             
-            calibrationTable = table();
+            calibrationTable = VOGAnalysis.FitCalibration( ...
+                rawCalibrationData.LeftPupilX, ...
+                rawCalibrationData.LeftPupilY, ...
+                rawCalibrationData.RightPupilX, ...
+                rawCalibrationData.RightPupilY, ...
+                rawCalibrationData.Target_LeftX, ...
+                rawCalibrationData.Target_LeftY, ...
+                rawCalibrationData.Target_RightX, ...
+                rawCalibrationData.Target_RightY );
+        end
+        
+        function [calibrationTable] = CalculateCalibrationCR(rawCalibrationData)
+            
+            % regress target and data to get coefficients of calibraiton
+            
             rawCalibrationData.LeftCR1X(rawCalibrationData.LeftCR1X==0) = nan;
             rawCalibrationData.LeftCR1Y(rawCalibrationData.LeftCR1Y==0) = nan;
             rawCalibrationData.RightCR1X(rawCalibrationData.RightCR1X==0) = nan;
             rawCalibrationData.RightCR1Y(rawCalibrationData.RightCR1Y==0) = nan;
             
-            lx = rawCalibrationData.LeftX_UNCALIBRATED - rawCalibrationData.LeftCR1X;
-            ly = rawCalibrationData.LeftY_UNCALIBRATED - rawCalibrationData.LeftCR1Y;
-            rx = rawCalibrationData.RightX_UNCALIBRATED - rawCalibrationData.RightCR1X;
-            ry = rawCalibrationData.RightY_UNCALIBRATED - rawCalibrationData.RightCR1Y;
-            bLeftX = robustfit(targetPosition.LeftX(~isnan(targetPosition.LeftX)),lx(~isnan(targetPosition.LeftX)));
-            bLeftY = robustfit(targetPosition.LeftY(~isnan(targetPosition.LeftY)),ly(~isnan(targetPosition.LeftY)));
-            bRightX = robustfit(targetPosition.RightX(~isnan(targetPosition.RightX)),rx(~isnan(targetPosition.RightX)));
-            bRightY = robustfit(targetPosition.RightY(~isnan(targetPosition.RightY)),ry(~isnan(targetPosition.RightY)));
-            
-            warning('off','MATLAB:table:RowsAddedExistingVars')
-            warning('off','MATLAB:table:RowsAddedNewVars')
-            
-            calibrationTable{'LeftEye', 'GlobeX'} = bLeftX(1);
-            calibrationTable{'LeftEye', 'GlobeY'} = bLeftY(1);
-            calibrationTable{'LeftEye', 'GlobeRadiusX'} = abs(60*bLeftX(2));
-            calibrationTable{'LeftEye', 'GlobeRadiusY'} = abs(60*bLeftY(2));
-            calibrationTable{'LeftEye', 'SignX'} = sign(bLeftX(2));
-            calibrationTable{'LeftEye', 'SignY'} = sign(bLeftY(2));
-            calibrationTable{'LeftEye', 'RefX'} = bLeftX(1);
-            calibrationTable{'LeftEye', 'RefY'} = bLeftY(1);
-            
-            calibrationTable{'RightEye', 'GlobeX'} = bRightX(1);
-            calibrationTable{'RightEye', 'GlobeY'} = bRightY(1);
-            calibrationTable{'RightEye', 'GlobeRadiusX'} = abs(60*bRightX(2));
-            calibrationTable{'RightEye', 'GlobeRadiusY'} = abs(60*bRightY(2));
-            calibrationTable{'RightEye', 'SignX'} = sign(bRightX(2));
-            calibrationTable{'RightEye', 'SignY'} = sign(bRightY(2));
-            calibrationTable{'RightEye', 'RefX'} = bRightX(1);
-            calibrationTable{'RightEye', 'RefY'} = bRightY(1);
-            
-            calibrationTable{'LeftEye', 'OffsetX'}  = bLeftX(1);
-            calibrationTable{'LeftEye', 'GainX'}    = bLeftX(2);
-            calibrationTable{'LeftEye', 'OffsetY'}  = bLeftY(1);
-            calibrationTable{'LeftEye', 'GainY'}    = bLeftY(2);
-            calibrationTable{'RightEye', 'OffsetX'}  = bRightX(1);
-            calibrationTable{'RightEye', 'GainX'}    = bRightX(2);
-            calibrationTable{'RightEye', 'OffsetY'}  = bRightY(1);
-            calibrationTable{'RightEye', 'GainY'}    = bRightY(2);
+            % use the _UNCALIBRATED COLUMNS because LEFT_X will be
+            % overriden after calibration
 
-            warning('on','MATLAB:table:RowsAddedExistingVars')
-            warning('on','MATLAB:table:RowsAddedNewVars')
+            calibrationTable = VOGAnalysis.FitCalibration( ...
+                rawCalibrationData.LeftPupilX - rawCalibrationData.LeftCR1X, ...
+                rawCalibrationData.LeftPupilY - rawCalibrationData.LeftCR1Y, ...
+                rawCalibrationData.RightPupilX - rawCalibrationData.RightCR1X, ...
+                rawCalibrationData.RightPupilY - rawCalibrationData.RightCR1Y, ...
+                rawCalibrationData.Target_LeftX, ...
+                rawCalibrationData.Target_LeftY, ...
+                rawCalibrationData.Target_RightX, ...
+                rawCalibrationData.Target_RightY );
+            
+        end
+
+
+        function [calibrationTable] = CalculateCalibrationDPI(rawCalibrationData)
+            
+            % regress target and data to get coefficients of calibraiton
+            
+            rawCalibrationData.LeftCR1X(rawCalibrationData.LeftCR1X==0) = nan;
+            rawCalibrationData.LeftCR1Y(rawCalibrationData.LeftCR1Y==0) = nan;
+            rawCalibrationData.RightCR1X(rawCalibrationData.RightCR1X==0) = nan;
+            rawCalibrationData.RightCR1Y(rawCalibrationData.RightCR1Y==0) = nan;
+
+            rawCalibrationData.LeftCR4X(rawCalibrationData.LeftCR4X==0) = nan;
+            rawCalibrationData.LeftCR4Y(rawCalibrationData.LeftCR4Y==0) = nan;
+            rawCalibrationData.RightCR4X(rawCalibrationData.RightCR4X==0) = nan;
+            rawCalibrationData.RightCR4Y(rawCalibrationData.RightCR4Y==0) = nan;
+                        
+            calibrationTable = VOGAnalysis.FitCalibration( ...
+                rawCalibrationData.LeftCR1X - rawCalibrationData.LeftCR4X, ...
+                rawCalibrationData.LeftCR1Y - rawCalibrationData.LeftCR4Y, ...
+                rawCalibrationData.RightCR1X - rawCalibrationData.RightCR4X, ...
+                rawCalibrationData.RightCR1Y - rawCalibrationData.RightCR4Y, ...
+                rawCalibrationData.Target_LeftX, ...
+                rawCalibrationData.Target_LeftY, ...
+                rawCalibrationData.Target_RightX, ...
+                rawCalibrationData.Target_RightY );
             
         end
         
@@ -1216,8 +1296,8 @@ classdef VOGAnalysis < handle
                 disp( ' WARNING GLOBE NOT SET' )
                 calibrationTable{'LeftEye', 'GlobeX'} = calibrationTable{'LeftEye', 'RefX'};
                 calibrationTable{'LeftEye', 'GlobeY'} = calibrationTable{'LeftEye', 'RefY'};
-                calibrationTable{'LeftEye', 'GlobeRadiusX'} = 85*2;
-                calibrationTable{'LeftEye', 'GlobeRadiusY'} = 85*2;
+                calibrationTable{'LeftEye', 'GlobeRadiusX'} = 85*2/3;
+                calibrationTable{'LeftEye', 'GlobeRadiusY'} = 85*2/3;
                 calibrationTable{'LeftEye', 'SignX'} = -1;
                 calibrationTable{'LeftEye', 'SignY'} = -1;
             end
@@ -1225,32 +1305,33 @@ classdef VOGAnalysis < handle
                 disp( ' WARNING GLOBE NOT SET' )
                 calibrationTable{'RightEye', 'GlobeX'} = calibrationTable{'RightEye', 'RefX'};
                 calibrationTable{'RightEye', 'GlobeY'} = calibrationTable{'RightEye', 'RefY'};
-                calibrationTable{'RightEye', 'GlobeRadiusX'} = 85*2;
-                calibrationTable{'RightEye', 'GlobeRadiusY'} = 85*2;
+                calibrationTable{'RightEye', 'GlobeRadiusX'} = 85*2/3;
+                calibrationTable{'RightEye', 'GlobeRadiusY'} = 85*2/3;
                 calibrationTable{'RightEye', 'SignX'} = -1;
                 calibrationTable{'RightEye', 'SignY'} = -1;
             end
             
-            
+
             calibratedData = rawData;
-            calibratedData.LeftX_UNCALIBRATED = rawData.LeftX;
-            calibratedData.LeftY_UNCALIBRATED = rawData.LeftY;
-            calibratedData.RightX_UNCALIBRATED = rawData.RightX;
-            calibratedData.RightY_UNCALIBRATED = rawData.RightY;
+            calibratedData.LeftPupilX = rawData.LeftX;
+            calibratedData.LeftPupilY = rawData.LeftY;
+            calibratedData.RightPupilX = rawData.RightX;
+            calibratedData.RightPupilY = rawData.RightY;
+
+            lx = rawData.LeftX - rawData.LeftCR1X;
+            ly = rawData.LeftY - rawData.LeftCR1Y;
+            rx = rawData.RightX - rawData.RightCR1X;
+            ry = rawData.RightY- rawData.RightCR1Y;
             
-            lx = calibratedData.LeftX_UNCALIBRATED - rawData.LeftCR1X;
-            ly = calibratedData.LeftY_UNCALIBRATED - rawData.LeftCR1Y;
-            rx = calibratedData.RightX_UNCALIBRATED - rawData.RightCR1X;
-            ry = calibratedData.RightY_UNCALIBRATED - rawData.RightCR1Y;
-            
-             calibratedData.LeftX = calibrationTable{'LeftEye', 'SignX'}*(lx- calibrationTable{'LeftEye', 'RefX'})/calibrationTable{'LeftEye', 'GlobeRadiusX'}*60;
-             calibratedData.LeftY = calibrationTable{'LeftEye', 'SignY'}*(ly - calibrationTable{'LeftEye', 'RefY'})/calibrationTable{'LeftEye', 'GlobeRadiusY'}*60;
-             calibratedData.RightX = calibrationTable{'RightEye', 'SignX'}*(rx - calibrationTable{'RightEye', 'RefX'})/calibrationTable{'RightEye', 'GlobeRadiusX'}*60;
-             calibratedData.RightY = calibrationTable{'RightEye', 'SignY'}*(ry - calibrationTable{'RightEye', 'RefY'})/calibrationTable{'RightEye', 'GlobeRadiusY'}*60;
-%             calibratedData.LeftX = (lx - median(lx,'omitnan'))/3;
-%             calibratedData.LeftY = (ly - median(ly,'omitnan'))/3;
-%             calibratedData.RightX = (rx - median(rx,'omitnan'))/3;
-%             calibratedData.RightY = (ry - median(ry,'omitnan'))/3;
+            calibratedData.LeftX_UNCALIBRATED = lx;
+            calibratedData.LeftY_UNCALIBRATED = ly;
+            calibratedData.RightX_UNCALIBRATED = rx;
+            calibratedData.RightY_UNCALIBRATED = ry;
+
+            calibratedData.LeftX = calibrationTable{'LeftEye', 'SignX'}*(lx- calibrationTable{'LeftEye', 'RefX'})/calibrationTable{'LeftEye', 'GlobeRadiusX'}*60;
+            calibratedData.LeftY = calibrationTable{'LeftEye', 'SignY'}*(ly - calibrationTable{'LeftEye', 'RefY'})/calibrationTable{'LeftEye', 'GlobeRadiusY'}*60;
+            calibratedData.RightX = calibrationTable{'RightEye', 'SignX'}*(rx - calibrationTable{'RightEye', 'RefX'})/calibrationTable{'RightEye', 'GlobeRadiusX'}*60;
+            calibratedData.RightY = calibrationTable{'RightEye', 'SignY'}*(ry - calibrationTable{'RightEye', 'RefY'})/calibrationTable{'RightEye', 'GlobeRadiusY'}*60;
         end
 
 
@@ -1266,13 +1347,14 @@ classdef VOGAnalysis < handle
             %   Outputs:
             %       - calibratedData: calibrated data
             
+            % TODO: THIS IS NOT FINISHED!!!
             
             if ( calibrationTable{'LeftEye', 'GlobeX'} == 0 )
                 disp( ' WARNING GLOBE NOT SET' )
                 calibrationTable{'LeftEye', 'GlobeX'} = calibrationTable{'LeftEye', 'RefX'};
                 calibrationTable{'LeftEye', 'GlobeY'} = calibrationTable{'LeftEye', 'RefY'};
-                calibrationTable{'LeftEye', 'GlobeRadiusX'} = 85*2;
-                calibrationTable{'LeftEye', 'GlobeRadiusY'} = 85*2;
+                calibrationTable{'LeftEye', 'GlobeRadiusX'} = 85*2/5;
+                calibrationTable{'LeftEye', 'GlobeRadiusY'} = 85*2/5;
                 calibrationTable{'LeftEye', 'SignX'} = -1;
                 calibrationTable{'LeftEye', 'SignY'} = -1;
             end
@@ -1280,32 +1362,33 @@ classdef VOGAnalysis < handle
                 disp( ' WARNING GLOBE NOT SET' )
                 calibrationTable{'RightEye', 'GlobeX'} = calibrationTable{'RightEye', 'RefX'};
                 calibrationTable{'RightEye', 'GlobeY'} = calibrationTable{'RightEye', 'RefY'};
-                calibrationTable{'RightEye', 'GlobeRadiusX'} = 85*2;
-                calibrationTable{'RightEye', 'GlobeRadiusY'} = 85*2;
+                calibrationTable{'RightEye', 'GlobeRadiusX'} = 85*2/5;
+                calibrationTable{'RightEye', 'GlobeRadiusY'} = 85*2/5;
                 calibrationTable{'RightEye', 'SignX'} = -1;
                 calibrationTable{'RightEye', 'SignY'} = -1;
             end
             
             
             calibratedData = rawData;
-            calibratedData.LeftX_UNCALIBRATED = rawData.LeftX;
-            calibratedData.LeftY_UNCALIBRATED = rawData.LeftY;
-            calibratedData.RightX_UNCALIBRATED = rawData.RightX;
-            calibratedData.RightY_UNCALIBRATED = rawData.RightY;
+            calibratedData.LeftPupilX = rawData.LeftX;
+            calibratedData.LeftPupilY = rawData.LeftY;
+            calibratedData.RightPupilX = rawData.RightX;
+            calibratedData.RightPupilY = rawData.RightY;
             
-            lx = calibratedData.LeftCR1X - rawData.LeftCR2X;
-            ly = calibratedData.LeftCR1Y - rawData.LeftCR2Y;
-            rx = calibratedData.RightCR1X - rawData.RightCR2X;
-            ry = calibratedData.RightCR1Y - rawData.RightCR2Y;
+            lx = rawData.LeftCR1X - rawData.LeftCR4X;
+            ly = rawData.LeftCR1Y - rawData.LeftCR4Y;
+            rx = rawData.RightCR1X - rawData.RightCR4X;
+            ry = rawData.RightCR1Y - rawData.RightCR4Y;
+
+            calibratedData.LeftX_UNCALIBRATED = lx;
+            calibratedData.LeftY_UNCALIBRATED = ly;
+            calibratedData.RightX_UNCALIBRATED = rx;
+            calibratedData.RightY_UNCALIBRATED = ry;
             
-%             calibratedData.LeftX = calibrationTable{'LeftEye', 'SignX'}*(lx- calibrationTable{'LeftEye', 'RefX'})/calibrationTable{'LeftEye', 'GlobeRadiusX'}*60;
-%             calibratedData.LeftY = calibrationTable{'LeftEye', 'SignY'}*(ly - calibrationTable{'LeftEye', 'RefY'})/calibrationTable{'LeftEye', 'GlobeRadiusY'}*60;
-%             calibratedData.RightX = calibrationTable{'RightEye', 'SignX'}*(rx - calibrationTable{'RightEye', 'RefX'})/calibrationTable{'RightEye', 'GlobeRadiusX'}*60;
-%             calibratedData.RightY = calibrationTable{'RightEye', 'SignY'}*(ry - calibrationTable{'RightEye', 'RefY'})/calibrationTable{'RightEye', 'GlobeRadiusY'}*60;
-            calibratedData.LeftX = (lx - median(lx,'omitnan'))/5;
-            calibratedData.LeftY = (ly - median(ly,'omitnan'))/5;
-            calibratedData.RightX = (rx - median(rx,'omitnan'))/5;
-            calibratedData.RightY = (ry - median(ry,'omitnan'))/5;
+            calibratedData.LeftX = calibrationTable{'LeftEye', 'SignX'}*(lx- calibrationTable{'LeftEye', 'RefX'})/calibrationTable{'LeftEye', 'GlobeRadiusX'}*60;
+            calibratedData.LeftY = calibrationTable{'LeftEye', 'SignY'}*(ly - calibrationTable{'LeftEye', 'RefY'})/calibrationTable{'LeftEye', 'GlobeRadiusY'}*60;
+            calibratedData.RightX = calibrationTable{'RightEye', 'SignX'}*(rx - calibrationTable{'RightEye', 'RefX'})/calibrationTable{'RightEye', 'GlobeRadiusX'}*60;
+            calibratedData.RightY = calibrationTable{'RightEye', 'SignY'}*(ry - calibrationTable{'RightEye', 'RefY'})/calibrationTable{'RightEye', 'GlobeRadiusY'}*60;
         end
         
         function [calibratedData] = CalibrateData(rawData, calibrationTable )
@@ -1323,6 +1406,11 @@ classdef VOGAnalysis < handle
             geomCorrected = 0;
             
             calibratedData = rawData;
+            calibratedData.LeftPupilX = rawData.LeftX;
+            calibratedData.LeftPupilY = rawData.LeftY;
+            calibratedData.RightPupilX = rawData.RightX;
+            calibratedData.RightPupilY = rawData.RightY;
+
             calibratedData.LeftX_UNCALIBRATED = rawData.LeftX;
             calibratedData.LeftY_UNCALIBRATED = rawData.LeftY;
             calibratedData.RightX_UNCALIBRATED = rawData.RightX;
@@ -1337,7 +1425,6 @@ classdef VOGAnalysis < handle
             else
                 referenceXDeg = asin((calibrationTable{'LeftEye', 'RefX'} - calibrationTable{'LeftEye', 'GlobeX'}) / calibrationTable{'LeftEye', 'GlobeRadiusX'}) * 180 / pi;
                 referenceYDeg = asin((calibrationTable{'LeftEye', 'RefY'} - calibrationTable{'LeftEye', 'GlobeY'}) / calibrationTable{'LeftEye', 'GlobeRadiusY'}) * 180 / pi;
-                
                 lx = asin((rawData.LeftX - calibrationTable{'LeftEye', 'GlobeX'}) / calibrationTable{'LeftEye', 'GlobeRadiusX'}) * 180 / pi;
                 ly = asin((rawData.LeftY - calibrationTable{'LeftEye', 'GlobeY'}) / calibrationTable{'LeftEye', 'GlobeRadiusY'}) * 180 / pi;
                 
@@ -2249,7 +2336,8 @@ classdef VOGAnalysis < handle
                     spYesNo = (~qp & ~isnan(xx));
                     sp = [find(diff([0;spYesNo])>0) find(diff([spYesNo;0])<0)];
                     spdur = sp(:,2) - sp(:,1);
-                    sp(spdur<20,:) = [];
+                    sp(spdur<20,:) = []; % TODO: account for different sampling rates
+                    % Remove first X ms from the slow phases
                     
                     l = length(xx);
                     starts = sp(:,1);
@@ -2349,7 +2437,7 @@ classdef VOGAnalysis < handle
             % number of quick-phases
             n_qp = size(quickPhaseTable.StartIndex,1);
             
-            textprogressbar('++ VOGAnalysis :: Calculating quick phases properties: ');
+            textprogressbar(sprintf('++ VOGAnalysis :: Calculating quick phases properties (%d qps): ',n_qp));
             Nprogsteps = length(eyes)*length(components)*n_qp/100;
             tic
             
@@ -2459,7 +2547,7 @@ classdef VOGAnalysis < handle
                 quickPhaseTable.Displacement   = props.Right.XY.Displacement;
                 quickPhaseTable.PeakSpeed      = props.Right.XY.PeakSpeed;
                 quickPhaseTable.MeanSpeed      = props.Right.XY.MeanSpeed;
-                quickPhaseTable.Direction      = props.Right.XY.Direction;
+                quickPhaseTable.Direction      = propfs.Right.XY.Direction;
             end
             
 
@@ -2516,25 +2604,67 @@ classdef VOGAnalysis < handle
             end
 
             quickPhaseTable = struct2table(quickPhaseTable);
+            quickPhaseTable.TrialNumber =  data.TrialNumber(quickPhaseTable.StartIndex);
             
             
             timeElapsed = toc;
             textprogressbar(sprintf('Done in %0.2f seconds.', timeElapsed));
         end
         
-        function [slowPhaseTable] = GetSlowPhaseTable(data)
+        function [slowPhaseTable] = GetSlowPhaseTable(data, begMs, endMs)
+            % begMs and endMs will limit the portion of time that is used
+            % to calculate the properties of the slow phase. 
+            % Both relative to the time that was originally detected and is
+            % labeld in the samples table as slow phase
+            %
+            % endMS can be 0 or negative to indicate that we use the entire
+            % slow phase
+            
+            if ( ~exist('begMs','var') )
+                begMs = 0;
+            end
+            if ( ~exist('endMs','var') )
+                endMs = 0;
+            end
+            
+        
+            
             [eyes, eyeSignals] = VOGAnalysis.GetEyesAndSignals(data);
             %% get SP properties
             rows = eyeSignals;
-            SAMPLERATE = 500;
+            %SAMPLERATE = 500; % NOT TRUE FOR ALL DATASETS! SR 3/21/2025
+            SAMPLERATE = data.Properties.UserData.sampleRate;
             sp = data.SlowPhase;
             sp = [find(diff([0;sp])>0) find(diff([sp;0])<0)];
             
             % properties common for all eyes and components
             slowPhaseTable = [];
+            if ( begMs > 0 )
+                sp(:,1) = sp(:,1) + round(begMs*SAMPLERATE/1000);
+            end
+            if ( endMs > 0 )
+                sp(:,2) = min(sp(:,2), sp(:,1) + round(endMs*SAMPLERATE/1000));
+            end
+            
+            sp(sp(:,1) >= sp(:,2),:)=[];
+            
             slowPhaseTable.StartIndex = sp(:,1);
             slowPhaseTable.EndIndex = sp(:,2);
             slowPhaseTable.DurationMs = (sp(:,2) - sp(:,1)) * 1000 / SAMPLERATE;
+          
+            tbeg = zeros(size(data.Time));
+            tn = data.TrialNumber;
+            tn(isnan(tn)) = 0;
+            t1 = data.Time([0;diff(tn)]>0);
+            t1 = [0; diff(t1)];
+            tbeg([0;diff(tn)]>0) = t1;
+            tfromTrialBegining = cumsum([diff(data.Time);0]-tbeg);
+            tfromTrialBegining(isnan(data.TrialNumber)) = nan;
+
+            slowPhaseTable.TimeFromTrialBeginning = tfromTrialBegining(sp(:,1));
+
+            % beginMs = 0;
+            % EndMs = 100;
             
             textprogressbar('++ VOGAnalysis :: Calculating slow phases properties: ');
             Nprogsteps = length(eyes)*length(rows)*size(sp,1)/100;
@@ -2550,17 +2680,19 @@ classdef VOGAnalysis < handle
                     sp1_props.GoodBegining = nan(size(sp(:,1)));
                     sp1_props.GoodEnd = nan(size(sp(:,1)));
                     sp1_props.GoodTrhought = nan(size(sp(:,1)));
+                    sp1_props.TimeFromTrialBeginning = nan(size(sp(:,1)));
                     
                     sp1_props.Amplitude = nan(size(sp(:,1)));
                     sp1_props.StartPosition = pos(sp(:,1));
                     sp1_props.EndPosition = pos(sp(:,2));
                     sp1_props.MeanPosition = nan(size(sp(:,1)));
+                    sp1_props.MedianPosition = nan(size(sp(:,1)));
                     sp1_props.Displacement = pos(sp(:,2)) - pos(sp(:,1));
                     
                     sp1_props.PeakVelocity = nan(size(sp(:,1)));
                     sp1_props.PeakVelocityIdx = nan(size(sp(:,1)));
                     sp1_props.MeanVelocity = nan(size(sp(:,1)));
-                    
+                    sp1_props.MedianVelocity = nan(size(sp(:,1)));
                     
                     sp1_props.Slope = nan(size(sp(:,1)));
                     sp1_props.TimeConstant = nan(size(sp(:,1)));
@@ -2569,7 +2701,7 @@ classdef VOGAnalysis < handle
                     opts = optimset('Display','off');
                     for i=1:size(sp,1)
                         if ( mod(i,100) == 0 )
-                            textprogressbar((((k-1)*length(rows)+j-1)*size(sp,1)+i)/Nprogsteps);
+                            % textprogressbar((((k-1)*length(rows)+j-1)*size(sp,1)+i)/Nprogsteps);
                         end
                         spidx = sp(i,1):sp(i,2);
                         sp1_props.GoodBegining(i)   = spidx(1)>1 && ~isnan(vel(spidx(1)-1));
@@ -2578,11 +2710,13 @@ classdef VOGAnalysis < handle
                         
                         sp1_props.Amplitude(i)      = max(pos(spidx)) - min(pos(spidx));
                         sp1_props.MeanPosition(i)   = mean(pos(spidx),'omitnan');
+                        sp1_props.MedianPosition(i) = median(pos(spidx),'omitnan');
                         
                         [m,mi] = max(vel(spidx));
                         sp1_props.PeakVelocity(i)   = m;
                         sp1_props.PeakVelocityIdx(i)= spidx(1) -1 + mi;
                         sp1_props.MeanVelocity(i)   = mean(vel(spidx),'omitnan');
+                        sp1_props.MedianVelocity(i) = median(vel(spidx),'omitnan');
                         
                         %                         if ( sp1_props.GoodTrhought(i) )
                         %                             fun = @(x,xdata)(-x(1) + x(1)*exp(-1/x(2)*xdata)+xdata*x(3));
@@ -2621,16 +2755,19 @@ classdef VOGAnalysis < handle
                 slowPhaseTable.Displacement   = mean([ props.Left.XY.Displacement props.Right.XY.Displacement],2,'omitnan');
                 slowPhaseTable.PeakSpeed      = mean([ props.Left.XY.PeakSpeed props.Right.XY.PeakSpeed],2,'omitnan');
                 slowPhaseTable.MeanSpeed      = mean([ props.Left.XY.MeanSpeed props.Right.XY.MeanSpeed],2,'omitnan');
+                slowPhaseTable.MedianSpeed    = median([ props.Left.XY.MeanSpeed props.Right.XY.MeanSpeed],2,'omitnan');
             elseif(any(contains(eyes,'Left')))
                 slowPhaseTable.Amplitude      = props.Left.XY.Amplitude;
                 slowPhaseTable.Displacement   = props.Left.XY.Displacement;
                 slowPhaseTable.PeakSpeed      = props.Left.XY.PeakSpeed;
                 slowPhaseTable.MeanSpeed      = props.Left.XY.MeanSpeed;
+                slowPhaseTable.MedianSpeed    = props.Left.XY.MedianSpeed;
             elseif(any(contains(eyes,'Right')))
                 slowPhaseTable.Amplitude      = props.Right.XY.Amplitude;
                 slowPhaseTable.Displacement   = props.Right.XY.Displacement;
                 slowPhaseTable.PeakSpeed      = props.Right.XY.PeakSpeed;
                 slowPhaseTable.MeanSpeed      = props.Right.XY.MeanSpeed;
+                slowPhaseTable.MedianSpeed    = props.Right.XY.MedianSpeed;
             end
             
             fieldsToAverageAcrossEyes = {...
@@ -2638,9 +2775,11 @@ classdef VOGAnalysis < handle
                 'StartPosition'...
                 'EndPosition'...
                 'MeanPosition'...
+                'MedianPosition'...
                 'Displacement'...
                 'PeakVelocity'...
                 'MeanVelocity'...
+                'MedianVelocity'...
                 'Slope'...
                 'TimeConstant'...
                 'ExponentialBaseline'};
@@ -2674,7 +2813,11 @@ classdef VOGAnalysis < handle
             end
             
             slowPhaseTable = struct2table(slowPhaseTable);
-            
+            slowPhaseTable.TrialNumber =  data.TrialNumber(slowPhaseTable.StartIndex);
+            if ismember('count', data.Properties.VariableNames)
+                slowPhaseTable.DriftCounter = data.count(slowPhaseTable.StartIndex);
+            end
+
             timeElapsed = toc;
             textprogressbar(sprintf('Done in %0.2f seconds.', timeElapsed));
         end
@@ -2897,7 +3040,7 @@ classdef VOGAnalysis < handle
             spvjom.RightYSE = spvye';
         end
         
-        function [spv, positionFiltered] = GetSPV_Simple(timeSec, position)
+        function [spv, positionFiltered] = GetSPV_Simple(timeSec, position, win)
             % GET SPV SIMPLE Calculates slow phase velocity (SPV) from a
             % position signal with a simple algorithm. No need to have
             % detected the quickphases before.
@@ -2912,18 +3055,23 @@ classdef VOGAnalysis < handle
             %   Inputs:
             %       - timeSec: timestamps of the data (column vector) in seconds.
             %       - position: position data (must be same size as timeSec).
+            %       - win: window size for the filter (1 s default).
             %
             %   Outputs:
             %       - spv: instantaneous slow phase velocity.
             %       - positionFiltered: corresponding filtered position signal.
             
+            if (~exist('win','var'))
+                win = 1;
+            end
+
             firstPassVThrehold              = 100;  %deg/s
             firstPassMedfiltWindow          = 4;    %s
             firstPassMedfiltNanFraction     = 0.25;   %
             firstPassPadding                = 30;   %ms
             
             secondPassVThrehold             = 10;   %deg/s
-            secondPassMedfiltWindow         = 1;    %s
+            secondPassMedfiltWindow         = win;    %s
             secondPassMedfiltNanFraction    = 0.5;   %
             secondPassPadding               = 30;   %ms
             
@@ -3242,28 +3390,28 @@ classdef VOGAnalysis < handle
                     MEDIUM_RED = [0.9000 0.2000 0.2000];
                     
                     figure
-                    timeL = data.LeftSeconds;
+                    timeL = data.LeftTime;
 %                     timeR = data.RightSeconds;
                     timeR = timeL;
                     
                     h(1) = subplot(3,1,1,'nextplot','add');
-                    plot(timeL, data.LeftPupilX, 'color', [ MEDIUM_BLUE ])
-                    plot(timeR, data.RightPupilX, 'color', [ MEDIUM_RED])
+                    plot(timeL, data.LeftX, 'color', [ MEDIUM_BLUE ])
+                    plot(timeR, data.RightX, 'color', [ MEDIUM_RED])
                     plot(timeL, data.LeftCR1X, 'color', [ MEDIUM_BLUE ]/2)
                     plot(timeR, data.RightCR1X, 'color', [ MEDIUM_RED]/2)
                     ylabel('Horizontal (deg)','fontsize', 16);
                     legend({'Left' 'Right' 'LeftCR1' 'RightCR1'})
                     
                     h(2) = subplot(3,1,2,'nextplot','add');
-                    plot(timeL, data.LeftPupilY, 'color', [ MEDIUM_BLUE ])
-                    plot(timeR, data.RightPupilY, 'color', [ MEDIUM_RED])
+                    plot(timeL, data.LeftY, 'color', [ MEDIUM_BLUE ])
+                    plot(timeR, data.RightY, 'color', [ MEDIUM_RED])
                     plot(timeL, data.LeftCR1Y, 'color', [ MEDIUM_BLUE ]/2)
                     plot(timeR, data.RightCR1Y, 'color', [ MEDIUM_RED]/2)
                     ylabel('Vertical (deg)','fontsize', 16);
                     
                     h(3) = subplot(3,1,3,'nextplot','add');
-                    plot(timeL, data.LeftTorsion, 'color', [ MEDIUM_BLUE ])
-                    plot(timeR, data.RightTorsion, 'color', [ MEDIUM_RED])
+                    plot(timeL, data.LeftT, 'color', [ MEDIUM_BLUE ])
+                    plot(timeR, data.RightT, 'color', [ MEDIUM_RED])
                     ylabel('Torsion (deg)','fontsize', 16);
                     xlabel('Time (s)');
                     linkaxes(h,'x');
@@ -3914,7 +4062,7 @@ if (isstruct(struct_def)) % Init
         dflt = rm_ignore_dflt(dflt,struct_def);
         present_val = rm_ignore_dflt(present_val,struct_def);
     else
-        dflt = rm_ignore_dflt(dflt,struct_def); % AF 6/20/02: Comment this line out if cuases problems.
+        %dflt = rm_ignore_dflt(dflt,struct_def); % AF 6/20/02: Comment this line out if cuases problems.
         present_val = rm_ignore_dflt(present_val,struct_def);
     end
     [struct_def units limits protected] = split_def(struct_def);

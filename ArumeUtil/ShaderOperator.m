@@ -158,6 +158,7 @@ classdef ShaderOperator  < handle
             % gaze position and foveal radius
             this.defaultParams.gazePosition = [defaults(1),defaults(2)];
             this.defaultParams.blurradpx = defaults(15);
+            this.defaultParams.kernelpadding = defaults(28);
 
             global GL;
 
@@ -165,6 +166,11 @@ classdef ShaderOperator  < handle
             kernelh = 1;
             hwx = (kernelw - 1) / 2;
             hwy = (kernelh - 1) / 2;
+
+            % kernel padding so we don't have to draw every pixel during
+            % convolution. Which is bigger? The transition zone, or half
+            % the convolutional kernel width?
+            % this.defaultParams.kernelpadding = this.defaultParams.kernelpadding+hwx;
             
             if blurmethod == 1
                 this.shaderHandleConv1 = LoadGLSLProgramFromFiles(which('Conv2dMattCircle.frag.txt'), 1);
@@ -198,7 +204,7 @@ classdef ShaderOperator  < handle
                 glUniform2f(this.shaderUniforms.Conv1GazePosition, this.defaultParams.gazePosition(1), this.defaultParams.gazePosition(2)); 
 
                 this.shaderUniforms.Conv1Padding = glGetUniformLocation(this.shaderHandleConv1, 'kernelPadding');
-                glUniform1f(this.shaderUniforms.Conv1Padding, sqrt(hwy^2+hwx^2));
+                glUniform1f(this.shaderUniforms.Conv1Padding, this.defaultParams.kernelpadding);
             end
 
             glUseProgram(0);
@@ -278,7 +284,7 @@ classdef ShaderOperator  < handle
                 glUniform2f(this.shaderUniforms.Conv2GazePosition, this.defaultParams.gazePosition(1), this.defaultParams.gazePosition(2)); 
             
                 this.shaderUniforms.Conv2Padding = glGetUniformLocation(this.shaderHandleConv2, 'kernelPadding');
-                glUniform1f(this.shaderUniforms.Conv2Padding, sqrt(hwy^2+hwx^2));
+                glUniform1f(this.shaderUniforms.Conv2Padding, this.defaultParams.kernelpadding);
 
             end
             
@@ -323,6 +329,7 @@ classdef ShaderOperator  < handle
             % gaze position and foveal radius
             this.defaultParams.gazePosition = [defaults(1),defaults(2)];
             this.defaultParams.blurradpx = defaults(15);
+            this.defaultParams.kernelpadding = defaults(28);
 
             global GL;
 
@@ -330,6 +337,11 @@ classdef ShaderOperator  < handle
             kernelh = 1;
             hwx = (kernelw - 1) / 2;
             hwy = (kernelh - 1) / 2;
+
+            % kernel padding so we don't have to draw every pixel during
+            % convolution. Which is bigger? The transition zone, or half
+            % the convolutional kernel width?
+            % this.defaultParams.kernelpadding = this.defaultParams.kernelpadding+hwx;
             
             if blurmethod == 1
                 this.shaderHandleConv1 = LoadGLSLProgramFromFiles(which('Conv2dMattAntiCircle.frag.txt'), 1);
@@ -363,7 +375,7 @@ classdef ShaderOperator  < handle
                 glUniform2f(this.shaderUniforms.Conv1GazePosition, this.defaultParams.gazePosition(1), this.defaultParams.gazePosition(2)); 
 
                 this.shaderUniforms.Conv1Padding = glGetUniformLocation(this.shaderHandleConv1, 'kernelPadding');
-                glUniform1f(this.shaderUniforms.Conv1Padding, sqrt(hwy^2+hwx^2));
+                glUniform1f(this.shaderUniforms.Conv1Padding, this.defaultParams.kernelpadding);
             end
 
             glUseProgram(0);
@@ -443,7 +455,7 @@ classdef ShaderOperator  < handle
                 glUniform2f(this.shaderUniforms.Conv2GazePosition, this.defaultParams.gazePosition(1), this.defaultParams.gazePosition(2)); 
             
                 this.shaderUniforms.Conv2Padding = glGetUniformLocation(this.shaderHandleConv2, 'kernelPadding');
-                glUniform1f(this.shaderUniforms.Conv2Padding, sqrt(hwy^2+hwx^2));
+                glUniform1f(this.shaderUniforms.Conv2Padding, this.defaultParams.kernelpadding);
 
             end
             
@@ -486,10 +498,15 @@ classdef ShaderOperator  < handle
         function addDeblurShader(this, shaderfname, defaults)
 
             % Screen('HookFunction', this.myOperator, 'AppendBuiltin', 'UserDefinedBlit', 'Builtin:FlipFBOs', '');
-
             this.defaultParams.gazePosition = [defaults(1),defaults(2)];
             this.defaultParams.radpx = defaults(15);
 
+            this.defaultParams.slope = defaults(16);
+            this.defaultParams.nxtoslope = defaults(17);
+            this.defaultParams.flatwidth = defaults(18);
+            this.defaultParams.coeff = defaults(19); 
+
+         
             this.shaderHandleDeblurFilt = LoadGLSLProgramFromFiles(which(shaderfname), 1);
 
             glUseProgram(this.shaderHandleDeblurFilt);
@@ -506,6 +523,18 @@ classdef ShaderOperator  < handle
 
             this.shaderUniforms.DeblurGazeRadius = glGetUniformLocation(this.shaderHandleDeblurFilt, 'gazeRadius');
             glUniform1f(this.shaderUniforms.DeblurGazeRadius, this.defaultParams.radpx);
+
+            this.shaderUniforms.DeblurFiltSlope = glGetUniformLocation(this.shaderHandleDeblurFilt, 'slope');
+            glUniform1f(this.shaderUniforms.DeblurFiltSlope, this.defaultParams.slope);
+
+            this.shaderUniforms.DeblurFiltNxtoslope = glGetUniformLocation(this.shaderHandleDeblurFilt, 'nxtoslope');
+            glUniform1f(this.shaderUniforms.DeblurFiltNxtoslope, this.defaultParams.nxtoslope);
+
+            this.shaderUniforms.DeblurFiltFlatwidth = glGetUniformLocation(this.shaderHandleDeblurFilt, 'flatwidth');
+            glUniform1f(this.shaderUniforms.DeblurFiltFlatwidth, this.defaultParams.flatwidth);
+
+            this.shaderUniforms.DeblurFiltCoeff = glGetUniformLocation(this.shaderHandleDeblurFilt, 'coeff');
+            glUniform1f(this.shaderUniforms.DeblurFiltCoeff, this.defaultParams.coeff);
 
             glUseProgram(0);  
 

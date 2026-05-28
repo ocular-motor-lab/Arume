@@ -248,7 +248,6 @@ classdef Session < ArumeCore.DataDB
             this.initialRun.pastTrialTable           = table();
             this.initialRun.originalFutureTrialTable = this.experimentDesign.TrialTable;
             this.initialRun.futureTrialTable         = this.initialRun.originalFutureTrialTable;
-            
         end
                 
         function addFile(this, fileTag, filePath)
@@ -289,7 +288,7 @@ classdef Session < ArumeCore.DataDB
                 if ~iscell(this.currentRun.LinkedFiles.(fileTag))
                     this.currentRun.LinkedFiles.(fileTag) = {this.currentRun.LinkedFiles.(fileTag)};
                 end
-                this.currentRun.LinkedFiles.(fileTag) = vertcat( this.currentRun.LinkedFiles.(fileTag), strcat(fileName, ext) );
+                this.currentRun.LinkedFiles.(fileTag) = vertcat( this.currentRun.LinkedFiles.(fileTag), {strcat(fileName, ext)} );
             end               
         end
         

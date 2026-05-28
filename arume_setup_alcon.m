@@ -8,6 +8,8 @@
 new_arume_folder = fileparts(mfilename('fullpath'));
 
 paths=regexpi(path,['[^;]*arume[^;]*;'],'match');
+paths= unique([paths,regexpi(path,['[^;]*alconarume[^;]*;'],'match'),regexpi(path,['[^;]*nocla[^;]*;'],'match')]);
+
 if ( length( paths) == 0 )
     paths=regexp(path,['[^;]*arume[^;]*;'],'match');
 end
@@ -33,32 +35,13 @@ addpath(new_arume_folder, fullfile(new_arume_folder, 'ArumeUtil'));
 disp(['ADDED TO THE PATH ' new_arume_folder ])
 disp(['ADDED TO THE PATH ' fullfile(new_arume_folder, 'ArumeUtil') ])
 
-
-% Now do the same for the two additional paths we need: FilterConfigFiles
-% and Shaders
+% Now do the same for the additional paths we need
 rootdir = fileparts(new_arume_folder);
 filelist = dir(fullfile(rootdir, ['**',filesep,'*']));  % get list of files and folders in any subfolder
 filelist = filelist([filelist.isdir]);  % remove folders from list
 
 % add shaders dir
 shadersdirs = filelist(contains({filelist.name},'Shaders'));
-
-% remove all existing paths, ignore warnings:
-warning('off')
-for i = 1:length(shadersdirs)
-    fname = [shadersdirs(i).folder,filesep,shadersdirs(i).name];
-    disp(['REMOVED: ',fname])
-    rmpath(fname)
-
-    fname = [shadersdirs(i).folder,filesep,'FilterConfigFiles'];
-    disp(['REMOVED: ',fname])
-    rmpath(fname)
-
-    fname = [shadersdirs(i).folder,filesep,'VisualStimuli'];
-    disp(['REMOVED: ',fname])
-    rmpath(fname)
-end
-warning('on');
 
 % if nocla exists, use nocla. If not, choose the latest deployment version
 isnocla = contains({shadersdirs.folder},'nocla');
@@ -83,5 +66,11 @@ disp(['ADDED TO THE PATH ' [shadersdir.folder, filesep, 'FilterConfigFiles']])
 
 addpath([shadersdir.folder, filesep, 'VisualStimuli']);
 disp(['ADDED TO THE PATH ' [shadersdir.folder, filesep, 'VisualStimuli']])
+
+addpath([shadersdir.folder, filesep, 'SpectralMeasurements']);
+disp(['ADDED TO THE PATH ' [shadersdir.folder, filesep, 'SpectralMeasurements']])
+
+addpath([shadersdir.folder, filesep, 'BrainardLabToolbox']);
+disp(['ADDED TO THE PATH ' [shadersdir.folder, filesep, 'BrainardLabToolbox']])
 
 savepath;

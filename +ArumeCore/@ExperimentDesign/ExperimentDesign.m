@@ -16,6 +16,9 @@ classdef ExperimentDesign < handle
 
         Graph               = [];   % Display handle (usually psychtoolbox).
         eyeTracker          = [];   % Eye tracker handle
+        
+        goodFixationStatus  = 'INIT';
+        badFixationTimeStart= 0;
     end
         
     % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -90,6 +93,56 @@ classdef ExperimentDesign < handle
         function cleanAfterRunning(this)
         end
         
+        function checkFixation(this, fixationPositionPix, winsizePix, timeoutSecs, eyeData)
+
+            if ( isempty(this.eyeTracker) )
+                return;
+            end
+
+            % Get the eye tracking data to know where the eye is looking at
+            if ( ~exist("eyeData","var"))
+              eyeData = this.eyeTracker.GetCurrentData();
+            end
+
+            if isfield(eyeData,'mx') && isfield(eyeData,'my')
+                gazeX = eyeData.mx;
+                gazeY = eyeData.my;
+            else
+                % assume eyes are closed and out of bounds?
+                gazeX = inf;
+                gazeY = inf;
+            end
+
+            % check if the eye is within a window around the given fixation
+            % spot
+            isInside =   (abs(gazeX - fixationPositionPix(1)) < winsizePix) && (abs(gazeY - fixationPositionPix(2)) < winsizePix) ;
+            tnow = GetSecs();
+
+            switch(this.goodFixationStatus)
+                case 'INIT'
+                    this.badFixationTimeStart = tnow;
+                    if ( isInside )
+                        this.goodFixationStatus = 'IN_WINDOW';
+                    else
+                        this.goodFixationStatus = 'OUT_WINDOW';
+                    end
+                case 'IN_WINDOW'
+                    if ( ~isInside )
+                        this.goodFixationStatus = 'OUT_WINDOW';
+                        this.badFixationTimeStart = tnow;
+                    end
+                case 'OUT_WINDOW'
+                    if ( isInside )
+                        this.goodFixationStatus = 'IN_WINDOW';
+                    else
+                        if ( tnow - this.badFixationTimeStart > timeoutSecs)
+                            Beeper(200,1); Beeper(200,1)
+                            this.abortTrialButContinue();
+                        end
+                    end
+            end
+
+        end
     end
         
     % --------------------------------------------------------------------
@@ -152,9 +205,36 @@ classdef ExperimentDesign < handle
     end
 
     methods (Access = private)
-        
+
+        %% EyeTrackingLoadSamplesData
+        % Loads and processes eye-tracking sample data from different
+        % possible sources.
+        %
+        % This method loads raw eye-tracking data, performs optional cleaning,
+        % calibration, and formatting steps, and returns the results in both
+        % structured and table formats.
+        %
+        % Syntax:
+        %   [samplesDataTable, cleanedData, calibratedData, rawData] = ...
+        %       EyeTrackingLoadSamplesData(this, options)
+        %
+        % Inputs:
+        %
+        %   options - RunExperimentAnalysis options from ArumeCore.ExperimentDesign.RunDataAnalyses
+        %
+        % Outputs:
+        %   samplesDataTable - table containing the final processed and
+        %                      formatted eye-tracking data samples.
+        %
+        %   cleanedData      - The data after cleaning (e.g., filtering out
+        %                      artifacts or blinks), but before calibration.
+        %
+        %   calibratedData   - Eye-tracking data after calibration has been
+        %                      applied (if enabled in options).
+        %
+        %   rawData          - The unprocessed raw data loaded from source files.
         function [samplesDataTable, cleanedData, calibratedData, rawData] = EyeTrackingLoadSamplesData(this, options)
-            
+
             samplesDataTable = [];
             calibratedData = [];
             cleanedData = [];
@@ -197,7 +277,7 @@ classdef ExperimentDesign < handle
                         calibrationFiles = {calibrationFiles};
                     end
                     
-                    if (length(calibrationFiles) == 1)
+                    if (isscalar(calibrationFiles))
                         calibrationFiles = repmat(calibrationFiles,size(dataFiles));
                     elseif length(calibrationFiles) ~= length(dataFiles)
                         error('ERROR preparing sample data set: The session should have the same number of calibration files as data files or 1 calibration file');
@@ -260,6 +340,7 @@ classdef ExperimentDesign < handle
             calibrationSessions = arume.currentProject.findSessionBySubjectAndExperiment(this.Session.subjectCode, 'Calibration');
             calibrationTables = {};
             calibrationCRTables = {};
+            calibrationDPITables = {};
             calibrationTimes = NaT(0);
             calibrationNames = {};
             rownumber = 0;
@@ -278,16 +359,24 @@ classdef ExperimentDesign < handle
 
                 if ( isfield( calibrationSessions(i).analysisResults, 'calibrationTable') )
                     calibrationTables{rownumber} = calibrationSessions(i).analysisResults.calibrationTable;
-                    calibrationCRTables{rownumber} = calibrationSessions(i).analysisResults.calibrationTableCR;
                 else
                     calibrationTables{rownumber} = table();
+                end
+                if ( isfield( calibrationSessions(i).analysisResults, 'calibrationTableCR') )
+                    calibrationCRTables{rownumber} = calibrationSessions(i).analysisResults.calibrationTableCR;
+                else
                     calibrationCRTables{rownumber} = table();
+                end
+                if ( isfield( calibrationSessions(i).analysisResults, 'calibrationTableDPI') )
+                    calibrationDPITables{rownumber} = calibrationSessions(i).analysisResults.calibrationTableDPI;
+                else
+                    calibrationDPITables{rownumber} = table();
                 end
                 calibrationTimes(rownumber) = datetime(calibrationSessions(i).currentRun.pastTrialTable.DateTimeTrialStart{end});
                 calibrationNames{rownumber} =  calibrationSessions(i).name;
             end
 
-            calibrations = table(string(calibrationNames'), calibrationTables', calibrationCRTables', calibrationTimes','VariableNames',{'SessionName','CalibrationTable','CalibrationCRTable','DateTime'});
+            calibrations = table(string(calibrationNames'), calibrationTables', calibrationCRTables', calibrationDPITables', calibrationTimes','VariableNames',{'SessionName','CalibrationTable','CalibrationCRTable','CalibrationDPITable','DateTime'});
             calibrations = sortrows(calibrations,'DateTime');
 
             % loop through trials to find the relavant calibration
@@ -304,8 +393,11 @@ classdef ExperimentDesign < handle
                 end
 
                 if (i==1)
-                    if ( (trialStartTime-calibrations.DateTime(pastClosestCalibration)) < minutes(5) )
+                    maxTimeBetweenCalibrationAndFirstTrialInMin = 30;
+                    if ( (trialStartTime-calibrations.DateTime(pastClosestCalibration)) < minutes(maxTimeBetweenCalibrationAndFirstTrialInMin) )
                         calibrationsForEachTrial(i) = pastClosestCalibration;
+                    else
+                        fprintf('TOO MUCH TIME IN BETWEEN CALIBRATION AND DATA COLLECTION (more than %d)', maxTimeBetweenCalibrationAndFirstTrialInMin);
                     end
                 else
                     previousTrialCalibration = calibrationsForEachTrial(i-1);
@@ -330,7 +422,7 @@ classdef ExperimentDesign < handle
             % if we did not find any calibration for the trials
             % we behave as if there were no calibrations
             if ( all(isnan(calibrationsForEachTrial)))
-                calibrationsForEachTrial = [];
+                calibrationsForEachTrial = nan((height(this.Session.currentRun.pastTrialTable)),1);
             end
 
             % Dealing with trials without a calibration. Add an
@@ -417,6 +509,8 @@ classdef ExperimentDesign < handle
                         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                         
                         % Find the samples that mark the begining and ends of trials
+                        validTrialMask = trialDataTable.EyeTrackerFrameNumberTrialStart <= max(samplesDataTable.RawFrameNumber);
+                        trialDataTable = trialDataTable(validTrialMask, :);
                         sampleStartTrial = nan(size(trialDataTable.TrialNumber));
                         sampleStopTrial = nan(size(trialDataTable.TrialNumber));
                         if ( ~any(strcmp(samplesDataTable.Properties.VariableNames, 'FileNumber')))
@@ -526,15 +620,15 @@ classdef ExperimentDesign < handle
                 
                 samplerate = samplesDataTable.Properties.UserData.sampleRate;
                 varsBeforeJoin = trialDataTable.Properties.VariableNames;
-                trialDataTable = outerjoin(trialDataTable, stats,'Keys','TrialNumber','MergeKeys',true, 'LeftVariables', setdiff(trialDataTable.Properties.VariableNames, stats.Properties.VariableNames) );
-                trialDataTable = outerjoin(trialDataTable, stats2,'Keys','TrialNumber','MergeKeys',true, 'LeftVariables', setdiff(trialDataTable.Properties.VariableNames, stats2.Properties.VariableNames) );
+                trialDataTable = outerjoin(trialDataTable, stats,'Keys','TrialNumber','MergeKeys',true, 'LeftVariables', setdiff(trialDataTable.Properties.VariableNames, setdiff(stats.Properties.VariableNames,{'TrialNumber'},'stable'),'stable') );
+                trialDataTable = outerjoin(trialDataTable, stats2,'Keys','TrialNumber','MergeKeys',true, 'LeftVariables', setdiff(trialDataTable.Properties.VariableNames, setdiff(stats2.Properties.VariableNames,{'TrialNumber'},'stable'),'stable') );
                 
                 trialDataTable.TotalGoodSec = trialDataTable.sum_GoodData/samplerate;
                 trialDataTable.TotalSec = trialDataTable.count_GoodSamples/samplerate;
                 
                 % keep a list of the variables added so it is easier to do
                 % states across trials
-                trialDataTable.Properties.UserData.EyeTrackingPrepareTrialDataTableVariables = setdiff(trialDataTable.Properties.VariableNames, varsBeforeJoin);
+                trialDataTable.Properties.UserData.EyeTrackingPrepareTrialDataTableVariables = setdiff(trialDataTable.Properties.VariableNames, varsBeforeJoin,'stable');
             end
         end
         
@@ -583,7 +677,14 @@ classdef ExperimentDesign < handle
         end
 
         function [analysisResults, samplesDataTable, trialDataTable, sessionDataTable]  = RunDataAnalysesEyeTracking(this, analysisResults, samplesDataTable, trialDataTable, sessionDataTable, options)
-            
+            %
+            % this function contains the basic eye movement analysis
+            % performed by Arume
+            %
+            %   - Quick-phase (Saccade) detection
+            %   - Slow-phase (fixation) detection
+            %
+
             updateTrialsAndSessionTables = false;
             
             if ( isfield(options,'Detect_Quik_and_Slow_Phases') && options.Detect_Quik_and_Slow_Phases )
@@ -625,27 +726,39 @@ classdef ExperimentDesign < handle
                 dataVars = { 'SPVX' 'SPVY' 'SPVT'};
                 isInTrial = ~isnan(samplesDataTable.TrialNumber);
                 
-                stats = grpstats(...
+                QP_stats = grpstats(...
                     samplesDataTable(isInTrial,:), ...     % Selected rows of data
                     'TrialNumber', ...                  % GROUP VARIABLE
                     {'median' 'mean' 'std'}, ...        % Stats to calculate
                     'DataVars', dataVars );             % Vars to do stats on
                 
-                trialDataTable = outerjoin(trialDataTable, stats,'Keys','TrialNumber','MergeKeys',true, 'LeftVariables', setdiff(trialDataTable.Properties.VariableNames, stats.Properties.VariableNames) );
+                trialDataTable = outerjoin(trialDataTable, QP_stats,'Keys','TrialNumber','MergeKeys',true, 'LeftVariables', setdiff(trialDataTable.Properties.VariableNames, QP_stats.Properties.VariableNames) );
             end
             
             if (updateTrialsAndSessionTables)
                 if ( width(this.TrialTable) > 5 ) % TODO: a bit ugly! 
                     % experiments that are imported behave a bit different
                     % than experiments that are run original with arume. 
-                    ConditionVarsNames = this.TrialTable.Properties.VariableNames(6:end);
+                    %
+                    % another reason to be ugly. We sometimes have columns
+                    % that are all NaN or missing and that caused problems.
+                    % this will remove those columns. 
+                    T = this.TrialTable;
+                    T(:, all(ismissing(T))) = [];
+                    ConditionVarsNames = T.Properties.VariableNames(6:end);
                 else
                     ConditionVarsNames = this.Session.currentRun.pastTrialTable.Properties.VariableNames(6:end); 
                 end
                 condition = [];
                 for i=1:length(ConditionVarsNames)
                     try
-                        conditionVarLevels = categories(categorical(this.Session.currentRun.pastTrialTable{:,ConditionVarsNames{i}}));
+                        columnDataType = class(this.Session.currentRun.pastTrialTable.(ConditionVarsNames{i}));
+                        switch(columnDataType)
+                            case 'cell'
+                                conditionVarLevels = [];
+                            otherwise
+                                conditionVarLevels = categories(categorical(this.Session.currentRun.pastTrialTable{:,ConditionVarsNames{i}}));  
+                        end
                     catch
                         % when we have a random variable, and two values
                         % are very close, the categorical function errors
@@ -656,8 +769,17 @@ classdef ExperimentDesign < handle
                     if ( numel(conditionVarLevels)>1)
                         if (isempty(condition) )
                             condition = string(trialDataTable{:,ConditionVarsNames(i)});
+                            if size(condition,2)>1
+                                condition = join(condition,"-");
+                            end
                         else
-                            condition = strcat(condition,'_', string(trialDataTable{:,ConditionVarsNames(i)}));
+                            newcondition = string(trialDataTable{:,ConditionVarsNames(i)});
+
+                            if size(newcondition,2)>1
+                                newcondition = join(newcondition,"-");
+                            end
+
+                            condition = strcat(condition,'_', newcondition);
                         end
                     end
                 end
@@ -669,25 +791,42 @@ classdef ExperimentDesign < handle
                 qpDataVars = qp.Properties.VariableNames;
                 spDataVars = sp.Properties.VariableNames;
                 
-                warning('off','MATLAB:table:RowsAddedNewVars');
-                qp.TrialNumber = samplesDataTable.TrialNumber(qp.StartIndex);
-                sp.TrialNumber = samplesDataTable.TrialNumber(sp.StartIndex);
-                for i=1:numel(ConditionVarsNames)
-                    if ( iscategorical(trialDataTable{qp.TrialNumber(~isnan(qp.TrialNumber)),ConditionVarsNames{i}}))
-                        qp{~isnan(qp.TrialNumber),ConditionVarsNames{i}} =  categorical(trialDataTable{qp.TrialNumber(~isnan(qp.TrialNumber)),ConditionVarsNames{i}});
-                    elseif iscellstr(trialDataTable{qp.TrialNumber(~isnan(qp.TrialNumber)),ConditionVarsNames{i}})
-                        qp{~isnan(qp.TrialNumber),ConditionVarsNames{i}} =  categorical(trialDataTable{qp.TrialNumber(~isnan(qp.TrialNumber)),ConditionVarsNames{i}});
-                    else
-                        qp{:,ConditionVarsNames{i}} = nan(height(qp),1);
-                        qp{~isnan(qp.TrialNumber),ConditionVarsNames{i}} =  trialDataTable{qp.TrialNumber(~isnan(qp.TrialNumber)),ConditionVarsNames{i}};
-                    end
-                    try
-                        sp{~isnan(sp.TrialNumber),ConditionVarsNames{i}} =  categorical(trialDataTable{sp.TrialNumber(~isnan(sp.TrialNumber)),ConditionVarsNames{i}});
-                    catch
-                        sp{~isnan(sp.TrialNumber),ConditionVarsNames{i}} =  (trialDataTable{sp.TrialNumber(~isnan(sp.TrialNumber)),ConditionVarsNames{i}});
+                qp = outerjoin(qp, trialDataTable(:,  [{'TrialNumber'} ConditionVarsNames]), 'Keys', 'TrialNumber',   'MergeKeys', true, 'Type', 'left');
+                sp = outerjoin(sp, trialDataTable(:,  [{'TrialNumber'} ConditionVarsNames]), 'Keys', 'TrialNumber',   'MergeKeys', true, 'Type', 'left');
+                % make categorical whatever can be categorical.
+                for i = 1:width(qp)
+                    varName = qp.Properties.VariableNames{i};
+                    col = qp.(varName);
+
+                    if iscellstr(col) || isstring(col) || islogical(col) || iscategorical(col)
+                        qp.(varName) = categorical(col);
                     end
                 end
-                warning('on','MATLAB:table:RowsAddedNewVars');
+                for i = 1:width(sp)
+                    varName = sp.Properties.VariableNames{i};
+                    col = sp.(varName);
+
+                    if iscellstr(col) || isstring(col) || islogical(col) || iscategorical(col)
+                        sp.(varName) = categorical(col);
+                    end
+                end
+                % warning('off','MATLAB:table:RowsAddedNewVars');
+                % for i=1:numel(ConditionVarsNames)
+                %     if ( iscategorical(trialDataTable{qp.TrialNumber(~isnan(qp.TrialNumber)),ConditionVarsNames{i}}))
+                %         qp{~isnan(qp.TrialNumber),ConditionVarsNames{i}} =  categorical(trialDataTable{qp.TrialNumber(~isnan(qp.TrialNumber)),ConditionVarsNames{i}});
+                %     elseif iscellstr(trialDataTable{qp.TrialNumber(~isnan(qp.TrialNumber)),ConditionVarsNames{i}})
+                %         qp{~isnan(qp.TrialNumber),ConditionVarsNames{i}} =  categorical(trialDataTable{qp.TrialNumber(~isnan(qp.TrialNumber)),ConditionVarsNames{i}});
+                %     else
+                %         qp{:,ConditionVarsNames{i}} = nan(height(qp),1);
+                %         qp{~isnan(qp.TrialNumber),ConditionVarsNames{i}} =  trialDataTable{qp.TrialNumber(~isnan(qp.TrialNumber)),ConditionVarsNames{i}};
+                %     end
+                %     try
+                %         sp{~isnan(sp.TrialNumber),ConditionVarsNames{i}} =  categorical(trialDataTable{sp.TrialNumber(~isnan(sp.TrialNumber)),ConditionVarsNames{i}});
+                %     catch
+                %         sp{~isnan(sp.TrialNumber),ConditionVarsNames{i}} =  (trialDataTable{sp.TrialNumber(~isnan(sp.TrialNumber)),ConditionVarsNames{i}});
+                %     end
+                % end
+                % warning('on','MATLAB:table:RowsAddedNewVars');
                 
                 analysisResults.QuickPhases = qp;
                 analysisResults.SlowPhases = sp;
@@ -697,22 +836,27 @@ classdef ExperimentDesign < handle
                 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                 % Add average properties of QP and SP to the trial table
                 goodQP = qp(~isnan(qp.TrialNumber),:);
-                stats = grpstats(goodQP, ...     % Selected rows of data
+                QP_stats = grpstats(goodQP, ...     % Selected rows of data
                     'TrialNumber', ...                  % GROUP VARIABLE
                     {'median' 'mean' 'std'}, ...        % Stats to calculate
                     'DataVars', qpDataVars);             % Vars to do stats on
-                stats.Properties.VariableNames(2:end) = strcat('QP_', stats.Properties.VariableNames(2:end));
-                trialDataTable = outerjoin(trialDataTable, stats,'Keys','TrialNumber','MergeKeys',true, 'LeftVariables', setdiff(trialDataTable.Properties.VariableNames, stats.Properties.VariableNames) );
+                QP_stats.Properties.VariableNames(2:end) = strcat('QP_', QP_stats.Properties.VariableNames(2:end));
+
+                trialDataTable(:,intersect(QP_stats.Properties.VariableNames, setdiff(trialDataTable.Properties.VariableNames,{'TrialNumber'}))) = []; % to make sure we override the QP related variables
+                trialDataTable = outerjoin(trialDataTable, QP_stats,'Keys','TrialNumber','MergeKeys',true);
+
+                trialDataTable.QP_Rate = trialDataTable.QP_GroupCount ./ trialDataTable.TotalGoodSec;
                 
                 goodSP = sp(~isnan(sp.TrialNumber),:);
-                stats = grpstats(goodSP, ...     % Selected rows of data
+                SP_stats = grpstats(goodSP, ...     % Selected rows of data
                     'TrialNumber', ...                  % GROUP VARIABLE
                     {'median' 'mean' 'std'}, ...        % Stats to calculate
                     'DataVars', spDataVars);             % Vars to do stats on
-                stats.Properties.VariableNames(2:end) = strcat('SP_', stats.Properties.VariableNames(2:end));
-                trialDataTable = outerjoin(trialDataTable, stats,'Keys','TrialNumber','MergeKeys',true, 'LeftVariables', setdiff(trialDataTable.Properties.VariableNames, stats.Properties.VariableNames) );
+                SP_stats.Properties.VariableNames(2:end) = strcat('SP_', SP_stats.Properties.VariableNames(2:end));
+
+                trialDataTable(:,intersect(SP_stats.Properties.VariableNames, setdiff(trialDataTable.Properties.VariableNames,{'TrialNumber'}))) = []; % to make sure we override the SP related variables
+                trialDataTable = outerjoin(trialDataTable, SP_stats,'Keys','TrialNumber','MergeKeys',true);
                 
-                trialDataTable.QP_Rate = trialDataTable.QP_GroupCount ./ trialDataTable.TotalGoodSec;
                 
                 
                 
@@ -733,11 +877,11 @@ classdef ExperimentDesign < handle
                     trialDataTable.Condition = condition; % combination of condition variables
                     ConditionVarsNames = horzcat({'Condition'}, ConditionVarsNames);
                     for i=1:length(ConditionVarsNames)
-                        stats = grpstats(trialDataTable, ...     % Selected rows of data
+                        QP_stats = grpstats(trialDataTable, ...     % Selected rows of data
                             ConditionVarsNames{i}, ...                  % GROUP VARIABLE
                             {'mean' 'std'}, ...        % Stats to calculate
                             'DataVars', varsToGroup);             % Vars to do stats on
-                        conditionStats = unstack(stats,setdiff(stats.Properties.VariableNames, ConditionVarsNames{i}),ConditionVarsNames{i});
+                        conditionStats = unstack(QP_stats,setdiff(QP_stats.Properties.VariableNames, ConditionVarsNames{i}),ConditionVarsNames{i});
                         conditionStats.Properties.RowNames = {};
                         sessionDataTable(:,intersect(conditionStats.Properties.VariableNames, sessionDataTable.Properties.VariableNames)) = [];
                         sessionDataTable = horzcat(sessionDataTable, conditionStats);
@@ -935,9 +1079,13 @@ classdef ExperimentDesign < handle
             % TODO: not great right now. But get all the columns from the
             % trial table that have condition variables. 
             if(size(this.Session.experimentDesign.TrialTable,2)>6) % if not imported
-                ConditionVars = this.Session.experimentDesign.TrialTable.Properties.VariableNames(6:end);
+                T = this.Session.experimentDesign.TrialTable;
+                T(:, all(ismissing(T))) = [];
+                ConditionVars = T.Properties.VariableNames(6:end);
             else % if imported (TODO: not very good)
-                ConditionVars = this.Session.currentRun.pastTrialTable.Properties.VariableNames(6:end);
+                T = this.Session.currentRun.pastTrialTable;
+                T(:, all(ismissing(T))) = [];
+                ConditionVars = T.Properties.VariableNames(6:end);
             end
 
             % get all the possible values of the condition variables. But
@@ -950,15 +1098,21 @@ classdef ExperimentDesign < handle
                         Select_Conditions.All = { {'0', '{1}'}};
                         for i=1:length(ConditionVars)
                             name = ConditionVars{i};
-                            if ( isnumeric(this.Session.currentRun.pastTrialTable{:,ConditionVars{i}}))
-                                values = unique(this.Session.currentRun.pastTrialTable{:,ConditionVars{i}});
-                            else
-                                values = categories(categorical(this.Session.currentRun.pastTrialTable{:,ConditionVars{i}}));
-                            end
-                            if ( numel(values) < 10 )
-                                for j=1:numel(values)
-                                    if (~ismissing(values(j)))
-                                        Select_Conditions.(strcat(name, '_', genvarname(string(values(j))))) = { {'{0}', '1'}};
+
+                            col = this.Session.currentRun.pastTrialTable.(ConditionVars{i}); 
+
+                            if iscellstr(col) || isstring(col) || islogical(col) || iscategorical(col) || isnumeric(col)
+
+                                if ( isnumeric(this.Session.currentRun.pastTrialTable{:,ConditionVars{i}}))
+                                    values = unique(this.Session.currentRun.pastTrialTable{:,ConditionVars{i}});
+                                else
+                                    values = categories(categorical(this.Session.currentRun.pastTrialTable{:,ConditionVars{i}}));
+                                end
+                                if ( numel(values) < 10 )
+                                    for j=1:numel(values)
+                                        if (~ismissing(values(j)))
+                                            Select_Conditions.(strcat(name, '_', genvarname(string(values(j))))) = { {'{0}', '1'}};
+                                        end
                                     end
                                 end
                             end
@@ -967,7 +1121,7 @@ classdef ExperimentDesign < handle
                         return;
                 end
             end
-            
+
             % Add the All condition variable column to allow that filter to
             % work like all others and not need special code later
             dataTable.All = ones(height(dataTable),1);
@@ -979,16 +1133,23 @@ classdef ExperimentDesign < handle
             Select_ConditionsFilters.All.VarValue = 1;
             for i=1:length(ConditionVars)
                 name = ConditionVars{i};
-                if ( isnumeric(this.Session.currentRun.pastTrialTable{:,ConditionVars{i}}))
-                    values = unique(this.Session.currentRun.pastTrialTable{:,ConditionVars{i}});
-                else
-                    values = categories(categorical(this.Session.currentRun.pastTrialTable{:,ConditionVars{i}}));
-                end
-                if ( numel(values) < 10 )
-                    for j=1:numel(values)
-                        if (~ismissing(values(j)))
-                            Select_ConditionsFilters.(strcat(name, '_', genvarname(string(values(j))))).VarName = name;
-                            Select_ConditionsFilters.(strcat(name, '_', genvarname(string(values(j))))).VarValue = values(j);
+
+                col = this.Session.currentRun.pastTrialTable.(name);
+
+                if iscellstr(col) || isstring(col) || islogical(col) || iscategorical(col) || isnumeric(col)
+
+
+                    if ( isnumeric(this.Session.currentRun.pastTrialTable{:,ConditionVars{i}}))
+                        values = unique(this.Session.currentRun.pastTrialTable{:,ConditionVars{i}});
+                    else
+                        values = categories(categorical(this.Session.currentRun.pastTrialTable{:,ConditionVars{i}}));
+                    end
+                    if ( numel(values) < 10 )
+                        for j=1:numel(values)
+                            if (~ismissing(values(j)))
+                                Select_ConditionsFilters.(strcat(name, '_', genvarname(string(values(j))))).VarName = name;
+                                Select_ConditionsFilters.(strcat(name, '_', genvarname(string(values(j))))).VarValue = values(j);
+                            end
                         end
                     end
                 end
@@ -1132,6 +1293,9 @@ classdef ExperimentDesign < handle
         function abortExperiment(this)
             throw(MException('PSYCORTEX:USERQUIT', ''));
         end
+        function abortTrialButContinue(this)
+            throw(MException('PSYCORTEX:ABORTTRIALBUTCONTINUE', ''));
+        end
     end
         
     methods (Access=private) % Private methods
@@ -1157,13 +1321,19 @@ classdef ExperimentDesign < handle
     methods ( Access = public ) % Eye tracking Plot methods
         
         function Plot_VOG_RawData(this)
-            switch(this.ExperimentOptions.EyeTracker) 
-                case 'OpenIris'
-                    data = this.Session.rawDataTable;
-                    VOGAnalysis.PlotRawTraces(data);
+            files = this.Session.currentRun.LinkedFiles;
+            for i=1:length(files)
+                switch(this.ExperimentOptions.EyeTracker) 
+                    case 'OpenIris'
+                        file = this.Session.currentRun.LinkedFiles(1).vogDataFile;
+                        data = VOGAnalysis.LoadOpenIrisData(fullfile(this.Session.dataPath,  file));
+                        VOGAnalysis.PlotRawTraces(data);
+                        set(gcf,'name', file);
+
                 case 'Fove'
                     data = this.Session.rawDataTable;
                     VOGAnalysis.PlotRawTraces(data,'Fove');
+                end
             end
         end
         
@@ -1205,8 +1375,8 @@ classdef ExperimentDesign < handle
                     yl = get(h(i),'ylim');
                     
                     trialStarts = nan(size(data.Time));
-                    trialStarts(this.Session.trialDataTable.SampleStartTrial-1) = yl(1);
-                    trialStarts(this.Session.trialDataTable.SampleStartTrial) = yl(2);
+                    trialStarts(this.Session.trialDataTable.SampleStartTrial) = yl(1);
+                    trialStarts(this.Session.trialDataTable.SampleStartTrial+1) = yl(2);
                     
                     trialStops = nan(size(data.Time));
                     trialStops(this.Session.trialDataTable.SampleStopTrial-1) = yl(1);
@@ -1695,7 +1865,7 @@ classdef ExperimentDesign < handle
                 experiment = AlconExperimentDesigns.(experimentName)();
             else
                 % Create the experiment design object
-                experiment = ArumeCore.ExperimentDesign();
+                experiment = [];
             end
         end
         

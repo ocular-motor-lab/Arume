@@ -274,10 +274,16 @@ while(1)
                         thisTrialData.TimePostTrialStop = GetSecs;
                     end
 
-
                 catch lastError
                     if ( streq(lastError.identifier, 'PSYCORTEX:USERQUIT' ) )
                         thisTrialData.TrialResult = Enum.trialResult.QUIT;
+                        lastError = [];
+                    elseif ( streq(lastError.identifier, 'PSYCORTEX:ABORTTRIALBUTCONTINUE' ) )
+                        % This is useful for things like checking fixation
+                        % when a trial will be cancelled (aborted) but we
+                        % just want to move on to the next trial instead of
+                        % going to the idle menu
+                        thisTrialData.TrialResult = Enum.trialResult.SOFTABORT;
                         lastError = [];
                     else
                         thisTrialData.TrialResult = Enum.trialResult.ERROR;
@@ -334,13 +340,18 @@ while(1)
                             % and switch it with the next
                             currentblock = this.Session.currentRun.futureTrialTable.BlockNumber(1);
                             currentblockSeqNumber = this.Session.currentRun.futureTrialTable.BlockSequenceNumber(1);
-                            futureConditionsInCurrentBlock = this.Session.currentRun.futureTrialTable(this.Session.currentRun.futureTrialTable.BlockNumber==currentblock & this.Session.currentRun.futureTrialTable.BlockSequenceNumber==currentblockSeqNumber,:);
+                            currentSessionPartNumber = this.Session.currentRun.futureTrialTable.Session(1);
+                            futureConditionsInCurrentBlockAndSessionPart = this.Session.currentRun.futureTrialTable(...
+                                    this.Session.currentRun.futureTrialTable.BlockNumber==currentblock ...
+                                    & this.Session.currentRun.futureTrialTable.BlockSequenceNumber==currentblockSeqNumber ...
+                                    & this.Session.currentRun.futureTrialTable.Session==currentSessionPartNumber...
+                                ,:) ;
 
-                            newPosition = ceil(rand(1)*(height(futureConditionsInCurrentBlock)-1))+1;
-                            c = futureConditionsInCurrentBlock(1,:);
-                            futureConditionsInCurrentBlock(1,:) = futureConditionsInCurrentBlock(newPosition,:);
-                            futureConditionsInCurrentBlock(newPosition,:) = c;
-                            this.Session.currentRun.futureTrialTable(this.Session.currentRun.futureTrialTable.BlockNumber==currentblock & this.Session.currentRun.futureTrialTable.BlockSequenceNumber==currentblockSeqNumber,:) = futureConditionsInCurrentBlock;
+                            newPosition = ceil(rand(1)*(height(futureConditionsInCurrentBlockAndSessionPart)-1))+1;
+                            c = futureConditionsInCurrentBlockAndSessionPart(1,:);
+                            futureConditionsInCurrentBlockAndSessionPart(1,:) = futureConditionsInCurrentBlockAndSessionPart(newPosition,:);
+                            futureConditionsInCurrentBlockAndSessionPart(newPosition,:) = c;
+                            this.Session.currentRun.futureTrialTable(this.Session.currentRun.futureTrialTable.BlockNumber==currentblock & this.Session.currentRun.futureTrialTable.BlockSequenceNumber==currentblockSeqNumber,:) = futureConditionsInCurrentBlockAndSessionPart;
                         case 'Drop'
                             %-- remove the condition that has just run from the future conditions list
                             this.Session.currentRun.futureTrialTable(1,:) = [];
@@ -399,6 +410,7 @@ while(1)
                     disp('Downloading eye tracking files...');
                     now = datetime;
                     now.Format = 'uuuuMMdd_HHmmss';
+                    
                     files = this.eyeTracker.DownloadFile( this.Session.dataPath, strcat(this.Session.name, "_", string(now), ".edf"));
 
                     if (~isempty( files) )

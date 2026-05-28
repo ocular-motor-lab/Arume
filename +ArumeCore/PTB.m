@@ -53,7 +53,7 @@ classdef PTB < handle
             result = Graph.DlgSelect( ...
                 'Choose an option:', ...
                 { 'n' 'c' 'q'}, ...
-                { 'Choose n' 'Choose c' 'quit'} , [],[])
+                { 'Choose n' 'Choose c' 'quit'} , [],[]);
 
             Graph.Clear();
         end
@@ -100,7 +100,7 @@ classdef PTB < handle
             % -- GRAPHICS KEYBOARD and MOUSE
             %-- hide the mouse cursor during the experiment
             if ( ~debugMode)
-                HideCursor;
+                HideCursor; 
                 ListenChar(2);
             else
                 ListenChar(1);
@@ -236,7 +236,7 @@ classdef PTB < handle
             this.lastfliptime = fliptime;
             
             %-- Check for keyboard press
-            [keyIsDown,secs,keyCode] = KbCheck;
+            [keyIsDown,secs,keyCode] = KbCheck; %TODO: maybe move this line to before the flip depending on performance
             if keyCode(Enum.keys.ESCAPE)
 
                 % in the special case where a movie is playing, close the
