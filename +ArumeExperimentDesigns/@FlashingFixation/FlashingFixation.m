@@ -1,10 +1,8 @@
-classdef FixationFlashing < ArumeExperimentDesigns.EyeTracking
+classdef FlashingFixation < ArumeExperimentDesigns.EyeTracking
     %OPTOKINETICTORSION Summary of this class goes here
     %   Detailed explanation goes here
 
     properties
-        fixRad = 20;
-        fixColor = [255 0 0];
         targetPositions =[];
     end
 
@@ -27,12 +25,14 @@ classdef FixationFlashing < ArumeExperimentDesigns.EyeTracking
             dlg.NumberRepetitions = 10;
             dlg.DisplayOptions.SelectedScreen = { 1 '* (screen)' [0 5] };
 
+
             dlg.TargetSize = 1;
             dlg.Calibration_Type = { {'Center dot' '5 dots' '{9 dots}' '13 dots' '17 dots'} };
             dlg.Calibration_Distance_H = { 10 '* (deg)' [1 3000] };
             dlg.Calibration_Distance_V = { 10 '* (deg)' [1 3000] };
 
-            dlg.BackgroundBrightness = 255/2;
+            dlg.BackgroundBrightness = 0;
+            dlg.FlashingFixation = { {'{Off}' 'On'} };  % braces {} mark the default selection
         end
 
 
@@ -62,27 +62,22 @@ classdef FixationFlashing < ArumeExperimentDesigns.EyeTracking
             end
             t = ArumeCore.TrialTableBuilder();
 
-            t.AddConditionVariable("TargetPosition", { ...
-                [0 0], [0 10], [10 0], [10 10], [-10 10], [-10 -10], [10 -10] [-10 0], [0 -10] ...
-                [0 2], [0 4], [0 6], [0 8], [0 -2], [0 -4], [0 -6], [0 -8], ...
-                [2 0], [4 0], [6 0], [8 0], [-2 0], [-4 0], [-6 0], [-8 0], ...
-                [2 2], [4 4], [6 6], [8 8], [-2 2], [-4 4], [-6 6], [-8 8], ...
-                [2 -2], [4 -4], [6 -6], [8 -8], [-2 -2], [-4 -4], [-6 -6], [-8 -8] ...
-                });
+            t.AddConditionVariable("TargetPosition", {[0 0], [0 5], [5 0], [-5 0], [0 -5]});
+            % (swap in your full list of target positions)
 
-            % Add all conditions to a single block with N repetitions
-            nReps = this.ExperimentOptions.NumberRepetitions;
-            t.AddBlock(1:height(t.ConditionTable), 1);
+            t.AddBlock(1:height(t.ConditionTable), 10);  % 10 repetitions of each condition
 
             trialSequence = 'Random';
             blockSequence = 'Sequential';
-            blockSequenceRepeatitions = nReps;
+            blockSequenceRepeatitions = 1;
             abortAction = 'Repeat';
-            trialsPerSession = 1000;  % You can use a large number if not splitting
+            trialsPerSession = 1000;
 
             trialTable = t.GenerateTrialTable(trialSequence, blockSequence, blockSequenceRepeatitions, abortAction, trialsPerSession);
-        end
 
+            % Reorder rows so no TargetPosition condition repeats back-to-back
+            trialTable = this.ReorderToAvoidImmediateRepeats(trialTable, 'Condition');
+        end
 
         function [trialResult, thisTrialData] = runTrial(this, thisTrialData)
             try
@@ -90,9 +85,7 @@ classdef FixationFlashing < ArumeExperimentDesigns.EyeTracking
                 graph = this.Graph;
                 trialResult = Enum.trialResult.CORRECT;
 
-                lastFlipTime        = GetSecs;
-                secondsRemaining    = this.ExperimentOptions.TrialDuration;
-                thisTrialData.TimeStartLoop = lastFlipTime;
+                thisTrialData.TimeStartLoop = GetSecs;
 
                 if (~isempty(this.eyeTracker))
                     thisTrialData.EyeTrackerFrameStartLoop = this.eyeTracker.RecordEvent( ...
@@ -101,64 +94,78 @@ classdef FixationFlashing < ArumeExperimentDesigns.EyeTracking
                         thisTrialData.Condition) );
                 end
 
-                flashPeriod = 1.0;         % seconds
-                flashOffDuration = 0.970;  % target invisible for 970 ms each second
+                % === Frame-based timing setup ===
+                % === Frame-based timing setup ===
+                ifi = Screen('GetFlipInterval', graph.window);   % measured flip interval (~1/240 s)
 
-                while secondsRemaining > 0
-                    currentTime        = GetSecs;
-                    secondsElapsed     = currentTime - thisTrialData.TimeStartLoop;
-                    secondsRemaining   = this.ExperimentOptions.TrialDuration - secondsElapsed;
+                isFlashing = strcmp(this.ExperimentOptions.FlashingFixation, 'On');
 
-                    % Determine if target should be visible or invisible
-                    timeInCycle = mod(secondsElapsed, flashPeriod);
-                    showTarget = timeInCycle > flashOffDuration;  % invisible only for 5 ms
+                cyclePeriod   = 1.0;                              % 970 ms OFF + 30 ms ON
+                onDuration    = 0.030;
 
-                    %-- Draw background
+                framesPerCycle = round(cyclePeriod / ifi);         % frames per full ON+OFF cycle
+                onFrames       = round(onDuration / ifi);          % frames the stim is ON per cycle
+
+                totalTrialFrames = round(this.ExperimentOptions.TrialDuration / ifi);
+
+                % Pre-compute stimulus draw parameters (constant across the trial)
+                [mx, my] = RectCenter(this.Graph.wRect);
+
+                targetDeg = thisTrialData.TargetPosition{1};
+                dx = targetDeg(1);
+                dy = targetDeg(2);
+
+                thisTrialData.StimulusPosition_X = dx;
+                thisTrialData.StimulusPosition_Y = dy;
+
+                pixelsPerDegree = this.Graph.pxWidth / this.ExperimentOptions.DisplayOptions.ScreenWidth * ...
+                    this.ExperimentOptions.DisplayOptions.ScreenDistance;
+
+                targetHPix = pixelsPerDegree * tand(dx);
+                targetYPix = pixelsPerDegree * tand(dy);
+
+                fixX = mx + targetHPix / 2;
+                fixY = my + targetYPix / 2;
+
+                targetSizeDeg = this.ExperimentOptions.TargetSize;
+                crossLength = pixelsPerDegree * tand(targetSizeDeg);
+                crossThickness = 4;
+                crossColor = [128, 128, 128];
+
+                gapSize = crossThickness * 4.5;
+                dotSize = crossThickness * 1.5;
+
+                crossCoords = [ ...
+                    -crossLength/2, 0;   -gapSize/2, 0; ...
+                    gapSize/2,     0;    crossLength/2, 0; ...
+                    0, -crossLength/2;   0, -gapSize/2; ...
+                    0,  gapSize/2;       0,  crossLength/2 ...
+                    ]';
+
+                dotRect = [fixX - dotSize/2, fixY - dotSize/2, fixX + dotSize/2, fixY + dotSize/2];
+
+                % === Frame loop ===
+                % === Frame loop ===
+                frameCount = 0;
+                while frameCount < totalTrialFrames
+                    if isFlashing
+                        cyclePos = mod(frameCount, framesPerCycle);
+                        stimOn = cyclePos < onFrames;
+                    else
+                        stimOn = true;   % non-flashing: stimulus stays on the whole trial
+                    end
+
                     Screen('FillRect', graph.window, this.ExperimentOptions.BackgroundBrightness);
 
-                    if showTarget
-
-                        [mx, my] = RectCenter(this.Graph.wRect);
-
-                        % Get the stimulus position in degrees from the trial table
-                        targetDeg = thisTrialData.TargetPosition{1};
-                        dx = targetDeg(1);
-                        dy = targetDeg(2);
-
-                        % === LOG POSITION INTO TRIAL DATA ===
-                        thisTrialData.StimulusPosition_X = targetDeg(1);
-                        thisTrialData.StimulusPosition_Y = targetDeg(2);
-
-                        % Convert visual degrees to pixels
-                        pixelsPerDegree = this.Graph.pxWidth / this.ExperimentOptions.DisplayOptions.ScreenWidth * ...
-                            this.ExperimentOptions.DisplayOptions.ScreenDistance;
-
-                        targetHPix = pixelsPerDegree * tand(dx);
-                        targetYPix = pixelsPerDegree * tand(dy);
-
-                        % Fixation location
-                        fixX = mx + targetHPix / 2;
-                        fixY = my + targetYPix / 2;
-
-                        % Fixation cross parameters
-                        targetSizeDeg = this.ExperimentOptions.TargetSize;
-                        crossLength = pixelsPerDegree * tand(targetSizeDeg); % in pixels
-                        crossThickness = 2;
-                        crossColor = [0, 0, 0];
-
-                        % Define cross lines centered on fixX, fixY
-                        crossCoords = [ ...
-                            -crossLength/2, 0; ...
-                            crossLength/2, 0; ...
-                            0, -crossLength/2; ...
-                            0,  crossLength/2 ...
-                            ]';
-
+                    if stimOn
                         Screen('DrawLines', graph.window, crossCoords, crossThickness, crossColor, [fixX, fixY], 2);
+                        Screen('FillRect', graph.window, crossColor, dotRect);
                     end
 
                     Screen('DrawingFinished', graph.window);
                     this.Graph.Flip();
+
+                    frameCount = frameCount + 1;
                 end
 
             catch ex
@@ -166,6 +173,49 @@ classdef FixationFlashing < ArumeExperimentDesigns.EyeTracking
             end
         end
 
+    end
+
+    methods (Static, Access = private)
+        function trialTable = ReorderToAvoidImmediateRepeats(trialTable, columnName)
+            values = trialTable.(columnName);
+            uniqueVals = unique(values, 'stable');
+            nUnique = numel(uniqueVals);
+
+            % Group row indices by condition value, each shuffled internally
+            indicesByValue = cell(1, nUnique);
+            counts = zeros(1, nUnique);
+            for i = 1:nUnique
+                idx = find(values == uniqueVals(i));
+                indicesByValue{i} = idx(randperm(numel(idx)));
+                counts(i) = numel(idx);
+            end
+
+            n = height(trialTable);
+            newOrder = zeros(n,1);
+            ptr = ones(1, nUnique);
+            lastVal = -1;
+
+            for step = 1:n
+                available = find(counts > 0);
+                candidates = available(available ~= lastVal);
+                if isempty(candidates)
+                    candidates = available;  % fallback safety net
+                end
+
+                % Prefer whichever condition(s) have the most trials left,
+                % breaking ties randomly, so we never get stuck later
+                maxCount = max(counts(candidates));
+                best = candidates(counts(candidates) == maxCount);
+                chosen = best(randi(numel(best)));
+
+                newOrder(step) = indicesByValue{chosen}(ptr(chosen));
+                ptr(chosen) = ptr(chosen) + 1;
+                counts(chosen) = counts(chosen) - 1;
+                lastVal = chosen;
+            end
+
+            trialTable = trialTable(newOrder, :);
+        end
     end
 
     methods ( Access = public )
@@ -459,17 +509,24 @@ classdef FixationFlashing < ArumeExperimentDesigns.EyeTracking
 
             p = this.Session.analysisResults.SlowPhases.X_MeanPosition;
             pp = round(p/2.5)*2.5;
-            [means,pred,grp,sem] = grpstats(this.Session.analysisResults.SlowPhases.X_MeanVelocity, pp, ...
-                ["median","predci","gname", "sem"], "Alpha",0.1);
+            [means,pred,grp,sem,numel] = grpstats(this.Session.analysisResults.SlowPhases.X_MeanVelocity, pp, ...
+                ["median","predci","gname", "sem","numel"], "Alpha",0.1);
 
             figure
-            subplot(2,2,1)
+            subplot(3,2,1)
             x = str2double(grp);
             y = means;
 
             % Plot data
             errorbar(x, y, sem, 'o')
             set(gca, 'xlim', [-15 15], 'ylim', [-3 3])
+            xlabel('Horizontal position (deg)')
+            ylabel('Horizontal drift velocity (deg/s)')
+            title("fixation data")
+
+            subplot(3,2,3)
+            bar(x, numel)
+            set(gca, 'ylim', [-3 3])
             xlabel('Horizontal position (deg)')
             ylabel('Horizontal drift velocity (deg/s)')
             title("fixation data")
@@ -517,7 +574,7 @@ classdef FixationFlashing < ArumeExperimentDesigns.EyeTracking
             pp = round(p*2.5)/2.5;
             [means,pred,grp,sem] = grpstats(v,pp, ["median","predci","gname", "sem"],"Alpha",0.1);
 
-            subplot(2,2,3)
+            subplot(3,2,5)
             errorbar(str2double(grp), means, sem,'o')
             set(gca,'xlim',[-5 5], 'ylim', [-3 3])
             xlabel('Vergence position (deg)')
@@ -532,6 +589,10 @@ classdef FixationFlashing < ArumeExperimentDesigns.EyeTracking
             % plot(str2double(grp), means,'o')
 
             % set(gca,'xlim',[-15 15], 'ylim', [-3 3])
+        end
+
+        function [out, options] = PlotAggregate_PositionVelocityAcrossSubjects(this, sessions, options)
+            sessions(subj).analysisResults.QuickPhases;
         end
 
         function [out, options] = Plot_DriftDiffusionAnalysis(this)
