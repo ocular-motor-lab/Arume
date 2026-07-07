@@ -136,33 +136,16 @@ classdef FixationPeriphCircle < ArumeExperimentDesigns.EyeTracking
                 lineThickness = 4*targetSizeDeg;
                 lineColor = [128, 128, 128];
 
-                % === Compute the same peripheralOffset used for the line version ===
-                screenW = this.Graph.wRect(3);
-                screenH = this.Graph.wRect(4);
-
-                minLeft = Inf; minRight = Inf; minTop = Inf; minBottom = Inf;
-
-                for i = 1:numel(this.allTargetPositions)
-                    posDeg = this.allTargetPositions{i};
-                    tHPix = pixelsPerDegree * tand(posDeg(1));
-                    tVPix = pixelsPerDegree * tand(posDeg(2));
-                    fx = mx + tHPix/2;
-                    fy = my + tVPix/2;
-
-                    minLeft   = min(minLeft,   fx);
-                    minRight  = min(minRight,  screenW - fx);
-                    minTop    = min(minTop,    fy);
-                    minBottom = min(minBottom, screenH - fy);
-                end
-
-                peripheralOffset = max(min([minLeft, minRight, minTop, minBottom]) - crossLength, 0);
+                % === Outer edge of the (imaginary) line fixed at 10 deg from fixation ===
+                outerEdgeDeg = 10;
+                outerEdgePix = pixelsPerDegree * tand(outerEdgeDeg);
+                peripheralOffset = outerEdgePix - crossLength;
 
                 % Radius through the MIDPOINT of where the peripheral lines would be,
                 % not their outer tip
                 circleRadius = peripheralOffset + crossLength/2;
 
                 circleRect = [fixX - circleRadius, fixY - circleRadius, fixX + circleRadius, fixY + circleRadius];
-
                 % === Frame loop ===
                 % === Frame loop ===
                 frameCount = 0;

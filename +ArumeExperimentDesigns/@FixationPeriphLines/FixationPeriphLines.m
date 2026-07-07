@@ -136,28 +136,10 @@ classdef FixationPeriphLines < ArumeExperimentDesigns.EyeTracking
                 lineThickness = 4*targetSizeDeg;
                 lineColor = [128, 128, 128];
 
-                % === Compute the maximum offset from fixX/fixY such that the lines
-                %     stay fully on screen for EVERY possible target position ===
-                screenW = this.Graph.wRect(3);
-                screenH = this.Graph.wRect(4);
-
-                minLeft = Inf; minRight = Inf; minTop = Inf; minBottom = Inf;
-
-                for i = 1:numel(this.allTargetPositions)
-                    posDeg = this.allTargetPositions{i};
-                    tHPix = pixelsPerDegree * tand(posDeg(1));
-                    tVPix = pixelsPerDegree * tand(posDeg(2));
-                    fx = mx + tHPix/2;
-                    fy = my + tVPix/2;
-
-                    minLeft   = min(minLeft,   fx);
-                    minRight  = min(minRight,  screenW - fx);
-                    minTop    = min(minTop,    fy);
-                    minBottom = min(minBottom, screenH - fy);
-                end
-
-                % Largest offset that keeps every line's far tip on screen, for every target position
-                peripheralOffset = max(min([minLeft, minRight, minTop, minBottom]) - crossLength, 0);
+                % === Outer edge of each line fixed at 10 deg from fixation ===
+                outerEdgeDeg = 10;
+                outerEdgePix = pixelsPerDegree * tand(outerEdgeDeg);
+                peripheralOffset = outerEdgePix - crossLength;
 
                 % Four line segments, pushed out to peripheralOffset, each still crossLength long
                 crossCoords = [ ...
@@ -167,7 +149,6 @@ classdef FixationPeriphLines < ArumeExperimentDesigns.EyeTracking
                     0,  peripheralOffset;       0,  peripheralOffset+crossLength ...   % bottom arm
                     ]';
 
-                % === Frame loop ===
                 % === Frame loop ===
                 frameCount = 0;
                 while frameCount < totalTrialFrames
