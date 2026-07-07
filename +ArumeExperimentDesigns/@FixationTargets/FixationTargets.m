@@ -130,8 +130,8 @@ classdef FixationTargets < ArumeExperimentDesigns.EyeTracking
                         targetYPix = pixelsPerDegree * tand(dy);
 
                         % Fixation location
-                        fixX = mx + targetHPix / 2;
-                        fixY = my + targetYPix / 2;
+                        fixX = mx + targetHPix;
+                        fixY = my + targetYPix;
 
                         % Fixation cross parameters
                         targetSizeDeg = this.ExperimentOptions.TargetSize;

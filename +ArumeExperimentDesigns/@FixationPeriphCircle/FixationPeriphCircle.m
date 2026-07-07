@@ -128,8 +128,8 @@ classdef FixationPeriphCircle < ArumeExperimentDesigns.EyeTracking
                 targetHPix = pixelsPerDegree * tand(dx);
                 targetYPix = pixelsPerDegree * tand(dy);
 
-                fixX = mx + targetHPix / 2;
-                fixY = my + targetYPix / 2;
+                fixX = mx + targetHPix;
+                fixY = my + targetYPix;
 
                 targetSizeDeg = this.ExperimentOptions.TargetSize;
                 crossLength = pixelsPerDegree * tand(targetSizeDeg);   % same "line length" as before

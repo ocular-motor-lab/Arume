@@ -17,8 +17,8 @@ classdef FlashingFixationCircle < ArumeExperimentDesigns.EyeTracking
             dlg = GetOptionsDialog@ArumeExperimentDesigns.EyeTracking(this, importing);
             dlg.Debug.DisplayVariableSelection = 'TrialNumber TrialResult TargetPosition'; % which variables to display every trial in the command line separated by spaces
 
-            dlg.DisplayOptions.ScreenWidth = { 55 '* (cm)' [1 3000] };
-            dlg.DisplayOptions.ScreenHeight = { 31 '* (cm)' [1 3000] };
+            dlg.DisplayOptions.ScreenWidth = { 69.948 '* (cm)' [1 3000] };
+            dlg.DisplayOptions.ScreenHeight = { 39.473 '* (cm)' [1 3000] };
             dlg.DisplayOptions.ScreenDistance = { 67 '* (cm)' [1 3000] };
 
             dlg.TrialDuration =  { 10 '* (s)' [1 100] };
@@ -125,8 +125,8 @@ classdef FlashingFixationCircle < ArumeExperimentDesigns.EyeTracking
                 targetHPix = pixelsPerDegree * tand(dx);
                 targetYPix = pixelsPerDegree * tand(dy);
 
-                fixX = mx + targetHPix / 2;
-                fixY = my + targetYPix / 2;
+                fixX = mx + targetHPix;
+                fixY = my + targetYPix;
 
                 targetSizeDeg = this.ExperimentOptions.TargetSize;
                 circleRadius = pixelsPerDegree * tand(targetSizeDeg / 2); % 0.5 deg radius, in pixels
