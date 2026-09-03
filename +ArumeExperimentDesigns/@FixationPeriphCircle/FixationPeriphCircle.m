@@ -27,7 +27,7 @@ classdef FixationPeriphCircle < ArumeExperimentDesigns.EyeTracking
             dlg.DisplayOptions.SelectedScreen = { 1 '* (screen)' [0 5] };
 
 
-            dlg.TargetSize = 2;
+            dlg.TargetSize = 1;
             dlg.Calibration_Type = { {'Center dot' '5 dots' '{9 dots}' '13 dots' '17 dots'} };
             dlg.Calibration_Distance_H = { 10 '* (deg)' [1 3000] };
             dlg.Calibration_Distance_V = { 10 '* (deg)' [1 3000] };
