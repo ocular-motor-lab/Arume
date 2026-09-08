@@ -104,9 +104,9 @@ classdef FixationPeriphLines < ArumeExperimentDesigns.EyeTracking
 
                 isFlashing = strcmp(this.ExperimentOptions.FlashingFixation, 'On');
 
-                cyclePeriod   = 1.0;                              % 970 ms OFF + 30 ms ON
-                onDuration    = 0.090;
-
+                cyclePeriod   = 0.730;                              % 700 ms OFF + 30 ms ON
+                onDuration    = 0.030;
+                
                 framesPerCycle = round(cyclePeriod / ifi);         % frames per full ON+OFF cycle
                 onFrames       = round(onDuration / ifi);          % frames the stim is ON per cycle
 
