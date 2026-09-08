@@ -102,7 +102,7 @@ classdef FlashingFixationCircle < ArumeExperimentDesigns.EyeTracking
                 isFlashing = strcmp(this.ExperimentOptions.FlashingFixation, 'On');
 
                 cyclePeriod   = 1.0;                              % 970 ms OFF + 30 ms ON
-                onDuration    = 0.030;
+                onDuration    = 0.090;
 
                 framesPerCycle = round(cyclePeriod / ifi);         % frames per full ON+OFF cycle
                 onFrames       = round(onDuration / ifi);          % frames the stim is ON per cycle
@@ -131,7 +131,7 @@ classdef FlashingFixationCircle < ArumeExperimentDesigns.EyeTracking
                 targetSizeDeg = this.ExperimentOptions.TargetSize;
                 circleRadius = pixelsPerDegree * tand(targetSizeDeg / 2); % 0.5 deg radius, in pixels
                 lineThickness = 4;
-                circleColor = [128, 128, 128];
+                circleColor = [80, 80, 80];
 
                 dotSize = lineThickness * 1.5;
 
@@ -160,6 +160,25 @@ classdef FlashingFixationCircle < ArumeExperimentDesigns.EyeTracking
                     this.Graph.Flip();
 
                     frameCount = frameCount + 1;
+                end
+
+                % =========================================================
+                % === 3 SECOND NO-STIMULUS INTER-STIMULUS INTERVAL (ISI) ===
+                % =========================================================
+
+                isiDuration = 3.0;  % seconds
+
+                isiStart = GetSecs;
+
+                while (GetSecs - isiStart) < isiDuration
+
+                    % Draw ONLY the background -- no fixation/stimulus
+                    Screen('FillRect', graph.window, ...
+                        this.ExperimentOptions.BackgroundBrightness);
+
+                    Screen('DrawingFinished', graph.window);
+                    this.Graph.Flip();
+
                 end
 
             catch ex

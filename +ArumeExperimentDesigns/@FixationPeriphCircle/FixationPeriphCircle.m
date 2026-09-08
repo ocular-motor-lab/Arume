@@ -27,7 +27,7 @@ classdef FixationPeriphCircle < ArumeExperimentDesigns.EyeTracking
             dlg.DisplayOptions.SelectedScreen = { 1 '* (screen)' [0 5] };
 
 
-            dlg.TargetSize = 1;
+            dlg.TargetSize = 2;
             dlg.Calibration_Type = { {'Center dot' '5 dots' '{9 dots}' '13 dots' '17 dots'} };
             dlg.Calibration_Distance_H = { 10 '* (deg)' [1 3000] };
             dlg.Calibration_Distance_V = { 10 '* (deg)' [1 3000] };
@@ -105,7 +105,7 @@ classdef FixationPeriphCircle < ArumeExperimentDesigns.EyeTracking
                 isFlashing = strcmp(this.ExperimentOptions.FlashingFixation, 'On');
 
                 cyclePeriod   = 1.0;                              % 970 ms OFF + 30 ms ON
-                onDuration    = 0.030;
+                onDuration    = 0.090;
 
                 framesPerCycle = round(cyclePeriod / ifi);         % frames per full ON+OFF cycle
                 onFrames       = round(onDuration / ifi);          % frames the stim is ON per cycle
@@ -134,7 +134,7 @@ classdef FixationPeriphCircle < ArumeExperimentDesigns.EyeTracking
                 targetSizeDeg = this.ExperimentOptions.TargetSize;
                 crossLength = pixelsPerDegree * tand(targetSizeDeg);   % same "line length" as before
                 lineThickness = 4*targetSizeDeg;
-                lineColor = [128, 128, 128];
+                lineColor = [80, 80, 80];
 
                 % === Outer edge of the (imaginary) line fixed at 10 deg from fixation ===
                 outerEdgeDeg = 10;
@@ -167,6 +167,25 @@ classdef FixationPeriphCircle < ArumeExperimentDesigns.EyeTracking
                     this.Graph.Flip();
 
                     frameCount = frameCount + 1;
+                end
+
+                % =========================================================
+                % === 3 SECOND NO-STIMULUS INTER-STIMULUS INTERVAL (ISI) ===
+                % =========================================================
+
+                isiDuration = 3.0;  % seconds
+
+                isiStart = GetSecs;
+
+                while (GetSecs - isiStart) < isiDuration
+
+                    % Draw ONLY the background -- no fixation/stimulus
+                    Screen('FillRect', graph.window, ...
+                        this.ExperimentOptions.BackgroundBrightness);
+
+                    Screen('DrawingFinished', graph.window);
+                    this.Graph.Flip();
+
                 end
 
             catch ex
