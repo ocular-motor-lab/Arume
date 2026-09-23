@@ -1,12 +1,10 @@
-classdef FixationTargets < ArumeExperimentDesigns.EyeTracking
+classdef FixationPeriphLines < ArumeExperimentDesigns.EyeTracking
     %OPTOKINETICTORSION Summary of this class goes here
     %   Detailed explanation goes here
 
     properties
-        fixRad = 20;
-        fixColo
-        r = [255 0 0];
         targetPositions =[];
+        allTargetPositions = {};   % full list of target positions used in the experiment
     end
 
     % ---------------------------------------------------------------------
@@ -20,8 +18,8 @@ classdef FixationTargets < ArumeExperimentDesigns.EyeTracking
             dlg = GetOptionsDialog@ArumeExperimentDesigns.EyeTracking(this, importing);
             dlg.Debug.DisplayVariableSelection = 'TrialNumber TrialResult TargetPosition'; % which variables to display every trial in the command line separated by spaces
 
-            dlg.DisplayOptions.ScreenWidth = { 55 '* (cm)' [1 3000] };
-            dlg.DisplayOptions.ScreenHeight = { 31 '* (cm)' [1 3000] };
+            dlg.DisplayOptions.ScreenWidth = { 69.948 '* (cm)' [1 3000] };
+            dlg.DisplayOptions.ScreenHeight = { 39.473 '* (cm)' [1 3000] };
             dlg.DisplayOptions.ScreenDistance = { 67 '* (cm)' [1 3000] };
 
             dlg.TrialDuration =  { 10 '* (s)' [1 100] };
@@ -29,12 +27,13 @@ classdef FixationTargets < ArumeExperimentDesigns.EyeTracking
             dlg.DisplayOptions.SelectedScreen = { 1 '* (screen)' [0 5] };
 
 
-            dlg.TargetSize = 1;
+            dlg.TargetSize = 2;
             dlg.Calibration_Type = { {'Center dot' '5 dots' '{9 dots}' '13 dots' '17 dots'} };
             dlg.Calibration_Distance_H = { 10 '* (deg)' [1 3000] };
             dlg.Calibration_Distance_V = { 10 '* (deg)' [1 3000] };
 
-            dlg.BackgroundBrightness = 255/2;
+            dlg.BackgroundBrightness = 0;
+            dlg.FlashingFixation = { {'{Off}' 'On'} };  % braces {} mark the default selection
         end
 
 
@@ -64,25 +63,23 @@ classdef FixationTargets < ArumeExperimentDesigns.EyeTracking
             end
             t = ArumeCore.TrialTableBuilder();
 
-            t.AddConditionVariable("TargetPosition", { ...
-                [0 0], [0 10], [10 0], [10 10], [-10 10], [-10 -10], [10 -10] [-10 0], [0 -10] ...
-                [0 2], [0 4], [0 6], [0 8], [0 -2], [0 -4], [0 -6], [0 -8], ...
-                [2 0], [4 0], [6 0], [8 0], [-2 0], [-4 0], [-6 0], [-8 0], ...
-                [2 2], [4 4], [6 6], [8 8], [-2 2], [-4 4], [-6 6], [-8 8], ...
-                [2 -2], [4 -4], [6 -6], [8 -8], [-2 -2], [-4 -4], [-6 -6], [-8 -8] ...
-                });
+            targetPositionsList = {[0 0], [0 5], [5 0], [-5 0], [0 -5]};
+            t.AddConditionVariable("TargetPosition", targetPositionsList);
+            this.allTargetPositions = targetPositionsList;
+            % (swap in your full list of target positions)
 
-            % Add all conditions to a single block with N repetitions
-            nReps = this.ExperimentOptions.NumberRepetitions;
-            t.AddBlock(1:height(t.ConditionTable), 1);
+            t.AddBlock(1:height(t.ConditionTable), 10);  % 10 repetitions of each condition
 
             trialSequence = 'Random';
             blockSequence = 'Sequential';
-            blockSequenceRepeatitions = nReps;
+            blockSequenceRepeatitions = 1;
             abortAction = 'Repeat';
-            trialsPerSession = 1000;  % You can use a large number if not splitting
+            trialsPerSession = 1000;
 
             trialTable = t.GenerateTrialTable(trialSequence, blockSequence, blockSequenceRepeatitions, abortAction, trialsPerSession);
+
+            % Reorder rows so no TargetPosition condition repeats back-to-back
+            trialTable = this.ReorderToAvoidImmediateRepeats(trialTable, 'Condition');
         end
 
 
@@ -92,9 +89,7 @@ classdef FixationTargets < ArumeExperimentDesigns.EyeTracking
                 graph = this.Graph;
                 trialResult = Enum.trialResult.CORRECT;
 
-                lastFlipTime        = GetSecs;
-                secondsRemaining    = this.ExperimentOptions.TrialDuration;
-                thisTrialData.TimeStartLoop = lastFlipTime;
+                thisTrialData.TimeStartLoop = GetSecs;
 
                 if (~isempty(this.eyeTracker))
                     thisTrialData.EyeTrackerFrameStartLoop = this.eyeTracker.RecordEvent( ...
@@ -103,60 +98,96 @@ classdef FixationTargets < ArumeExperimentDesigns.EyeTracking
                         thisTrialData.Condition) );
                 end
 
-                while secondsRemaining > 0
-                    secondsElapsed      = GetSecs - thisTrialData.TimeStartLoop;
-                    secondsRemaining    = this.ExperimentOptions.TrialDuration - secondsElapsed;
+                % === Frame-based timing setup ===
+                % === Frame-based timing setup ===
+                ifi = Screen('GetFlipInterval', graph.window);   % measured flip interval (~1/240 s)
 
-                    if secondsRemaining > 0
-                        %-- Draw fixation spot as a white cross (+)
-                        Screen('FillRect', graph.window, this.ExperimentOptions.BackgroundBrightness);
+                isFlashing = strcmp(this.ExperimentOptions.FlashingFixation, 'On');
 
-                        [mx, my] = RectCenter(this.Graph.wRect);
+                cyclePeriod   = 0.730;                              % 700 ms OFF + 30 ms ON
+                onDuration    = 0.030;
+                
+                framesPerCycle = round(cyclePeriod / ifi);         % frames per full ON+OFF cycle
+                onFrames       = round(onDuration / ifi);          % frames the stim is ON per cycle
 
-                        % Get the stimulus position in degrees from the trial table
-                        targetDeg = thisTrialData.TargetPosition{1};
-                        dx = targetDeg(1);
-                        dy = targetDeg(2);
+                totalTrialFrames = round(this.ExperimentOptions.TrialDuration / ifi);
 
-                        % === LOG POSITION INTO TRIAL DATA ===
-                        thisTrialData.StimulusPosition_X = targetDeg(1);
-                        thisTrialData.StimulusPosition_Y = targetDeg(2);
+                % Pre-compute stimulus draw parameters (constant across the trial)
+                [mx, my] = RectCenter(this.Graph.wRect);
 
-                        % Convert visual degrees to pixels
-                        pixelsPerDegree = this.Graph.pxWidth / this.ExperimentOptions.DisplayOptions.ScreenWidth * ...
-                            this.ExperimentOptions.DisplayOptions.ScreenDistance;
+                targetDeg = thisTrialData.TargetPosition{1};
+                dx = targetDeg(1);
+                dy = targetDeg(2);
 
-                        targetHPix = pixelsPerDegree * tand(dx);
-                        targetYPix = pixelsPerDegree * tand(dy);
+                thisTrialData.StimulusPosition_X = dx;
+                thisTrialData.StimulusPosition_Y = dy;
 
-                        % Fixation location
-                        fixX = mx + targetHPix;
-                        fixY = my + targetYPix;
+                pixelsPerDegree = this.Graph.pxWidth / this.ExperimentOptions.DisplayOptions.ScreenWidth * ...
+                    this.ExperimentOptions.DisplayOptions.ScreenDistance;
 
-                        % Fixation cross parameters
-                        targetSizeDeg = this.ExperimentOptions.TargetSize;
-                        crossLength = pixelsPerDegree * tand(targetSizeDeg); % in pixels
-                        crossThickness = 2;
-                        crossColor = [0, 0, 0];
+                targetHPix = pixelsPerDegree * tand(dx);
+                targetYPix = pixelsPerDegree * tand(dy);
 
-                        % Define cross lines centered on fixX, fixY
-                        crossCoords = [ ...
-                            -crossLength/2, 0; ...
-                            crossLength/2, 0; ...
-                            0, -crossLength/2; ...
-                            0,  crossLength/2 ...
-                            ]';
+                fixX = mx + targetHPix;
+                fixY = my + targetYPix;
 
-                        Screen('DrawLines', graph.window, crossCoords, crossThickness, crossColor, [fixX, fixY], 2);
+                targetSizeDeg = this.ExperimentOptions.TargetSize;
+                crossLength = pixelsPerDegree * tand(targetSizeDeg);   % line length stays the same
+                lineThickness = 4*targetSizeDeg;
+                lineColor = [80, 80, 80];
 
-                        Screen('DrawingFinished', graph.window);
+                % === Outer edge of each line fixed at 10 deg from fixation ===
+                outerEdgeDeg = 10;
+                outerEdgePix = pixelsPerDegree * tand(outerEdgeDeg);
+                peripheralOffset = outerEdgePix - crossLength;
+
+                % Four line segments, pushed out to peripheralOffset, each still crossLength long
+                crossCoords = [ ...
+                    -(peripheralOffset+crossLength), 0;   -peripheralOffset, 0; ...   % left arm
+                    peripheralOffset,     0;    peripheralOffset+crossLength, 0; ...   % right arm
+                    0, -(peripheralOffset+crossLength);   0, -peripheralOffset; ...   % top arm
+                    0,  peripheralOffset;       0,  peripheralOffset+crossLength ...   % bottom arm
+                    ]';
+
+                % === Frame loop ===
+                frameCount = 0;
+                while frameCount < totalTrialFrames
+                    if isFlashing
+                        cyclePos = mod(frameCount, framesPerCycle);
+                        stimOn = cyclePos < onFrames;
                     else
-                        Screen('FillRect', graph.window, this.ExperimentOptions.BackgroundBrightness);
-                        Screen('DrawingFinished', graph.window);
+                        stimOn = true;   % non-flashing: stimulus stays on the whole trial
                     end
 
-                    % Flip screen buffer
+                    Screen('FillRect', graph.window, this.ExperimentOptions.BackgroundBrightness);
+
+                    if stimOn
+                        Screen('DrawLines', graph.window, crossCoords, lineThickness, lineColor, [fixX, fixY], 2);
+                    end
+
+                    Screen('DrawingFinished', graph.window);
                     this.Graph.Flip();
+
+                    frameCount = frameCount + 1;
+                end
+
+                % =========================================================
+                % === 3 SECOND NO-STIMULUS INTER-STIMULUS INTERVAL (ISI) ===
+                % =========================================================
+
+                isiDuration = 3.0;  % seconds
+
+                isiStart = GetSecs;
+
+                while (GetSecs - isiStart) < isiDuration
+
+                    % Draw ONLY the background -- no fixation/stimulus
+                    Screen('FillRect', graph.window, ...
+                        this.ExperimentOptions.BackgroundBrightness);
+
+                    Screen('DrawingFinished', graph.window);
+                    this.Graph.Flip();
+
                 end
 
             catch ex
@@ -164,6 +195,49 @@ classdef FixationTargets < ArumeExperimentDesigns.EyeTracking
             end
         end
 
+    end
+
+    methods (Static, Access = private)
+        function trialTable = ReorderToAvoidImmediateRepeats(trialTable, columnName)
+            values = trialTable.(columnName);
+            uniqueVals = unique(values, 'stable');
+            nUnique = numel(uniqueVals);
+
+            % Group row indices by condition value, each shuffled internally
+            indicesByValue = cell(1, nUnique);
+            counts = zeros(1, nUnique);
+            for i = 1:nUnique
+                idx = find(values == uniqueVals(i));
+                indicesByValue{i} = idx(randperm(numel(idx)));
+                counts(i) = numel(idx);
+            end
+
+            n = height(trialTable);
+            newOrder = zeros(n,1);
+            ptr = ones(1, nUnique);
+            lastVal = -1;
+
+            for step = 1:n
+                available = find(counts > 0);
+                candidates = available(available ~= lastVal);
+                if isempty(candidates)
+                    candidates = available;  % fallback safety net
+                end
+
+                % Prefer whichever condition(s) have the most trials left,
+                % breaking ties randomly, so we never get stuck later
+                maxCount = max(counts(candidates));
+                best = candidates(counts(candidates) == maxCount);
+                chosen = best(randi(numel(best)));
+
+                newOrder(step) = indicesByValue{chosen}(ptr(chosen));
+                ptr(chosen) = ptr(chosen) + 1;
+                counts(chosen) = counts(chosen) - 1;
+                lastVal = chosen;
+            end
+
+            trialTable = trialTable(newOrder, :);
+        end
     end
 
     methods ( Access = public )
