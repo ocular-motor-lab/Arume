@@ -143,6 +143,61 @@ classdef ExperimentDesign < handle
             end
 
         end
+        % 
+        % function abort_bool = checkFixationClara(this, fixationPositionPix, winsizePix, timeoutSecs, eyeData)
+        % 
+        %     if ( isempty(this.eyeTracker) )
+        %         return;
+        %     end
+        % 
+        %     % Get the eye tracking data to know where the eye is looking at
+        %     if ( ~exist("eyeData","var"))
+        %       eyeData = this.eyeTracker.GetCurrentData();
+        %     end
+        % 
+        %     if isfield(eyeData,'mx') && isfield(eyeData,'my')
+        %         gazeX = eyeData.mx;
+        %         gazeY = eyeData.my;
+        %     else
+        %         % assume eyes are closed and out of bounds?
+        %         gazeX = inf;
+        %         gazeY = inf;
+        %     end
+        % 
+        %     % check if the eye is within a window around the given fixation
+        %     % spot
+        %     isInside =   (abs(gazeX - fixationPositionPix(1)) < winsizePix) && (abs(gazeY - fixationPositionPix(2)) < winsizePix) ;
+        %     tnow = GetSecs();
+        % 
+        %     abort_bool = 0;
+        % 
+        %     switch(this.goodFixationStatus)
+        %         case 'INIT'
+        %             this.badFixationTimeStart = tnow;
+        %             if ( isInside )
+        %                 this.goodFixationStatus = 'IN_WINDOW';
+        %             else
+        %                 this.goodFixationStatus = 'OUT_WINDOW';
+        %             end
+        %         case 'IN_WINDOW'
+        %             if ( ~isInside )
+        %                 this.goodFixationStatus = 'OUT_WINDOW';
+        %                 this.badFixationTimeStart = tnow;
+        %             end
+        %         case 'OUT_WINDOW'
+        %             if ( isInside )
+        %                 this.goodFixationStatus = 'IN_WINDOW';
+        %             else
+        %                 if ( tnow - this.badFixationTimeStart > timeoutSecs)
+        %                     Beeper(200,1); Beeper(200,1)
+        %                     this.abortTrialButContinue();
+        %                     abort_bool = 1;
+        %                     return;
+        %                 end
+        %             end
+        %     end
+        % 
+        % end
     end
         
     % --------------------------------------------------------------------
@@ -539,6 +594,8 @@ classdef ExperimentDesign < handle
                         % are still useful so we will regenate them here
                         % in the trial table
                         for i=1:height(trialDataTable)
+                            % TODO: JORGE : this probably does not work for
+                            % multiple files, only if there is one.
                             i1 = find(samplesDataTable.RawTime>=trialDataTable.EyeTrackerTimeTrialStart(i),1,'first');
                             i2 = find(samplesDataTable.RawTime<=trialDataTable.EyeTrackerTimeTrialStop(i),1,'last');
                             trialDataTable.EyeTrackerFrameNumberTrialStart(i) = samplesDataTable.RawFrameNumber(i1);

@@ -331,6 +331,7 @@ while(1)
 
                     trialsSinceBreak = trialsSinceBreak + 1;
                 else
+                    disp(['TRIAL NOT CORRECT -- ' this.TrialTable.Properties.UserData.trialTableOptions.trialAbortAction])
                     %-- what to do in case of abort
                     switch(this.TrialTable.Properties.UserData.trialTableOptions.trialAbortAction) % TODO: save the trial abort action somehwere else
                         case 'Repeat'
@@ -351,7 +352,10 @@ while(1)
                             c = futureConditionsInCurrentBlockAndSessionPart(1,:);
                             futureConditionsInCurrentBlockAndSessionPart(1,:) = futureConditionsInCurrentBlockAndSessionPart(newPosition,:);
                             futureConditionsInCurrentBlockAndSessionPart(newPosition,:) = c;
-                            this.Session.currentRun.futureTrialTable(this.Session.currentRun.futureTrialTable.BlockNumber==currentblock & this.Session.currentRun.futureTrialTable.BlockSequenceNumber==currentblockSeqNumber,:) = futureConditionsInCurrentBlockAndSessionPart;
+                            
+                            this.Session.currentRun.futureTrialTable(...
+                                this.Session.currentRun.futureTrialTable.BlockNumber==currentblock ...
+                                & this.Session.currentRun.futureTrialTable.BlockSequenceNumber==currentblockSeqNumber,:) = futureConditionsInCurrentBlockAndSessionPart;
                         case 'Drop'
                             %-- remove the condition that has just run from the future conditions list
                             this.Session.currentRun.futureTrialTable(1,:) = [];

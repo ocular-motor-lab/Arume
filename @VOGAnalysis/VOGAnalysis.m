@@ -1004,7 +1004,7 @@ classdef VOGAnalysis < handle
             rawData = table();
             cleanedData = table();
             
-            for i=1:length(dataFiles{1}) % TODO this breaks old stuff CAREFULL NEED TO FIND A LONG TERM SOLUTION THAT WORKS FOR BOTH CASES maybe an issue with new matlab?
+            for i=1:length(dataFiles) % TODO this breaks old stuff CAREFULL NEED TO FIND A LONG TERM SOLUTION THAT WORKS FOR BOTH CASES maybe an issue with new matlab?
                 dataFile = dataFiles{i}; cprintf('CLARA CHANGE: dataFile = dataFiles{i}(i); ln 1008 of VOGAnalysis')
                 cprintf('blue','++ VOGAnalysis :: Reading data File %d of %d = %s ...\n', i, length(dataFiles), dataFile);
                 
