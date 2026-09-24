@@ -596,8 +596,8 @@ classdef ExperimentDesign < handle
                         for i=1:height(trialDataTable)
                             % TODO: JORGE : this probably does not work for
                             % multiple files, only if there is one.
-                            i1 = find(samplesDataTable.RawTime>=trialDataTable.EyeTrackerTimeTrialStart(i),1,'first');
-                            i2 = find(samplesDataTable.RawTime<=trialDataTable.EyeTrackerTimeTrialStop(i),1,'last');
+                            i1 = find(samplesDataTable.FileNumber' == trialDataTable.FileNumber(i) & samplesDataTable.RawTime' >= trialDataTable.EyeTrackerTimeTrialStart(i),1,'first');
+                            i2 = find(samplesDataTable.FileNumber' == trialDataTable.FileNumber(i) & samplesDataTable.RawTime' <= trialDataTable.EyeTrackerTimeTrialStop(i),1,'last');
                             trialDataTable.EyeTrackerFrameNumberTrialStart(i) = samplesDataTable.RawFrameNumber(i1);
                             trialDataTable.EyeTrackerFrameNumberTrialStop(i) = samplesDataTable.RawFrameNumber(i2); 
                         end
