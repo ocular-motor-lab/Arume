@@ -14,8 +14,7 @@ classdef VOG  < handle
             if ( ~exist('port','var') || isempty(port) )
                 port = 9000;
             end
-            arumePath = regexpi(path,['[^;]*arumeHardware'],'match');
-            asm = NET.addAssembly(fullfile(fileparts(arumePath{1}),'+ArumeHardware\@VOG\OpenIrisRemoteClient.dll'));
+            % OpenIris.OpenIrisClient is +OpenIris/OpenIrisClient.m, from OpenIris's matlab folder (no DLL).
             ip = '127.0.0.1';
 %             if ( ~exist('openirispath','var') || isempty(openirispath) )
 %                 openirispath = 'M:\TEMP\Arume_openiris_test\Debug';
@@ -118,7 +117,6 @@ classdef VOG  < handle
                 catch ex
                     ex
                 end
-                files = cell(files.ToArray)';
             end
         end
 
